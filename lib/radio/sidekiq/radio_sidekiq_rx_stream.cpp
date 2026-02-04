@@ -29,11 +29,10 @@ radio_sidekiq_rx_stream::radio_sidekiq_rx_stream(const stream_description& descr
 {
   for (unsigned i_port = 0, nof_ports = rx_port_handles.size(); i_port != nof_ports; ++i_port) {
     skiq_rx_hdl_t port_handle = rx_port_handles[i_port];
-    // Enabling DC offset correction can cause an IQ impairment.
-    if (skiq_write_rx_dc_offset_corr(card_id, port_handle, false)) {
-      fmt::print("Error: failed to set Rx DC offset correction.\n");
-      return;
-    }
+
+    // Enabling DC offset correction can cause an IQ impairment. This is not supported in some devices, in this case,
+    // it returns an error. Ignore the error.
+    skiq_write_rx_dc_offset_corr(card_id, port_handle, false);
 
     // Set manual Rx gain mode.
     if (skiq_write_rx_gain_mode(card_id, port_handle, skiq_rx_gain_manual)) {

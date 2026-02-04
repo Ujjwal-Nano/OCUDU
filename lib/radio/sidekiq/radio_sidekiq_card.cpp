@@ -9,6 +9,7 @@
  */
 
 #include "radio_sidekiq_card.h"
+#include "ocudu/adt/interval.h"
 #include "ocudu/ocudulog/ocudulog.h"
 
 using namespace ocudu;
@@ -257,24 +258,22 @@ bool radio_sidekiq_card::set_tx_gain(unsigned i_channel, double gain_dB)
 
   ocudu_assert(gain_dB >= 0.0, "TX gain cannot be negative.");
 
-  double max_atten_dB = 0.25 * card_params.tx_param->atten_quarter_db_max;
-  double min_atten_dB = 0.25 * card_params.tx_param->atten_quarter_db_min;
+  interval<double> atten_dB_range = {0.25 * card_params.tx_param->atten_quarter_db_min,
+                                     0.25 * card_params.tx_param->atten_quarter_db_max};
 
   // Calculate attenuation:
   // - 0dB attenuation -> Maximum gain;
   // - 0dB gain -> Maximum attenuation;
-  static constexpr double min_gain = 0.0;
-  double                  max_gain = max_atten_dB - min_atten_dB;
-  double                  att_dB   = max_atten_dB - gain_dB;
+  interval<double> gain_range_dB = {0.0, atten_dB_range.length()};
+  double           att_dB        = atten_dB_range.stop() - gain_dB;
 
   // Check gain range
-  if (att_dB < min_atten_dB || att_dB > max_atten_dB) {
-    fmt::print("Error card {} channel {}: the selected gain (i.e. {:.1f} dB) is out of range ({:.1f} to {:.1f} dB).\n",
+  if (!atten_dB_range.contains(att_dB)) {
+    fmt::print("Error card {} channel {}: the selected gain (i.e. {:.1f} dB) is out of the range {}.\n",
                card_id,
                i_channel,
                gain_dB,
-               min_gain,
-               max_gain);
+               gain_range_dB);
     return false;
   }
 
@@ -306,24 +305,37 @@ bool radio_sidekiq_card::set_rx_gain(unsigned i_channel, double gain_dB)
   //(sidekiq_z2), and Matchstiq Z3u (sidekiq_z3u) each increment of the gain index value results in approxi-
   // mately 1 dB of gain, with approximately 76 dB of total gain available. For details on the gain table,
   // refer to p. 37 of AD9361 Reference Manual UG-570.
+  double gain_dB_step = 1.0;
 
-  // Calculate the gain index.
-  auto gain_idx = static_cast<uint16_t>(floor(gain_dB));
+  // For Sidekiq X4 (skiq_x4) and Matchstiq X40 (skiq_x40), each receiver has 30 dB of total gain available,
+  // where an increment of 1 in the gain index results in approximately 0.5 dB increase. For details on the
+  // receiver datapath and gain control blocks, refer to the "Receiver Datapath" on p. 125 of the ADRV9008-
+  // 1/ADRV9008-2/ADRV9009 Hardware Reference Manual (UG-1295)
+  if (card_params.rx_param->gain_index_min == 195) {
+    // Sidekiq X4 minimum gain index is 195.
+    gain_dB_step = 0.5;
+  }
+
+  // Expected gain range in decibels.
+  interval<uint16_t> gain_dB_range(
+      0.0, gain_dB_step * (card_params.rx_param->gain_index_max - gain_dB_step * card_params.rx_param->gain_index_min));
 
   // Check gain range.
-  if (gain_idx < card_params.rx_param->gain_index_min || gain_idx > card_params.rx_param->gain_index_max) {
-    fmt::print("Error card {} channel {}: the selected gain (i.e. {:.1f} dB) is out of range ({:.1f} to {:.1f} dB).\n",
+  if (!gain_dB_range.contains(gain_dB)) {
+    fmt::print("Error card {} channel {}: the selected gain (i.e. {:.1f} dB) is out of the range {}.\n",
                card_id,
                i_channel,
                gain_dB,
-               card_params.rx_param->gain_index_min,
-               card_params.rx_param->gain_index_max);
+               gain_dB_range);
     return false;
   }
 
+  // Calculate the gain index. The minimum index is mapped to 0dB.
+  auto gain_idx = static_cast<uint16_t>(floor(gain_dB / gain_dB_step)) + card_params.rx_param->gain_index_min;
+
   // Set the RX gain.
   if (skiq_write_rx_gain(card_id, card_params.rx_param[i_channel].handle, gain_idx)) {
-    fmt::print("Error: setting card {} port {} Rx gain.\n", card_id, i_channel);
+    fmt::print("Error: setting card {} port {} Rx gain.\n", card_id, i_channel, gain_idx);
     return false;
   }
 
