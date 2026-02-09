@@ -12,6 +12,7 @@
 
 #if defined(__SSE3__) && defined(__AVX__) && defined(__AVX2__)
 #define HAVE_AVX
+#define SIMD_I16_SIZE 16
 #include <immintrin.h>
 #endif // defined(__SSE3__) && defined(__AVX__) && defined(__AVX2__)
 
@@ -50,7 +51,7 @@ void ocudu::convert_i12_to_ci16(span<ci16_t> out, span<const uint32_t> in)
 
     // Store the result back to memory.
     _mm_storeu_si128(reinterpret_cast<__m128i_u*>(&out[i_sample]), input_vec);
-#else  // HAVE_AVX
+#else // HAVE_AVX
     // Extract words.
     uint32_t word0  = in[i_word + 0];
     uint32_t word1  = in[i_word + 1];
@@ -59,21 +60,16 @@ void ocudu::convert_i12_to_ci16(span<ci16_t> out, span<const uint32_t> in)
     uint64_t word12 = (static_cast<uint64_t>(word1) << 32U) | static_cast<uint64_t>(word2);
 
     // Extract int16 values.
-    std::array<int16_t, 8> iq_values;
-    iq_values[0] = static_cast<int16_t>((word0 >> 16U) & 0xfff0);
-    iq_values[1] = static_cast<int16_t>((word0 >> 4U) & 0xfff0);
-    iq_values[2] = static_cast<int16_t>((word01 >> 24U) & 0xfff0);
-    iq_values[3] = static_cast<int16_t>((word1 >> 12U) & 0xfff0);
-    iq_values[4] = static_cast<int16_t>((word1 >> 0U) & 0xfff0);
-    iq_values[5] = static_cast<int16_t>((word12 >> 20U) & 0xfff0);
-    iq_values[6] = static_cast<int16_t>((word2 >> 8U) & 0xfff0);
-    iq_values[7] = static_cast<int16_t>((word2 << 4U) & 0xfff0);
+    auto* iq_values = reinterpret_cast<int16_t*>(&out[i_sample]);
+    iq_values[0]    = static_cast<int16_t>((word0 >> 16U) & 0xfff0);
+    iq_values[1]    = static_cast<int16_t>((word0 >> 4U) & 0xfff0);
+    iq_values[2]    = static_cast<int16_t>((word01 >> 24U) & 0xfff0);
+    iq_values[3]    = static_cast<int16_t>((word1 >> 12U) & 0xfff0);
+    iq_values[4]    = static_cast<int16_t>((word1 >> 0U) & 0xfff0);
+    iq_values[5]    = static_cast<int16_t>((word12 >> 20U) & 0xfff0);
+    iq_values[6]    = static_cast<int16_t>((word2 >> 8U) & 0xfff0);
+    iq_values[7]    = static_cast<int16_t>((word2 << 4U) & 0xfff0);
 
-    // Convert int16 to cf.
-    float* dst = reinterpret_cast<float*>(&out[i_sample]);
-    for (unsigned i = 0; i != 8; ++i) {
-      dst[i] = static_cast<float>(iq_values[i]) * i12_to_cf_scaling_factor;
-    }
 #endif // HAVE_AVX
   }
 }
@@ -91,7 +87,10 @@ void ocudu::convert_ci16_to_i12(span<uint32_t> out, span<const ci16_t> in)
     // Load input.
     __m128i i16_vec = _mm_loadu_si128(reinterpret_cast<const __m128i_u*>(in.data() + i_sample));
 
-    // Pack eight 16-bit words in three 32-bit words.
+    // Scale and truncate samples to 12 bits.
+    i16_vec = _mm_srai_epi16(i16_vec, 4);
+
+    // Pack eight 12-bit words in three 32-bit words.
     __m128i shifted = _mm_slli_epi16(i16_vec, 4);
     __m128i i16_low =
         _mm_shuffle_epi8(i16_vec, _mm_setr_epi8(-1, 2, 3, -1, 11, -1, 6, 7, 14, 15, -1, 10, -1, -1, -1, -1));
@@ -116,5 +115,69 @@ void ocudu::convert_ci16_to_i12(span<uint32_t> out, span<const ci16_t> in)
     out[i_word + 1] = (iq_values[2] << 28U) | (iq_values[3] << 16U) | (iq_values[4] << 4U) | (iq_values[5] >> 8U);
     out[i_word + 2] = (iq_values[5] << 24U) | (iq_values[6] << 12U) | (iq_values[7]);
 #endif // HAVE_AVX
+  }
+}
+
+void ocudu::scale_to_iq_bit_depth(span<int16_t> out, span<const int16_t> in, unsigned iq_bit_depth)
+{
+  ocudu_assert(out.size() == in.size(), "Input size (i.e., {}) does not match the output size (i.e., {})");
+  ocudu_assert(
+      iq_bit_depth < 16,
+      "The requested IQ bit depth (i.e., {}) must be smaller than the bit depth of the input samples (i.e., 16).");
+
+  // Compute the required number of right shifts.
+  unsigned nof_shifts = 16 - iq_bit_depth;
+
+  unsigned    i_sample    = 0;
+  std::size_t nof_samples = in.size();
+
+#ifdef HAVE_AVX
+  for (std::size_t i_end = (nof_samples / SIMD_I16_SIZE) * SIMD_I16_SIZE; i_sample != i_end;
+       i_sample += SIMD_I16_SIZE) {
+    // Load input.
+    __m256i i16_vec = _mm256_loadu_si256(reinterpret_cast<const __m256i_u*>(in.data() + i_sample));
+
+    // Shift right.
+    i16_vec = _mm256_srai_epi16(i16_vec, nof_shifts);
+
+    // Store output.
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(out.data() + i_sample), i16_vec);
+  }
+#endif // HAVE_AVX
+
+  for (; i_sample != nof_samples; ++i_sample) {
+    out[i_sample] = in[i_sample] >> nof_shifts;
+  }
+}
+
+void ocudu::scale_to_baseband_bit_depth(span<int16_t> out, span<const int16_t> in, unsigned iq_bit_depth)
+{
+  ocudu_assert(out.size() == in.size(), "Input size (i.e., {}) does not match the output size (i.e., {})");
+  ocudu_assert(
+      iq_bit_depth < 16,
+      "The provided IQ bit depth (i.e., {}) must be smaller than the bit depth of the output samples (i.e., 16).");
+
+  // Compute the required number of left shifts.
+  unsigned nof_shifts = 16 - iq_bit_depth;
+
+  unsigned    i_sample    = 0;
+  std::size_t nof_samples = in.size();
+
+#ifdef HAVE_AVX
+  for (std::size_t i_end = (nof_samples / SIMD_I16_SIZE) * SIMD_I16_SIZE; i_sample != i_end;
+       i_sample += SIMD_I16_SIZE) {
+    // Load input.
+    __m256i i16_vec = _mm256_loadu_si256(reinterpret_cast<const __m256i_u*>(in.data() + i_sample));
+
+    // Shift left.
+    i16_vec = _mm256_slli_epi16(i16_vec, nof_shifts);
+
+    // Store output.
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(out.data() + i_sample), i16_vec);
+  }
+#endif // HAVE_AVX
+
+  for (; i_sample != nof_samples; ++i_sample) {
+    out[i_sample] = in[i_sample] << nof_shifts;
   }
 }

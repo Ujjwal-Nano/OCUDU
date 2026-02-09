@@ -25,7 +25,8 @@ radio_sidekiq_rx_stream::radio_sidekiq_rx_stream(const stream_description& descr
   card_id(description.card_id),
   rx_port_handles(description.rx_port_handles),
   alignment_buffer(rx_port_handles.size(), 0),
-  packed_mode(description.packed_mode)
+  packed_mode(description.packed_mode),
+  rx_iq_bit_depth(description.rx_iq_bit_depth)
 {
   for (unsigned i_port = 0, nof_ports = rx_port_handles.size(); i_port != nof_ports; ++i_port) {
     skiq_rx_hdl_t port_handle = rx_port_handles[i_port];
@@ -202,9 +203,15 @@ baseband_gateway_receiver::metadata radio_sidekiq_rx_stream::receive(baseband_ga
           // Unpack and convert from 12-bit integer to ci16_t.
           convert_i12_to_ci16(port_data, block_samples);
         } else {
-          span<const ci16_t> block_samples(
-              reinterpret_cast<const ci16_t*>(const_cast<const int16_t*>(p_rx_block->data)), nof_samples_block);
-          ocuduvec::copy(port_data, block_samples);
+          span<int16_t>       baseband_iq_samples(reinterpret_cast<int16_t*>(port_data.data()), 2 * nof_samples_block);
+          span<const int16_t> block_iq_samples(const_cast<const int16_t*>(p_rx_block->data), 2 * nof_samples_block);
+          if (rx_iq_bit_depth.has_value()) {
+            // If the IQ bit depth is specified, Expand the IQ samples to 16 bit.
+            scale_to_baseband_bit_depth(baseband_iq_samples, block_iq_samples, *rx_iq_bit_depth);
+          } else {
+            // Otherwise, copy the IQ samples from the RF block.
+            ocuduvec::copy(baseband_iq_samples, block_iq_samples);
+          }
         }
       }
 

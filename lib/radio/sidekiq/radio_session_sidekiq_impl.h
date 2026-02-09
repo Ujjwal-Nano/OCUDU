@@ -52,18 +52,6 @@ public:
   // See the radio_base interface for documentation.
   void stop() override;
 
-  // See the radio_management_plane interface for documentation.
-  bool set_tx_gain(unsigned port_idx, double gain_dB) override { return set_tx_gain_unprotected(port_idx, gain_dB); }
-
-  // See the radio_management_plane interface for documentation.
-  bool set_rx_gain(unsigned port_idx, double gain_dB) override { return set_rx_gain_unprotected(port_idx, gain_dB); }
-
-  // See the radio_management_plane interface for documentation.
-  bool set_tx_freq(unsigned stream_id, double center_freq_Hz) override { return false; }
-
-  // See the radio_management_plane interface for documentation.
-  bool set_rx_freq(unsigned stream_id, double center_freq_Hz) override { return false; }
-
 private:
   /// Enumerates possible Sidekiq session states.
   enum class states { UNINITIALIZED, SUCCESSFUL_INIT, STOP };
@@ -87,6 +75,18 @@ private:
   radio_event_notifier& notifier;
   /// RF logger.
   ocudulog::basic_logger& logger;
+
+  // See the radio_management_plane interface for documentation.
+  bool set_tx_gain(unsigned port_idx, double gain_dB) override { return set_tx_gain_unprotected(port_idx, gain_dB); }
+
+  // See the radio_management_plane interface for documentation.
+  bool set_rx_gain(unsigned port_idx, double gain_dB) override { return set_rx_gain_unprotected(port_idx, gain_dB); }
+
+  // See the radio_management_plane interface for documentation.
+  bool set_tx_freq(unsigned stream_id, double center_freq_Hz) override { return false; }
+
+  // See the radio_management_plane interface for documentation.
+  bool set_rx_freq(unsigned stream_id, double center_freq_Hz) override { return false; }
 
   /// \brief Sets transmission gain of an RF port.
   /// \param[in] port_idx Port index.

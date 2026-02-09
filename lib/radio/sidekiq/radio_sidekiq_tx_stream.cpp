@@ -51,7 +51,7 @@ static constexpr unsigned get_nof_samples_block(unsigned nof_words, skiq_chan_mo
                "In 12-bit packed mode, the number of configured data words per port (i.e., {}) must be a multiple of 3",
                nof_data_words_port);
 
-  unsigned nof_samples_port = packed_mode ? (nof_data_words_port / 3) * 4 : nof_data_words;
+  unsigned nof_samples_port = packed_mode ? (nof_data_words_port / 3) * 4 : nof_data_words_port;
 
   return nof_samples_port;
 }
@@ -86,7 +86,8 @@ radio_sidekiq_tx_stream::radio_sidekiq_tx_stream(const stream_description& descr
   alignment_buffer(tx_port_handles.size(), 0),
   last_late_check_ts(0),
   total_nof_lates({0}),
-  packed_mode(description.packed_mode)
+  packed_mode(description.packed_mode),
+  tx_iq_bit_depth(description.tx_iq_bit_depth)
 {
   // Defines the block size in multiples of 256 words.
   uint32_t nof_blocks_per_packet = 16;
@@ -189,13 +190,24 @@ void radio_sidekiq_tx_stream::transmit_block(const baseband_gateway_buffer_reade
       // Number of 16-bit I and Q samples for a single port.
       unsigned nof_iq_samples_port = 2 * nof_port_samples_block;
 
-      // View over the entire RF block.
-      span<ci16_t> block_samples(reinterpret_cast<ci16_t*>(tx_block->data), nof_iq_samples_port);
+      // Views over the RF block for each port.
+      span<int16_t> rf_block_data(tx_block->data, 2 * nof_iq_samples_port);
+      span<int16_t> block_samples_p0 = rf_block_data.first(nof_iq_samples_port);
+      span<int16_t> block_samples_p1 = rf_block_data.last(nof_iq_samples_port);
 
-      // Convert and write samples for port 0.
-      ocuduvec::copy(block_samples.first(nof_iq_samples_port), port0_data);
-      // Convert and write samples for port 1.
-      ocuduvec::copy(block_samples.last(nof_iq_samples_port), port1_data);
+      // Views over the baseband IQ samples for each port.
+      span<const int16_t> port0_iq_samples(reinterpret_cast<const int16_t*>(port0_data.data()), nof_iq_samples_port);
+      span<const int16_t> port1_iq_samples(reinterpret_cast<const int16_t*>(port1_data.data()), nof_iq_samples_port);
+
+      if (tx_iq_bit_depth.has_value()) {
+        // If the IQ bit depth is specified, truncate the baseband signal to the IQ bit depth.
+        scale_to_iq_bit_depth(block_samples_p0, port0_iq_samples, *tx_iq_bit_depth);
+        scale_to_iq_bit_depth(block_samples_p1, port1_iq_samples, *tx_iq_bit_depth);
+      } else {
+        // Otherwise, copy the IQ samples into the RF block.
+        ocuduvec::copy(block_samples_p0, port0_iq_samples);
+        ocuduvec::copy(block_samples_p1, port1_iq_samples);
+      }
     }
 
     // Transmit the RF block.
@@ -216,9 +228,18 @@ void radio_sidekiq_tx_stream::transmit_block(const baseband_gateway_buffer_reade
         // Convert from ci16_t to 12 bit integers and pack into the data words.
         convert_ci16_to_i12(block_samples, port_data);
       } else {
-        // Convert to fixed point.
-        span<ci16_t> block_samples(reinterpret_cast<ci16_t*>(tx_block->data), port_data.size());
-        ocuduvec::copy(block_samples, port_data);
+        // Number of 16-bit I and Q samples for a single port.
+        unsigned nof_iq_samples_port = 2 * nof_port_samples_block;
+
+        span<const int16_t> port_data_flat(reinterpret_cast<const int16_t*>(port_data.data()), nof_iq_samples_port);
+        span<int16_t>       rf_block_data(tx_block->data, nof_iq_samples_port);
+        if (tx_iq_bit_depth.has_value()) {
+          // If the IQ bit depth is specified, truncate the baseband signal to the IQ bit depth.
+          scale_to_iq_bit_depth(rf_block_data, port_data_flat, *tx_iq_bit_depth);
+        } else {
+          // Otherwise, copy the IQ samples into the RF block.
+          ocuduvec::copy(rf_block_data, port_data_flat);
+        }
       }
 
       // Transmit the RF block.

@@ -33,6 +33,11 @@ public:
     std::vector<skiq_tx_hdl_t> tx_port_handles;
     /// Packed mode flag.
     bool packed_mode;
+    /// \brief IQ sample resolution in number of bits.
+    ///
+    /// Set this parameter if the TX IQ resolution of the Sidekiq card is smaller than 16 bits, and packed mode is
+    /// disabled.
+    std::optional<unsigned> tx_iq_bit_depth;
   };
 
   /// \brief Constructs a Sidekiq transmit stream.
@@ -102,6 +107,8 @@ private:
   std::array<uint32_t, RADIO_MAX_NOF_CHANNELS> total_nof_lates;
   /// Packed mode flag.
   bool packed_mode;
+  /// TX IQ bit depth.
+  std::optional<unsigned> tx_iq_bit_depth;
 };
 
 } // namespace ocudu

@@ -35,6 +35,11 @@ public:
     std::vector<skiq_rx_hdl_t> rx_port_handles;
     /// Packed mode flag.
     bool packed_mode;
+    /// \brief IQ sample resolution in number of bits.
+    ///
+    /// Set this parameter if the RX IQ resolution of the Sidekiq card is smaller than 16 bits, and packed mode is
+    /// disabled.
+    std::optional<unsigned> rx_iq_bit_depth;
   };
 
   /// \brief Constructs a sidekiq receive stream.
@@ -108,6 +113,8 @@ private:
   detail::rx_alignment_buffer alignment_buffer;
   /// Packed mode flag.
   bool packed_mode;
+  /// RX IQ bit depth.
+  std::optional<unsigned> rx_iq_bit_depth;
 };
 
 } // namespace ocudu

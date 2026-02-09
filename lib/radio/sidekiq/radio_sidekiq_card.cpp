@@ -175,6 +175,12 @@ radio_sidekiq_card::radio_sidekiq_card(task_executor&          async_executor,
   tx_stream_config.stream_mode  = card_config.stream_mode;
   tx_stream_config.channel_mode = channel_mode;
   tx_stream_config.packed_mode  = card_config.packed_mode;
+
+  // If packed mode is disabled, and the DAC bit depth is less than 16 bits, set the required IQ bit depth.
+  if (!card_config.packed_mode && (card_params.tx_param->iq_resolution < 16U)) {
+    tx_stream_config.tx_iq_bit_depth.emplace(card_params.tx_param->iq_resolution);
+  }
+
   for (unsigned i_port = 0; i_port != nof_tx_ports; ++i_port) {
     // Set the stream Tx port handles.
     tx_stream_config.tx_port_handles.push_back(card_params.tx_param[i_port].handle);
@@ -203,6 +209,12 @@ radio_sidekiq_card::radio_sidekiq_card(task_executor&          async_executor,
   radio_sidekiq_rx_stream::stream_description rx_stream_config;
   rx_stream_config.card_id     = card_id;
   rx_stream_config.stream_mode = card_config.stream_mode;
+
+  // If packed mode is disabled, and the ADC bit depth is less than 16 bits, set the required IQ bit depth.
+  if (!card_config.packed_mode && (card_params.rx_param->iq_resolution < 16U)) {
+    rx_stream_config.rx_iq_bit_depth.emplace(card_params.rx_param->iq_resolution);
+  }
+
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     // Set the stream Rx port handles.
     rx_stream_config.rx_port_handles.push_back(card_params.rx_param[i_port].handle);
