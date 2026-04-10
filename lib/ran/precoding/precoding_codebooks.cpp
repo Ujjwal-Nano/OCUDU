@@ -304,8 +304,8 @@ precoding_weight_matrix ocudu::make_two_layer_four_ports_type1_sp_mode1(unsigned
   // Precoding weight matrix for two layers mapped into four antenna ports.
   precoding_weight_matrix result(2, 4);
 
-  // Select k1 as per TS38.214 Section 5.2.2.2.1-4.
-  static constexpr unsigned k1 = O_1;
+  // Select k1 as per TS38.214 Section 5.2.2.2.1-3.
+  unsigned k1 = (beam_offset_id == 0) ? 0 : O_1;
 
   // Normalized horizontal beam index.
   float l_norm = static_cast<float>(beam_azimuth_id) / static_cast<float>(nof_beams);
@@ -1230,7 +1230,7 @@ precoding_weight_matrix ocudu::make_seven_layer_eight_ports_type1_sp(unsigned be
   precoding_weight_matrix result(7, 8);
 
   // Normalized horizontal beam index.
-  float l_norm = static_cast<float>(beam_azimuth_id) / static_cast<float>(nof_beams);
+  float l_norm = static_cast<float>(beam_azimuth_id) / static_cast<float>(O_1 * N_1);
   // Normalized vertical beam index.
   float m_norm = 0.0f;
   // Polarization phase shift. This defines the relative phase between the cross-polarized antenna elements.
@@ -1243,18 +1243,18 @@ precoding_weight_matrix ocudu::make_seven_layer_eight_ports_type1_sp(unsigned be
   make_layer_type1_sp_mode1(result, 1, N_1, 1, l_norm, m_norm, pol_phase_shift_rad + M_PI);
 
   // Build layer 2 beam coefficients. Recalculate phase increment for adjacent beam antenna elements.
-  l_norm = static_cast<float>(beam_azimuth_id + O_1) / static_cast<float>(nof_beams);
+  l_norm = static_cast<float>(beam_azimuth_id + O_1) / static_cast<float>(N_1 * O_1);
   make_layer_type1_sp_mode1(result, 2, N_1, 1, l_norm, m_norm, pol_phase_shift_rad);
 
   // Build layer 3 beam coefficients. Recalculate phase increment for adjacent beam antenna elements.
-  l_norm = static_cast<float>(beam_azimuth_id + 2 * O_1) / static_cast<float>(nof_beams);
+  l_norm = static_cast<float>(beam_azimuth_id + 2 * O_1) / static_cast<float>(N_1 * O_1);
   make_layer_type1_sp_mode1(result, 3, N_1, 1, l_norm, m_norm, 0.0f);
 
   // Build layer 4 beam coefficients. The phase increment for adjacent beam antenna elements is the same as layer 3.
   make_layer_type1_sp_mode1(result, 4, N_1, 1, l_norm, m_norm, M_PI);
 
   // Build layer 5 beam coefficients. Recalculate phase increment for adjacent beam antenna elements.
-  l_norm = static_cast<float>(beam_azimuth_id + 3 * O_1) / static_cast<float>(nof_beams);
+  l_norm = static_cast<float>(beam_azimuth_id + 3 * O_1) / static_cast<float>(N_1 * O_1);
   make_layer_type1_sp_mode1(result, 5, N_1, 1, l_norm, m_norm, 0.0f);
 
   // Build layer 6 beam coefficients. The phase increment for adjacent beam antenna elements is the same as layer 5.
@@ -1373,7 +1373,7 @@ precoding_weight_matrix ocudu::make_eight_layer_eight_ports_type1_sp(unsigned be
   precoding_weight_matrix result(8, 8);
 
   // Normalized horizontal beam index.
-  float l_norm = static_cast<float>(beam_azimuth_id) / static_cast<float>(nof_beams);
+  float l_norm = static_cast<float>(beam_azimuth_id) / static_cast<float>(O_1 * N_1);
   // Normalized vertical beam index.
   float m_norm = 0.0f;
   // Polarization phase shift. This defines the relative phase between the cross-polarized antenna elements.
@@ -1386,21 +1386,21 @@ precoding_weight_matrix ocudu::make_eight_layer_eight_ports_type1_sp(unsigned be
   make_layer_type1_sp_mode1(result, 1, N_1, 1, l_norm, m_norm, pol_phase_shift_rad + M_PI);
 
   // Build layer 2 beam coefficients. Recalculate phase increment for adjacent beam antenna elements.
-  l_norm = static_cast<float>(beam_azimuth_id + O_1) / static_cast<float>(nof_beams);
+  l_norm = static_cast<float>(beam_azimuth_id + O_1) / static_cast<float>(O_1 * N_1);
   make_layer_type1_sp_mode1(result, 2, N_1, 1, l_norm, m_norm, pol_phase_shift_rad);
 
   // Build layer 3 beam coefficients. The phase increment for adjacent beam antenna elements is the same as layer 2.
   make_layer_type1_sp_mode1(result, 3, N_1, 1, l_norm, m_norm, pol_phase_shift_rad + M_PI);
 
   // Build layer 4 beam coefficients. Recalculate phase increment for adjacent beam antenna elements.
-  l_norm = static_cast<float>(beam_azimuth_id + 2 * O_1) / static_cast<float>(nof_beams);
+  l_norm = static_cast<float>(beam_azimuth_id + 2 * O_1) / static_cast<float>(O_1 * N_1);
   make_layer_type1_sp_mode1(result, 4, N_1, 1, l_norm, m_norm, 0.0f);
 
   // Build layer 5 beam coefficients. The phase increment for adjacent beam antenna elements is the same as layer 4.
   make_layer_type1_sp_mode1(result, 5, N_1, 1, l_norm, m_norm, M_PI);
 
   // Build layer 6 beam coefficients. Recalculate phase increment for adjacent beam antenna elements.
-  l_norm = static_cast<float>(beam_azimuth_id + 3 * O_1) / static_cast<float>(nof_beams);
+  l_norm = static_cast<float>(beam_azimuth_id + 3 * O_1) / static_cast<float>(O_1 * N_1);
   make_layer_type1_sp_mode1(result, 6, N_1, 1, l_norm, m_norm, 0.0f);
 
   // Build layer 7 beam coefficients. The phase increment for adjacent beam antenna elements is the same as layer 6.
