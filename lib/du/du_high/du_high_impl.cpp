@@ -95,7 +95,7 @@ du_high_impl::du_high_impl(const du_high_configuration& config_, const du_high_d
       {*f1ap, *f1ap, f1ap->get_metrics_collector(), dependencies.f1_setup_notifier},
       {*dependencies.f1u_teid_allocator, *dependencies.f1u_gw},
       {mac->get_ue_control_info_handler(), *f1ap, *f1ap, *dependencies.rlc_p, dependencies.rlc_metrics_notif},
-      {*mac, cfg.ran.sched_cfg},
+      {*mac, cfg.ran.sched_cfg, dependencies.phy_cell_op_controllers},
       {cfg.metrics.period,
        dependencies.du_notifier,
        cfg.metrics.enable_f1ap,

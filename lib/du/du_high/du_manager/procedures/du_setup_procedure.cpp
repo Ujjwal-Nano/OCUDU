@@ -9,6 +9,7 @@
 #include "../du_cell_manager.h"
 #include "../du_manager_context.h"
 #include "ocudu/mac/config/mac_config_helpers.h"
+#include "ocudu/mac/phy_cell_operation_controller.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/scheduler/config/scheduler_cell_config_validator.h"
 #include "ocudu/support/async/async_no_op_task.h"
@@ -25,7 +26,8 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
                                                       const du_cell_config&                           du_cfg,
                                                       const byte_buffer&                              sib1,
                                                       span<const bcch_dl_sch_payload_type>            si_messages,
-                                                      const sched_cell_configuration_request_message& sched_cell_cfg)
+                                                      const sched_cell_configuration_request_message& sched_cell_cfg,
+                                                      phy_cell_operation_controller*                  phy_cell_op_ctrl)
 {
   mac_cell_creation_request mac_cfg{};
   mac_cfg.cell_index = cell_index;
@@ -46,6 +48,7 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
   mac_cfg.sched_req                       = sched_cell_cfg;
   mac_cfg.cell_barred                     = du_cfg.cell_barred;
   mac_cfg.intra_freq_reselection          = du_cfg.intra_freq_reselection;
+  mac_cfg.phy_cell_op_controller          = phy_cell_op_ctrl;
 
   return mac_cfg;
 }
@@ -166,9 +169,17 @@ void du_setup_procedure::configure_du_cells()
       report_error("Invalid cell={} configuration. Cause: {}", fmt::underlying(cell_index), result.error());
     }
 
+    // Look up the per-cell PHY operation controller. The vector is indexed by du_cell_index and may
+    // be empty (e.g. test mode) or shorter than nof_cells — null entries leave the PHY untouched on
+    // MAC stop, which preserves the legacy behaviour.
+    phy_cell_operation_controller* phy_cell_op_ctrl = nullptr;
+    if (idx < ctxt.params.mac.phy_cell_op_controllers.size()) {
+      phy_cell_op_ctrl = ctxt.params.mac.phy_cell_op_controllers[idx];
+    }
+
     // Forward config to MAC.
     ctxt.params.mac.mgr.get_cell_manager().add_cell(
-        make_mac_cell_config(cell_index, du_cfg, sys_info.sib1, sys_info.si_messages, sched_cfg));
+        make_mac_cell_config(cell_index, du_cfg, sys_info.sib1, sys_info.si_messages, sched_cfg, phy_cell_op_ctrl));
   }
 }
 
