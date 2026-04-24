@@ -1794,3 +1794,98 @@ void cu_cp_impl::on_statistics_report_timer_expired()
                               [this](timer_id_t /*tid*/) { on_statistics_report_timer_expired(); });
   statistics_report_timer.run();
 }
+
+// =============================================================================
+// cu_cp_cell_command_handler implementation
+// =============================================================================
+
+// Helper that builds and dispatches an F1AP gNB-CU Configuration Update for a single-cell activation or
+// deactivation. Encapsulated here to avoid variable declarations crossing CORO_AWAIT case labels.
+namespace {
+
+struct single_cell_f1ap_ctx {
+  du_processor*                    du_proc = nullptr;
+  bool                             invalid = false;
+  std::string                      error_message;
+  f1ap_gnb_cu_configuration_update f1ap_req;
+};
+
+static single_cell_f1ap_ctx prepare_single_cell_update(du_processor_repository&   du_db,
+                                                       const std::string&         gnb_cu_name,
+                                                       const nr_cell_global_id_t& cgi,
+                                                       bool                       activate)
+{
+  single_cell_f1ap_ctx out{};
+  du_index_t           du_idx = du_db.find_du(cgi);
+  if (du_idx == du_index_t::invalid) {
+    out.invalid = true;
+    out.error_message =
+        fmt::format("No DU found serving NR-CGI plmn={} nci={:#x}", cgi.plmn_id.to_string(), cgi.nci.value());
+    return out;
+  }
+  out.du_proc = du_db.find_du_processor(du_idx);
+  if (out.du_proc == nullptr) {
+    out.invalid       = true;
+    out.error_message = fmt::format("DU processor not found for du_index={}", fmt::underlying(du_idx));
+    return out;
+  }
+  out.f1ap_req.gnb_cu_name = gnb_cu_name;
+  if (activate) {
+    f1ap_cell_to_activate cell_req{};
+    cell_req.cgi = cgi;
+    out.f1ap_req.cells_to_be_activated_list.push_back(cell_req);
+  } else {
+    out.f1ap_req.cells_to_be_deactivated_list.push_back(f1ap_cell_to_deactivate{cgi});
+  }
+  return out;
+}
+
+static cu_cp_cell_command_response translate_f1ap_response(const f1ap_gnb_cu_configuration_update_response& r)
+{
+  cu_cp_cell_command_response resp{};
+  resp.success = r.success;
+  if (!resp.success) {
+    resp.error_message = r.cause.has_value() ? fmt::to_string(r.cause.value()) : "gNB-CU Configuration Update failed";
+  }
+  return resp;
+}
+
+} // namespace
+
+async_task<cu_cp_cell_command_response> cu_cp_impl::deactivate_cell(const nr_cell_global_id_t& cgi)
+{
+  single_cell_f1ap_ctx prep = prepare_single_cell_update(du_db, cfg.node.ran_node_name, cgi, /* activate */ false);
+
+  if (prep.invalid) {
+    cu_cp_cell_command_response resp{};
+    resp.error_message = std::move(prep.error_message);
+    return launch_no_op_task(resp);
+  }
+
+  return launch_async([du_proc = prep.du_proc, f1ap_req = std::move(prep.f1ap_req)](
+                          coro_context<async_task<cu_cp_cell_command_response>>& ctx) mutable {
+    CORO_BEGIN(ctx);
+    CORO_AWAIT_VALUE(f1ap_gnb_cu_configuration_update_response f1ap_resp,
+                     du_proc->handle_configuration_update(f1ap_req));
+    CORO_RETURN(translate_f1ap_response(f1ap_resp));
+  });
+}
+
+async_task<cu_cp_cell_command_response> cu_cp_impl::activate_cell(const nr_cell_global_id_t& cgi)
+{
+  single_cell_f1ap_ctx prep = prepare_single_cell_update(du_db, cfg.node.ran_node_name, cgi, /* activate */ true);
+
+  if (prep.invalid) {
+    cu_cp_cell_command_response resp{};
+    resp.error_message = std::move(prep.error_message);
+    return launch_no_op_task(resp);
+  }
+
+  return launch_async([du_proc = prep.du_proc, f1ap_req = std::move(prep.f1ap_req)](
+                          coro_context<async_task<cu_cp_cell_command_response>>& ctx) mutable {
+    CORO_BEGIN(ctx);
+    CORO_AWAIT_VALUE(f1ap_gnb_cu_configuration_update_response f1ap_resp,
+                     du_proc->handle_configuration_update(f1ap_req));
+    CORO_RETURN(translate_f1ap_response(f1ap_resp));
+  });
+}

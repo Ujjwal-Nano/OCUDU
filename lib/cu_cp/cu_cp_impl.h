@@ -20,6 +20,8 @@
 #include "ue_manager/ue_manager_impl.h"
 #include "xnap_repository.h"
 #include "ocudu/cu_cp/cu_configurator.h"
+#include "ocudu/cu_cp/cu_cp_cell_command_handler.h"
+#include "ocudu/cu_cp/cu_cp_command_handler.h"
 #include "ocudu/cu_cp/cu_cp_configuration.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_cp/inter_cu_handover_messages.h"
@@ -46,7 +48,8 @@ class cu_cp_impl final : public cu_cp,
                          public cu_cp_impl_interface,
                          public cu_cp_ng_handler,
                          public cu_cp_command_handler,
-                         public cu_cp_ue_release_command_handler
+                         public cu_cp_ue_release_command_handler,
+                         public cu_cp_cell_command_handler
 {
 public:
   explicit cu_cp_impl(const cu_cp_configuration& config_);
@@ -176,7 +179,12 @@ public:
 
   cu_cp_mobility_command_handler&   get_mobility_command_handler() override { return mobility_mng; }
   cu_cp_ue_release_command_handler& get_ue_release_command_handler() override { return *this; }
+  cu_cp_cell_command_handler&       get_cell_command_handler() override { return *this; }
   metrics_handler&                  get_metrics_handler() override { return *metrics_hdlr; }
+
+  // cu_cp_cell_command_handler.
+  async_task<cu_cp_cell_command_response> deactivate_cell(const nr_cell_global_id_t& cgi) override;
+  async_task<cu_cp_cell_command_response> activate_cell(const nr_cell_global_id_t& cgi) override;
 
   // cu_cp_amf_reconnection_handler.
   void handle_amf_reconnection(amf_index_t amf_index) override;
