@@ -93,6 +93,13 @@ public:
   /// Stop a specific cell in the DU.
   async_task<void> stop(du_cell_index_t cell_index) const;
 
+  /// \brief Update the MIB cellBarred flag of a cell at runtime.
+  ///
+  /// Used by the cell stop procedure to bar the cell before draining UEs (so idle UEs reselect away
+  /// before connected UE drain begins) and by the cell start path to restore the configured cellBarred
+  /// state after a prior bar-first stop. The new value takes effect on the next SSB build (~20 ms).
+  async_task<void> set_cell_barred(du_cell_index_t cell_index, bool barred) const;
+
   /// Stop all cells in the DU.
   async_task<void> stop_all() const;
 

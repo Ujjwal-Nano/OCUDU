@@ -233,9 +233,36 @@ async_task<bool> du_cell_manager::start(du_cell_index_t cell_index) const
     // Start cell in the MAC.
     CORO_AWAIT(cfg.mac.mgr.get_cell_manager().get_cell_controller(cell_index).start());
 
+    // Restore the configured MIB cellBarred state. A prior bar-first cell stop may have
+    // left the live MIB flag set to true; this brings it back to the user-configured intent.
+    CORO_AWAIT(set_cell_barred(cell_index, cells[cell_index]->cfg.cell_barred));
+
     cells[cell_index]->state = du_cell_context::state_t::active;
 
     CORO_RETURN(true);
+  });
+}
+
+async_task<void> du_cell_manager::set_cell_barred(du_cell_index_t cell_index, bool barred) const
+{
+  // Build the MAC reconfigure request outside the coroutine. The OCUDU coroutine framework
+  // expands CORO_AWAIT into a switch case, which cannot cross local variable initialization.
+  mac_cell_reconfig_request mac_req;
+  mac_req.cell_barred_mod.emplace(barred);
+
+  return launch_async([this, cell_index, barred, mac_req](coro_context<async_task<void>>& ctx) mutable {
+    CORO_BEGIN(ctx);
+
+    if (!has_cell(cell_index)) {
+      logger.warning("cell={}: set_cell_barred called for a cell that does not exist.", fmt::underlying(cell_index));
+      CORO_EARLY_RETURN();
+    }
+
+    CORO_AWAIT(cfg.mac.mgr.get_cell_manager().get_cell_controller(cell_index).reconfigure(mac_req));
+
+    logger.info("cell={}: MIB cellBarred set to {}", fmt::underlying(cell_index), barred);
+
+    CORO_RETURN();
   });
 }
 
