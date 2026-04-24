@@ -44,7 +44,7 @@ public:
 
   size_t nof_cells() const { return cells.size(); }
 
-  bool has_cell(du_cell_index_t cell_index) const { return cell_index < cells.size(); }
+  bool has_cell(du_cell_index_t cell_index) const { return cell_index < cells.size() && cells[cell_index] != nullptr; }
 
   /// Determine whether cell is activated.
   bool is_cell_active(du_cell_index_t cell_index) const
@@ -95,6 +95,14 @@ public:
 
   /// Stop all cells in the DU.
   async_task<void> stop_all() const;
+
+  /// \brief Remove a single cell configuration from the DU.
+  ///
+  /// Precondition: the cell must be in the inactive state. The caller is responsible for stopping the cell first
+  /// (\ref stop or \ref stop_all) before invoking this method.
+  /// \remark After removal, \ref has_cell returns false for the given index and the slot is available for reuse
+  /// by a subsequent \ref add_cell call (subject to implementation).
+  void remove_cell(du_cell_index_t cell_index);
 
   /// Remove all cell configurations.
   void remove_all_cells();

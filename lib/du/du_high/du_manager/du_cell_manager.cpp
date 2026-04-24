@@ -278,10 +278,25 @@ async_task<void> du_cell_manager::stop_all() const
   });
 }
 
+void du_cell_manager::remove_cell(du_cell_index_t cell_index)
+{
+  assert_cell_exists(cell_index);
+  ocudu_assert(cells[cell_index]->state != du_cell_context::state_t::active,
+               "Cannot remove cell={} while it is active; stop it first.",
+               fmt::underlying(cell_index));
+
+  cfg.mac.mgr.get_cell_manager().remove_cell(cell_index);
+  cells[cell_index].reset();
+  logger.info("cell={}: Cell removed from DU", fmt::underlying(cell_index));
+}
+
 void du_cell_manager::remove_all_cells()
 {
   for (unsigned i = 0; i != cells.size(); ++i) {
-    ocudu_assert(cells[i] != nullptr, "Cell {} is null", i);
+    if (cells[i] == nullptr) {
+      // Already removed via remove_cell; skip.
+      continue;
+    }
     ocudu_assert(cells[i]->state != du_cell_context::state_t::active, "Cell {} is still active", i);
     cfg.mac.mgr.get_cell_manager().remove_cell(to_du_cell_index(i));
   }
