@@ -58,6 +58,7 @@ mac_cell_processor::mac_cell_processor(const mac_cell_creation_request& cell_cfg
   sched(sched_),
   time_source(std::move(dependencies.timer_source)),
   metrics(cell_cfg.pci, cell_cfg.scs_common, dependencies.notifier),
+  phy_cell_op_controller(dependencies.phy_cell_op_controller),
   pcap(pcap_),
   sfn_time_mapper(sfn_time_mapper_),
   sib1_pcap_dumped_version(std::numeric_limits<unsigned>::max())
@@ -67,27 +68,35 @@ mac_cell_processor::mac_cell_processor(const mac_cell_creation_request& cell_cfg
 
 async_task<void> mac_cell_processor::start()
 {
-  // Notify scheduler about activation.
-  // Note: This is done in the control executor context to avoid concurrency with other CTRL procedures.
-  sched.handle_cell_activation(cell_cfg.cell_index);
+  return launch_async([this](coro_context<async_task<void>>& ctx) {
+    CORO_BEGIN(ctx);
 
-  return execute_and_continue_on_blocking(
-      cell_exec,
-      ctrl_exec,
-      timers,
-      [this]() noexcept OCUDU_RTSAN_NONBLOCKING {
-        if (state != cell_state::inactive) {
-          // No-op.
-          return;
-        }
+    // Start PHY cell first (FAPI P5 START.request) if a controller is configured.
+    // The PHY must be ready to receive DL grants before the MAC scheduler begins issuing them.
+    if (phy_cell_op_controller != nullptr) {
+      CORO_AWAIT_VALUE(bool phy_ok, phy_cell_op_controller->start());
+      if (!phy_ok) {
+        logger.warning("cell={}: PHY start failed; cell remains inactive.", fmt::underlying(cell_cfg.cell_index));
+        CORO_EARLY_RETURN();
+      }
+    }
 
-        state = cell_state::active;
-        logger.info("cell={}: Cell was activated", fmt::underlying(cell_cfg.cell_index));
-      },
-      [this]() {
-        logger.warning("cell={}: Postponed cell start operation. Cause: Task queue is full",
-                       fmt::underlying(cell_cfg.cell_index));
-      });
+    // Notify scheduler about activation (on the control executor to avoid concurrency with other CTRL procedures).
+    sched.handle_cell_activation(cell_cfg.cell_index);
+
+    // Switch to cell executor context to update state.
+    CORO_AWAIT(defer_on_blocking(cell_exec, timers));
+
+    if (state == cell_state::inactive) {
+      state = cell_state::active;
+      logger.info("cell={}: Cell was activated", fmt::underlying(cell_cfg.cell_index));
+    }
+
+    // Switch back to ctrl executor context.
+    CORO_AWAIT(defer_on_blocking(ctrl_exec, timers));
+
+    CORO_RETURN();
+  });
 }
 
 async_task<void> mac_cell_processor::stop()
@@ -110,14 +119,20 @@ async_task<void> mac_cell_processor::stop()
     // Notify time source that the cell is being deactivated and no slot indications will be received anymore.
     time_source->on_cell_deactivation();
 
-    // Notify lower layers that the cell is being stopped.
-    // TODO: Rely on FAPI STOP procedure to signal the cell stop. For now, we just skip this step.
-
-    // Clear all UEs.
+    // Clear all UEs before stopping PHY so that no further DL grants are produced.
     ue_mng.clear();
 
     // Switch back to respective ctrl executor context.
     CORO_AWAIT(defer_on_blocking(ctrl_exec, timers));
+
+    // Stop PHY cell (FAPI P5 STOP.request) if a controller is configured. This halts RF transmission for this cell.
+    // Without it the MAC stops scheduling but the PHY keeps transmitting the cell's SSB on its configured cadence.
+    if (phy_cell_op_controller != nullptr) {
+      CORO_AWAIT_VALUE(bool phy_ok, phy_cell_op_controller->stop());
+      if (!phy_ok) {
+        logger.warning("cell={}: PHY stop did not complete cleanly.", fmt::underlying(cell_cfg.cell_index));
+      }
+    }
 
     // Signal to the scheduler that the cell was successfully stopped in the lower layers.
     // Note: This is done in the control executor context to avoid concurrency with other CTRL procedures.
