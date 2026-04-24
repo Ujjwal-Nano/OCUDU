@@ -33,8 +33,8 @@ void ssb_assembler::assemble_ssb(dl_ssb_pdu& ssb_pdu, const ssb_information& ssb
   ssb_pdu.L_max             = L_max;
 
   // Fields required for PBCH payload/MIB generation.
-  ssb_pdu.mib_data.cell_barred            = cell_barred;
-  ssb_pdu.mib_data.intra_freq_reselection = intra_freq_reselection;
+  ssb_pdu.mib_data.cell_barred            = cell_barred.load(std::memory_order_relaxed);
+  ssb_pdu.mib_data.intra_freq_reselection = intra_freq_reselection.load(std::memory_order_relaxed);
   ssb_pdu.mib_data.dmrs_typeA_pos         = dmrs_typeA_pos;
   ssb_pdu.mib_data.pdcch_config_sib1      = pdcch_config_sib1;
 }
