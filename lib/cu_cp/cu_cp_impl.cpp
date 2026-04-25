@@ -1892,3 +1892,39 @@ async_task<cu_cp_cell_command_response> cu_cp_impl::activate_cell(const nr_cell_
     CORO_RETURN(translate_f1ap_response(f1ap_resp));
   });
 }
+
+bool cu_cp_impl::dispatch_deactivate_cell(const nr_cell_global_id_t& cgi)
+{
+  // Pre-validate the CGI synchronously so the WS/O1 handler can surface an immediate error to
+  // the caller without waiting for the async procedure.
+  single_cell_f1ap_ctx prep = prepare_single_cell_update(du_db, cfg.node.ran_node_name, cgi, /* activate */ false);
+  if (prep.invalid) {
+    logger.warning("Dispatch deactivate_cell failed: {}", prep.error_message);
+    return false;
+  }
+
+  async_task<cu_cp_cell_command_response> task = deactivate_cell(cgi);
+  return common_task_sched.schedule_async_task(
+      launch_async([t = std::move(task)](coro_context<async_task<void>>& ctx) mutable {
+        CORO_BEGIN(ctx);
+        CORO_AWAIT(t);
+        CORO_RETURN();
+      }));
+}
+
+bool cu_cp_impl::dispatch_activate_cell(const nr_cell_global_id_t& cgi)
+{
+  single_cell_f1ap_ctx prep = prepare_single_cell_update(du_db, cfg.node.ran_node_name, cgi, /* activate */ true);
+  if (prep.invalid) {
+    logger.warning("Dispatch activate_cell failed: {}", prep.error_message);
+    return false;
+  }
+
+  async_task<cu_cp_cell_command_response> task = activate_cell(cgi);
+  return common_task_sched.schedule_async_task(
+      launch_async([t = std::move(task)](coro_context<async_task<void>>& ctx) mutable {
+        CORO_BEGIN(ctx);
+        CORO_AWAIT(t);
+        CORO_RETURN();
+      }));
+}
