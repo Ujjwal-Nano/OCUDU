@@ -37,10 +37,11 @@ public:
 
   /// \brief Toggle delivery of slot indications to the MAC.
   ///
-  /// Cells default to inactive at construction so the FAPI lifecycle is honored: MAC must call
-  /// upper_phy_operation_controller::start() (which lands here as set_active(true)) before slot
-  /// indications begin flowing — this is what acks the FAPI START transaction. Setting false
-  /// suppresses delivery so MAC stops scheduling and the cell goes off-air at the symbol level.
+  /// Default is active=true so the cell's first activation at DU init does not require the FAPI
+  /// START handshake to flip a gate that's currently closed — see mac_cell_processor::start() and
+  /// the init-bypass note in cns-ocudu-changes.md (Change 7) for why a default of false would
+  /// deadlock during DU.start() in the monolithic deployment. Runtime cell lock/unlock toggles
+  /// this normally via the controller chain.
   void set_active(bool a) { active.store(a, std::memory_order_relaxed); }
 
 private:
@@ -50,7 +51,7 @@ private:
   fapi::p7_slot_indication_notifier* slot_indication_notifier;
   /// Gates slot indication delivery. Written from control executor via set_active(); read on the
   /// timing executor in on_tti_boundary().
-  std::atomic<bool> active{false};
+  std::atomic<bool> active{true};
 };
 
 } // namespace fapi_adaptor

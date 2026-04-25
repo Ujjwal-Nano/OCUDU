@@ -71,13 +71,32 @@ async_task<void> mac_cell_processor::start()
   return launch_async([this](coro_context<async_task<void>>& ctx) {
     CORO_BEGIN(ctx);
 
-    // Start PHY cell first (FAPI P5 START.request) if a controller is configured.
+    // Start PHY cell (FAPI P5 START.request) if a controller is configured.
     // The PHY must be ready to receive DL grants before the MAC scheduler begins issuing them.
+    //
+    // Init bypass: the very first activation of every cell happens inside DU.start(), at a moment
+    // when the FAPI control executors are not yet draining their queues. Awaiting the FAPI START
+    // transaction here deadlocks for the full 5-second timeout window — DU.start() blocks on this
+    // coroutine, this coroutine blocks on a deferred outcome, the executor that would fire the
+    // outcome is held back by DU.start() not yet returning. Pre-Change-5 this was hidden because
+    // phy_cell_op_controller was always null and MAC bypassed the await entirely. Change 5 wired
+    // the controller and surfaced the deadlock; Change 6 implemented the PHY-side controller; this
+    // (Change 7) handles the init case by skipping only the FIRST await per cell. Subsequent
+    // activations (runtime cell unlock, NRCell add at runtime, etc.) all hit the proper FAPI path
+    // because by then DU.start() has returned and executors are pumping normally.
+    //
+    // Why this is safe: the FAPI P7 slot-indication gate defaults to active=true, so SSB starts
+    // broadcasting as soon as the slot machinery comes online — no FAPI handshake required to get
+    // the first cell on the air. The full handshake remains in force for every later transition.
     if (phy_cell_op_controller != nullptr) {
-      CORO_AWAIT_VALUE(bool phy_ok, phy_cell_op_controller->start());
-      if (!phy_ok) {
-        logger.warning("cell={}: PHY start failed; cell remains inactive.", fmt::underlying(cell_cfg.cell_index));
-        CORO_EARLY_RETURN();
+      if (is_first_activation) {
+        is_first_activation = false;
+      } else {
+        CORO_AWAIT_VALUE(bool phy_ok, phy_cell_op_controller->start());
+        if (!phy_ok) {
+          logger.warning("cell={}: PHY start failed; cell remains inactive.", fmt::underlying(cell_cfg.cell_index));
+          CORO_EARLY_RETURN();
+        }
       }
     }
 
