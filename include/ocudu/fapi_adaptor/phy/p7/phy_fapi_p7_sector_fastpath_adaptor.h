@@ -29,6 +29,15 @@ public:
 
   /// Returns a reference to the results notifier used by the adaptor.
   virtual upper_phy_rx_results_notifier& get_rx_results_notifier() = 0;
+
+  /// \brief Toggle slot-indication delivery to the MAC for this sector.
+  ///
+  /// Inactive (default at construction) suppresses slot indications so MAC stops scheduling and
+  /// the cell goes off-air at the symbol level. Set true when MAC sends FAPI START — the next
+  /// slot indication then acks the START transaction and the cell is on-air. Set false on FAPI
+  /// STOP. The factory wires this to upper_phy_operation_controller so the FAPI lifecycle drives
+  /// it transparently.
+  virtual void set_active(bool active) = 0;
 };
 
 } // namespace fapi_adaptor

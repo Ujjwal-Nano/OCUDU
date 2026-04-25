@@ -7,6 +7,7 @@
 #include "ocudu/fapi/p7/p7_slot_indication_notifier.h"
 #include "ocudu/phy/upper/upper_phy_timing_handler.h"
 #include "ocudu/phy/upper/upper_phy_timing_notifier.h"
+#include <atomic>
 
 namespace ocudu {
 namespace fapi_adaptor {
@@ -34,11 +35,22 @@ public:
     slot_indication_notifier = &notifier;
   }
 
+  /// \brief Toggle delivery of slot indications to the MAC.
+  ///
+  /// Cells default to inactive at construction so the FAPI lifecycle is honored: MAC must call
+  /// upper_phy_operation_controller::start() (which lands here as set_active(true)) before slot
+  /// indications begin flowing — this is what acks the FAPI START transaction. Setting false
+  /// suppresses delivery so MAC stops scheduling and the cell goes off-air at the symbol level.
+  void set_active(bool a) { active.store(a, std::memory_order_relaxed); }
+
 private:
   /// FAPI to PHY data translator.
   fapi_to_phy_fastpath_translator& translator;
   /// FAPI slot-based, slot indication notifier.
   fapi::p7_slot_indication_notifier* slot_indication_notifier;
+  /// Gates slot indication delivery. Written from control executor via set_active(); read on the
+  /// timing executor in on_tti_boundary().
+  std::atomic<bool> active{false};
 };
 
 } // namespace fapi_adaptor

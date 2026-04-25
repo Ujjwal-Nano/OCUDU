@@ -6,7 +6,10 @@
 #include "o_du_low_impl.h"
 #include "ocudu/du/du_low/du_low_factory.h"
 #include "ocudu/du/du_low/o_du_low_config.h"
+#include "ocudu/fapi_adaptor/phy/p7/phy_fapi_p7_sector_fastpath_adaptor.h"
+#include "ocudu/fapi_adaptor/phy/phy_fapi_fastpath_adaptor.h"
 #include "ocudu/fapi_adaptor/phy/phy_fapi_fastpath_adaptor_factory.h"
+#include "ocudu/fapi_adaptor/phy/phy_fapi_sector_fastpath_adaptor.h"
 #include "ocudu/fapi_adaptor/precoding_matrix_table_generator.h"
 #include "ocudu/fapi_adaptor/uci_part2_correspondence_generator.h"
 #include "ocudu/ocudulog/ocudulog.h"
@@ -60,6 +63,17 @@ std::unique_ptr<o_du_low> ocudu::odu::make_o_du_low(const o_du_low_config& confi
       config.fapi_cfg,
       generate_fapi_fastpath_adaptor_dependencies(*du_lo, config.fapi_cfg, o_du_low_deps.fapi_p5_executor));
   report_error_if_not(fapi != nullptr, "Unable to create FAPI-PHY adpators.");
+
+  // Wire each upper PHY's operation controller to its sector's slot-indication gate. This closes
+  // the FAPI cell-lifecycle loop: when MAC sends FAPI START via the P5 fastpath, the controller
+  // flips the gate on; the next slot indication then acks the START transaction. Symmetric on
+  // STOP. Without this wiring, upper_phy_operation_controller::start()/stop() would be no-ops
+  // and MAC's START transaction would always time out.
+  for (unsigned i = 0, e = config.fapi_cfg.sectors.size(); i != e; ++i) {
+    auto& p7_sector = fapi->get_sector_adaptor(i).get_p7_sector_adaptor();
+    du_lo->get_upper_phy(i).set_operation_controller_active_target(
+        [&p7_sector](bool active) { p7_sector.set_active(active); });
+  }
 
   auto o_du_lo = std::make_unique<o_du_low_impl>(std::move(du_lo), std::move(fapi), config.fapi_cfg.sectors.size());
   report_error_if_not(o_du_lo != nullptr, "Unable to create O-DU low.");
