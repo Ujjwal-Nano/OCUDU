@@ -40,9 +40,11 @@ install_rohc_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates gcc gcc-c++ make which xz autoconf automake libtool libpcap-devel libcmocka-devel
+        curl ca-certificates make xz autoconf automake libtool libpcap-devel libcmocka-devel
     )
-    local -a run_pkgs=()
+    local -a run_pkgs=(
+        curl ca-certificates libtool libpcap libcmocka xz
+    )
 
     case "$mode" in
         all|build)
