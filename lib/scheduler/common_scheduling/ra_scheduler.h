@@ -84,6 +84,7 @@ private:
   struct msg3_alloc_candidate {
     unsigned     pusch_td_res_index;
     crb_interval crbs;
+    rnti_t       tc_rnti;
   };
 
   /// State for a pending MsgB PDSCH (pending to be scheduled or waiting for a positive HARQ-ACK).
@@ -160,13 +161,11 @@ private:
 
   /// Schedule RAR grant and associated Msg3 grants in the provided scheduling resources.
   /// \param res_alloc Cell Resource Allocator.
-  /// \param pending_rar pending RAR with an associated RA-RNTI that is going to be scheduled.
   /// \param pdcch_slot Slot where the PDCCH is going to be scheduled.
   /// \param rar_crbs CRBs of the RAR to be scheduled.
   /// \param pdsch_time_res_index Index of PDSCH time domain resource.
   /// \param msg3_candidates List of Msg3s with respective resource information (e.g. RBs and symbols) to allocate.
   void fill_rar_grant(cell_resource_allocator&         res_alloc,
-                      const pending_rar_alloc&         pending_rar,
                       slot_point                       pdcch_slot,
                       crb_interval                     rar_crbs,
                       unsigned                         pdsch_time_res_index,
