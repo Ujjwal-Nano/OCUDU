@@ -7,8 +7,6 @@
 
 using namespace ocudu;
 
-#ifndef OCUDU_HAS_ENTERPRISE_NTN
-
 std::unique_ptr<ocudu_ntn::ntn_configuration_manager>
 ocudu::create_ntn_configuration_manager(const ocudu_ntn::ntn_configuration_manager_config& ntn_config,
                                         odu::du_configurator&                              du_cfgtr,
@@ -17,7 +15,6 @@ ocudu::create_ntn_configuration_manager(const ocudu_ntn::ntn_configuration_manag
                                         timer_manager&                                     timers,
                                         task_executor&                                     executor)
 {
+  // TODO implement NTN configuration manager creation for NTN-enabled DU.
   return nullptr;
 }
-
-#endif // OCUDU_HAS_ENTERPRISE_NTN

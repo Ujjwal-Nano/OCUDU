@@ -6,14 +6,11 @@
 using namespace ocudu;
 using namespace dpdk;
 
-#ifndef OCUDU_HAS_ENTERPRISE
-
 std::shared_ptr<bbdev_acc> ocudu::dpdk::create_bbdev_acc(const bbdev_acc_configuration& cfg,
                                                          ocudulog::basic_logger&        logger)
 {
+  // TODO implement bbdev accelerator creation for supported hardware acceleration.
   logger.error("[bbdev] bbdev accelerator creation failed. Cause: hardware-acceleration is not supported.");
 
   return nullptr;
 }
-
-#endif // OCUDU_HAS_ENTERPRISE

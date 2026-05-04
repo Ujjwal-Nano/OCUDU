@@ -7,12 +7,9 @@
 using namespace ocudu;
 using namespace hal;
 
-#ifndef OCUDU_HAS_ENTERPRISE
-
 std::shared_ptr<hw_accelerator_pdsch_enc_factory>
 ocudu::hal::create_bbdev_pdsch_enc_acc_factory(const bbdev_hwacc_pdsch_enc_factory_configuration& accelerator_config)
 {
+  // TODO implement bbdev PDSCH encoder hardware accelerator factory creation.
   return nullptr;
 }
-
-#endif // OCUDU_HAS_ENTERPRISE

@@ -124,9 +124,8 @@ split6_o_du_low_plugin_dummy::create_fapi_p7_sector_adaptor_factory(task_executo
   return std::make_unique<mac_fapi_p7_sector_adaptor_factory_dummy>();
 }
 
-#ifndef OCUDU_HAS_SPLIT6_ENTERPRISE
 std::unique_ptr<split6_o_du_low_plugin> ocudu::create_split6_o_du_low_plugin(std::string_view app_name)
 {
+  // TODO implement Split6 O-DU low plugin creation for split6 support.
   return std::make_unique<split6_o_du_low_plugin_dummy>();
 }
-#endif

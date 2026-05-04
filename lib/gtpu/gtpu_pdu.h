@@ -182,7 +182,7 @@ struct gtpu_ie_gtpu_peer_address {
 /// GTP-U information element for "Private Extension". See TS 29.281 Sec. 8.6
 /// IE format: TLV
 struct gtpu_ie_private_extension {
-  /// The Extension Identifier is a value defined in the Private Enterprise number list
+  /// The Extension Identifier is a value defined in the Private number list
   uint16_t extension_identifier;
   /// Custom extension
   static_vector<uint8_t, GTPU_PRIVATE_EXTENSION_VALUE_LENGTH> extension_value;

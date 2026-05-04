@@ -177,11 +177,7 @@ ntn_cfg_r17_s ocudu::odu::make_asn1_rrc_cell_ntn_cfg(const ntn_config& ntn_cfg)
   return out_ntn_cfg;
 }
 
-#ifndef OCUDU_HAS_ENTERPRISE_NTN
-
 void ocudu::odu::make_asn1_rrc_advanced_cell_sib19(const sib19_info& sib19_params, sib19_r17_s& out)
 {
-  // Encoding of the advanced NTN config parameters are not implemented.
+  // TODO implement advanced NTN SIB19 ASN.1 encoding for NTN cell broadcast configuration.
 }
-
-#endif // OCUDU_HAS_ENTERPRISE_NTN
