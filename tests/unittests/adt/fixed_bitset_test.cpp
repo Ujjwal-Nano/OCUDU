@@ -21,8 +21,8 @@ static_assert(!fixed_size_bitset<4>{}.empty(), "size-4 bitset should not be empt
 static_assert(fixed_size_bitset<1>{}.size() == 1, "invalid size()");
 static_assert(fixed_size_bitset<64>{}.size() == 64, "invalid size()");
 static_assert(fixed_size_bitset<128>{}.size() == 128, "invalid size()");
-static_assert(fixed_size_bitset<4>{}.bit_order() == false, "invalid default bit_order()");
-static_assert(fixed_size_bitset<4, true>{}.bit_order() == true, "invalid bit_order()");
+static_assert(!fixed_size_bitset<4>{}.bit_order(), "invalid default bit_order()");
+static_assert(fixed_size_bitset<4, true>{}.bit_order(), "invalid bit_order()");
 
 // ** Typed test suite for fixed_size_bitset
 
@@ -55,8 +55,8 @@ protected:
   static std::vector<bool> create_random_vector()
   {
     std::vector<bool> vec(N);
-    for (auto it = vec.begin(); it != vec.end(); ++it) {
-      *it = test_rng::bernoulli();
+    for (auto elem : vec) {
+      elem = test_rng::bernoulli();
     }
     return vec;
   }
@@ -636,8 +636,8 @@ TEST(fixed_bitset_test, find_highest_range)
 TEST(fixed_bitset_test, lsb_msb_format_are_mirrors)
 {
   std::vector<bool> data(25);
-  for (size_t i = 0; i < data.size(); ++i) {
-    data[i] = test_rng::bernoulli();
+  for (auto elem : data) {
+    elem = test_rng::bernoulli();
   }
 
   fixed_size_bitset<25>       bitmap(data.begin(), data.end());

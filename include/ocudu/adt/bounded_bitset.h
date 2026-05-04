@@ -10,8 +10,6 @@
 #include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/ocudu_assert.h"
 #include "fmt/format.h"
-#include <cinttypes>
-#include <string>
 
 namespace ocudu {
 
@@ -88,10 +86,8 @@ public:
   constexpr bounded_bitset(Iterator begin, Iterator end)
   {
     resize(end - begin);
-    auto it = begin;
-    for (size_t count = 0; count != cur_size; ++count) {
-      this->set_(count, *it);
-      ++it;
+    for (size_t count = 0; count != cur_size; ++count, ++begin) {
+      this->set_(count, *begin);
     }
   }
 
@@ -103,7 +99,7 @@ public:
   constexpr bounded_bitset(const std::initializer_list<const bool>& values)
   {
     resize(values.size());
-    auto it = values.begin();
+    const auto* it = values.begin();
     for (size_t count = 0; count != cur_size; ++count) {
       this->set_(count, *it);
       ++it;

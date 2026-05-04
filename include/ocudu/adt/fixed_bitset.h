@@ -53,7 +53,7 @@ public:
   {
     report_fatal_error_if_not(
         values.size() == N, "fixed_size_bitset initializer list requires exactly N={} elements", N);
-    auto it = values.begin();
+    const auto* it = values.begin();
     for (size_t count = 0; count != N; ++count, ++it) {
       this->set_(count, *it);
     }
