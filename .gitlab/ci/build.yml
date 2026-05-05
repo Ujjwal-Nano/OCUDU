@@ -447,6 +447,7 @@ smoke coverage:
   rules:
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
     - if: $ON_PROTECTED_BRANCH
+    - if: $ON_MR
 
 smoke asan:
   extends: .build_and_unit

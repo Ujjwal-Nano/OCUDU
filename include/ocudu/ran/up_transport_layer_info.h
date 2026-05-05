@@ -19,11 +19,11 @@ template <typename Asn1Bitstring>
 transport_layer_address tla_from_asn1_bitstring(const Asn1Bitstring& bs)
 {
   std::array<uint8_t, 20> ip_bytes{};
-  report_fatal_error_if_not(bs.nof_octets() <= ip_bytes.size(),
-                            "Bitstring octet count {} exceeds maximum supported size {}",
-                            bs.nof_octets(),
-                            ip_bytes.size());
-  std::reverse_copy(bs.data(), bs.data() + bs.nof_octets(), ip_bytes.begin());
+  if (bs.nof_octets() <= ip_bytes.size()) {
+    std::reverse_copy(bs.data(), bs.data() + bs.nof_octets(), ip_bytes.begin());
+  } else {
+    report_fatal_error("Bitstring octet count {} exceeds maximum supported size {}", bs.nof_octets(), ip_bytes.size());
+  }
   return transport_layer_address::create_from_bytes({ip_bytes.data(), bs.nof_octets()});
 }
 
