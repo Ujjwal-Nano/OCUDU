@@ -7,12 +7,9 @@
 using namespace ocudu;
 using namespace hal;
 
-#ifndef OCUDU_HAS_ENTERPRISE
-
 std::shared_ptr<hw_accelerator_pusch_dec_factory>
 ocudu::hal::create_bbdev_pusch_dec_acc_factory(const bbdev_hwacc_pusch_dec_factory_configuration& accelerator_config)
 {
+  // TODO implement bbdev PUSCH decoder hardware accelerator factory creation.
   return nullptr;
 }
-
-#endif // OCUDU_HAS_ENTERPRISE

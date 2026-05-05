@@ -8,13 +8,10 @@
 
 using namespace ocudu;
 
-#ifndef OCUDU_HAS_ENTERPRISE_NTN
-
 void ocudu::configure_cli11_advanced_ntn_args(CLI::App& app, du_high_unit_cell_ntn_config& config)
 {
-  // Advanced NTN config parameters are not implemented.
+  // TODO implement advanced NTN CLI argument parsing for NTN configuration.
 }
-#endif // OCUDU_HAS_ENTERPRISE_NTN
 
 static void configure_cli11_epoch_time(CLI::App& app, epoch_time_t& epoch_time)
 {

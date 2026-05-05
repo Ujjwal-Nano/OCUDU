@@ -10,17 +10,14 @@
 using namespace ocudu;
 using namespace odu;
 
-#ifndef OCUDU_HAS_ENTERPRISE_NTN
-
 async_task<du_ntn_param_update_response> ocudu::odu::start_du_ntn_param_update(const du_ntn_param_update_request& req,
                                                                                const du_manager_params& params,
                                                                                du_cell_manager&         cell_mng)
 {
+  // TODO implement DU NTN parameter update procedure for NTN configuration changes.
   auto err_function = [](coro_context<async_task<du_ntn_param_update_response>>& ctx) {
     CORO_BEGIN(ctx);
     CORO_RETURN(du_ntn_param_update_response{false});
   };
   return launch_async(std::move(err_function));
 }
-
-#endif // OCUDU_HAS_ENTERPRISE_NTN

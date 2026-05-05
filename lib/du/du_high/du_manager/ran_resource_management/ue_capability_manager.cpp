@@ -59,15 +59,11 @@ expected<ue_capability_summary, std::string> ocudu::odu::decode_ue_nr_cap_contai
   return ue_caps;
 }
 
-#ifndef OCUDU_HAS_ENTERPRISE_NTN
-
 void ocudu::odu::decode_advanced_ue_nr_ntn_caps(ue_capability_summary&           ue_capability,
                                                 const asn1::rrc_nr::ue_nr_cap_s& ue_cap)
 {
-  // Advanced NTN UE capabilities is not implemented.
+  // TODO implement advanced UE NR NTN capability decoding for NTN-enabled UE capabilities.
 }
-
-#endif // OCUDU_HAS_ENTERPRISE_NTN
 
 // Configure dedicated UE configuration to set MCS ant CQI tables.
 static void set_pdsch_mcs_table(serving_cell_config& cell_cfg, pdsch_mcs_table mcs_table)

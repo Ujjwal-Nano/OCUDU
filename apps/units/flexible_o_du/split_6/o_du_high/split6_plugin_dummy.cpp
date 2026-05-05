@@ -111,9 +111,8 @@ split6_plugin_dummy::create_fapi_adaptor(const fapi_adaptor::split6_o_du_low_fap
   return std::make_unique<fapi_adaptor_dummy>();
 }
 
-#ifndef OCUDU_HAS_ENTERPRISE
 std::unique_ptr<split6_plugin> ocudu::create_split6_plugin(std::string_view app_name)
 {
+  // TODO implement Split6 plugin creation for split6 hardware support.
   return std::make_unique<split6_plugin_dummy>();
 }
-#endif
