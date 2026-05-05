@@ -284,7 +284,7 @@ struct upper_phy_factory_configuration {
   bool rx_symbol_printer_prach;
   /// Enables the PHY tap plugin if present.
   std::optional<std::string> phy_tap_arguments;
-  /// Informs the PHY tap plugin of the TDD configuration if present.
+  /// Informs the PHY tap plugin if the TDD configuration if present.
   std::optional<tdd_ul_dl_config_common> phy_tap_tdd_pattern;
   /// \brief LDPC encoder type.
   ///
