@@ -944,19 +944,9 @@ void ra_scheduler::schedule_pending_rars(cell_resource_allocator& res_alloc, slo
     const size_t nof_allocs = schedule_rar(rar_req, res_alloc, pdcch_slot);
 
     if (nof_allocs > 0) {
-      // If RAR allocation was successful:
-      // - in case all Msg3 grants were allocated, remove pending RAR, and continue with following RAR
-      // - otherwise, erase only Msg3 grants that were allocated, and stop iteration
-
-      if (nof_allocs >= rar_req.tc_rntis.size()) {
+      // Remove pending RAR is there are no TC-RNTIs left to schedule Msg3 for.
+      if (rar_req.tc_rntis.empty()) {
         it = pending_rars.erase(it);
-      } else {
-        // Remove only allocated Msg3 grants
-        std::copy(rar_req.tc_rntis.begin() + nof_allocs, rar_req.tc_rntis.end(), rar_req.tc_rntis.begin());
-        const size_t new_pending_msg3s =
-            rar_req.tc_rntis.size() > nof_allocs ? rar_req.tc_rntis.size() - nof_allocs : 0;
-        rar_req.tc_rntis.resize(new_pending_msg3s);
-        break;
       }
     } else {
       // If RAR allocation was not successful, try next pending RAR
@@ -1053,6 +1043,7 @@ unsigned ra_scheduler::schedule_rar(pending_rar_alloc& rar, cell_resource_alloca
   // > Find available RBs in PUSCH for Msg3 grants. This process requires searching for a valid K2 value in
   // the list of PUSCH-TimeDomainResourceAllocation in PUSCHConfigCommon.
   static_vector<msg3_alloc_candidate, MAX_GRANTS_PER_RAR> msg3_candidates;
+  static_vector<rnti_t, MAX_PREAMBLES_PER_PRACH_OCCASION> pending_tc_rntis(rar.tc_rntis.begin(), rar.tc_rntis.end());
   const auto& ul_bwp_cfg = cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params;
   const auto  pusch_list = get_pusch_td_list(cell_cfg);
   for (unsigned pusch_idx = 0; pusch_idx < pusch_list.size(); ++pusch_idx) {
@@ -1084,13 +1075,10 @@ unsigned ra_scheduler::schedule_rar(pending_rar_alloc& rar, cell_resource_alloca
     used_ul_crbs |= pucch_crbs;
     crb_interval   msg3_crbs              = rb_helper::find_empty_interval_of_length(used_ul_crbs, nof_msg3_rbs);
     const unsigned max_allocs_on_free_rbs = msg3_crbs.length() / nof_rbs_per_msg3;
-
     if (max_allocs_on_free_rbs == 0) {
       continue;
     }
 
-    // >> Register Msg3 allocations for this PUSCH resource as successful.
-    unsigned last_crb = msg3_crbs.start();
     // NOTE: this should not happen, but we added as an extra safety step.
     if (max_allocs_on_free_rbs + msg3_alloc.result.ul.puschs.size() > msg3_alloc.result.ul.puschs.capacity()) {
       logger.warning("Overestimated number of MSG3 grants that can be allocated ({} > {}). This number will be capped",
@@ -1098,11 +1086,32 @@ unsigned ra_scheduler::schedule_rar(pending_rar_alloc& rar, cell_resource_alloca
                      list_space);
     }
     pusch_res_max_allocs = std::min(pusch_res_max_allocs, max_allocs_on_free_rbs);
-    for (unsigned i = 0; i != pusch_res_max_allocs; ++i) {
+
+    // >> Register Msg3 allocations for this PUSCH resource.
+    auto*    rnti_it    = pending_tc_rntis.begin();
+    unsigned nof_allocs = 0;
+    unsigned last_crb   = msg3_crbs.start();
+    while (rnti_it != pending_tc_rntis.end()) {
+      if (nof_allocs == pusch_res_max_allocs) {
+        break;
+      }
+
+      bool existing_pucch = std::any_of(msg3_alloc.result.ul.pucchs.begin(),
+                                        msg3_alloc.result.ul.pucchs.end(),
+                                        [rnti = *rnti_it](const pucch_info& pucch) { return pucch.crnti == rnti; });
+      if (existing_pucch) {
+        // Skip this RNTI if there is already a PUCCH allocation for it.
+        ++rnti_it;
+        continue;
+      }
+
       msg3_alloc_candidate& candidate = msg3_candidates.emplace_back();
       candidate.crbs                  = {last_crb, last_crb + nof_rbs_per_msg3};
       candidate.pusch_td_res_index    = pusch_idx;
+      candidate.tc_rnti               = *rnti_it;
       last_crb += nof_rbs_per_msg3;
+      ++nof_allocs;
+      rnti_it = pending_tc_rntis.erase(rnti_it);
     }
   }
   max_nof_allocs = msg3_candidates.size();
@@ -1126,13 +1135,15 @@ unsigned ra_scheduler::schedule_rar(pending_rar_alloc& rar, cell_resource_alloca
   // Status: RAR allocation is successful.
 
   // > Fill RAR and Msg3 PDSCH, PUSCH and DCI.
-  fill_rar_grant(res_alloc, rar, pdcch_slot, rar_crbs, pdsch_time_res_index, msg3_candidates);
+  fill_rar_grant(res_alloc, pdcch_slot, rar_crbs, pdsch_time_res_index, msg3_candidates);
+
+  // > Remove allocated TC-RNTIs from pending RAR.
+  rar.tc_rntis.assign(pending_tc_rntis.begin(), pending_tc_rntis.end());
 
   return msg3_candidates.size();
 }
 
 void ra_scheduler::fill_rar_grant(cell_resource_allocator&         res_alloc,
-                                  const pending_rar_alloc&         rar_request,
                                   slot_point                       pdcch_slot,
                                   crb_interval                     rar_crbs,
                                   unsigned                         pdsch_time_res_index,
@@ -1164,15 +1175,14 @@ void ra_scheduler::fill_rar_grant(cell_resource_allocator&         res_alloc,
 
   const auto& init_ul_bwp         = cell_cfg.params.ul_cfg_common.init_ul_bwp;
   const auto  pusch_td_alloc_list = get_pusch_td_list(cell_cfg);
-  for (unsigned i = 0; i < msg3_candidates.size(); ++i) {
-    const auto&    msg3_candidate = msg3_candidates[i];
-    const auto&    pusch_res      = pusch_td_alloc_list[msg3_candidate.pusch_td_res_index];
+  for (const auto& msg3_candidate : msg3_candidates) {
+    const auto&    pusch_res = pusch_td_alloc_list[msg3_candidate.pusch_td_res_index];
     const unsigned msg3_delay =
         ra_helper::get_msg3_delay(init_ul_bwp.generic_params.scs, pusch_res.k2) + cell_cfg.ntn_cs_koffset;
     cell_slot_resource_allocator& msg3_alloc = res_alloc[pdcch_slot + msg3_delay];
     const vrb_interval            vrbs       = ul_crb_to_vrb(cell_cfg, msg3_candidate.crbs);
 
-    auto msg3_it = pending_msg3s.find(get_msg3_ring_key(rar_request.tc_rntis[i]));
+    auto msg3_it = pending_msg3s.find(get_msg3_ring_key(msg3_candidate.tc_rnti));
     ocudu_sanity_check(msg3_it != pending_msg3s.end(),
                        "Pending Msg3 entry should have been reserved when RACH was received");
     auto& pending_msg3 = msg3_it->second;
