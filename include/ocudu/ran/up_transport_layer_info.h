@@ -23,7 +23,7 @@ transport_layer_address tla_from_asn1_bitstring(const Asn1Bitstring& bs)
                             "Bitstring octet count {} exceeds maximum supported size {}",
                             bs.nof_octets(),
                             ip_bytes.size());
-  std::reverse_copy(bs.data(), bs.data() + bs.nof_octets(), ip_bytes.begin());
+  std::reverse_copy(bs.data(), bs.data() + std::min(bs.nof_octets(), ip_bytes.size()), ip_bytes.begin());
   return transport_layer_address::create_from_bytes({ip_bytes.data(), bs.nof_octets()});
 }
 
