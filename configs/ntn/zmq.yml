@@ -1,0 +1,17 @@
+#
+# Copyright 2021-2026 Software Radio Systems Limited
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the distribution.
+#
+
+ru_sdr:
+  device_driver: zmq                # The RF driver name.
+  device_args: tx_port=tcp://127.0.0.1:2100,rx_port=tcp://127.0.0.1:2101 # Optionally pass arguments to the selected RF driver.
+  srate: 5.76                       # RF sample rate might need to be adjusted according to selected bandwidth.
+  tx_gain: 60                       # Transmit gain of the RF might need to adjusted to the given situation.
+  rx_gain: 60                       # Receive gain of the RF might need to adjusted to the given situation.
+  #time_alignment_calibration: -500
+  expert_cfg:
+    low_phy_dl_throttling: 0.8
