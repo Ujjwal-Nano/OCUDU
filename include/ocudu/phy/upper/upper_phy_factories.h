@@ -421,9 +421,9 @@ public:
 };
 
 /// Creates a physical layer tap factory.
-std::shared_ptr<phy_tap_factory> create_phy_tap_factory(unsigned                       nof_rb,
-                                                        unsigned                       nof_ports,
-                                                        const tdd_ul_dl_config_common& tdd_pattern,
-                                                        const std::string&             processor_arguments);
+std::shared_ptr<phy_tap_factory> create_phy_tap_factory(unsigned                               nof_rb,
+                                                        unsigned                               nof_ports,
+                                                        std::optional<tdd_ul_dl_config_common> tdd_pattern,
+                                                        const std::string&                     processor_arguments);
 
 } // namespace ocudu
