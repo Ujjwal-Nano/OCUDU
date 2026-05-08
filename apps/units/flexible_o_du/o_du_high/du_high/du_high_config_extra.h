@@ -8,9 +8,9 @@
 
 namespace ocudu {
 
-struct o_du_high_e2_config;
+struct du_high_unit_config;
 
-/// Configures the given CLI11 application with the o-ran du high e2 configuration schema.
-void configure_cli11_with_o_du_high_e2_config_schema(CLI::App& app, o_du_high_e2_config& config);
+/// Auto derive DU high parameters after the parsing.
+void autoderive_du_high_parameters_after_parsing(CLI::App& app, du_high_unit_config& unit_cfg);
 
 } // namespace ocudu

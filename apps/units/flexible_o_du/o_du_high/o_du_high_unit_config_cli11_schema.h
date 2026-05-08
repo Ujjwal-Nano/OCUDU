@@ -5,7 +5,9 @@
 #pragma once
 
 #include "du_high/du_high_config_cli11_schema.h"
+#include "du_high/du_high_config_extra.h"
 #include "e2/o_du_high_e2_config_cli11_schema.h"
+#include "e2/o_du_high_e2_config_extra.h"
 #include "fapi/fapi_config_cli11_schema.h"
 #include "o_du_high_unit_config.h"
 #include "CLI/CLI11.hpp"

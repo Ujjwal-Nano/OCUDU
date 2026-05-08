@@ -1,0 +1,470 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: du_high_parsed_config
+namespace: ocudu
+description: du high configuration
+generate_header: false
+generate_cli11_source: false
+
+outputs:
+  header:       apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h
+  cli11_source: apps/units/flexible_o_du/o_du_high/du_high/du_high_config_cli11_schema.cpp
+  cli11_header: apps/units/flexible_o_du/o_du_high/du_high/du_high_config_cli11_schema.h
+
+cli11_extra_includes:
+  - '"apps/helpers/logger/logger_appconfig_cli11_utils.h"'
+  - '"apps/helpers/metrics/metrics_config_cli11_schema.h"'
+  - '"ntn/du_high_ntn_config_cli11_schema.h"'
+  - '"ocudu/adt/ranges/transform.h"'
+  - '"ocudu/ran/csi_report/csi_report_configuration.h"'
+  - '"ocudu/ran/drx_config.h"'
+  - '"ocudu/ran/du_types.h"'
+  - '"ocudu/ran/duplex_mode.h"'
+  - '"ocudu/ran/pucch/pucch_mapping.h"'
+  - '"ocudu/ran/slot_point_extended.h"'
+  - '"ocudu/scheduler/config/scheduler_expert_config.h"'
+  - '"ocudu/support/config_parsers.h"'
+  - '"ocudu/support/format/fmt_to_c_str.h"'
+  - '<CLI/CLI11.hpp>'
+  - '<charconv>'
+  - '<cmath>'
+
+# ---------------------------------------------------------------------------
+# Top-level flat parameters
+# ---------------------------------------------------------------------------
+parameters:
+  - name: gnb_id
+    description: gNodeB identifier
+    type: unsigned
+    cli11:
+      member: config.gnb_id.id
+      capture: true
+
+  - name: gnb_id_bit_length
+    description: gNodeB identifier length in bits
+    type: unsigned
+    mode: struct-only
+    cli11:
+      raw_cpp: |
+        add_option(app, "--gnb_id_bit_length", config.config.gnb_id.bit_length, "gNodeB identifier length in bits")
+            ->default_function([&value = config.config.gnb_id.bit_length]() { return std::to_string(value); })
+            ->capture_default_str()
+            ->check(CLI::Range(22, 32));
+
+  - name: gnb_du_id
+    description: gNB-DU identifier
+    type: unsigned
+    mode: struct-only
+    cli11:
+      raw_cpp: |
+        add_option(app, "--gnb_du_id", config.config.gnb_du_id, "gNB-DU Id")
+            ->capture_default_str()
+            ->check(CLI::Range(static_cast<uint64_t>(0U), static_cast<uint64_t>((uint64_t(1) << 36) - 1)));
+
+# ---------------------------------------------------------------------------
+# Log subcommand parameters (log levels use add_log_option helper)
+# ---------------------------------------------------------------------------
+  - name: mac_level
+    description: MAC log level
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.mac_level, "--mac_level", "MAC log level");
+
+  - name: rlc_level
+    description: RLC log level
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.rlc_level, "--rlc_level", "RLC log level");
+
+  - name: f1ap_level
+    description: F1AP log level
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.f1ap_level, "--f1ap_level", "F1AP log level");
+
+  - name: f1u_level
+    description: F1-U log level
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.f1u_level, "--f1u_level", "F1-U log level");
+
+  - name: gtpu_level
+    description: GTPU log level
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.gtpu_level, "--gtpu_level", "GTPU log level");
+
+  - name: ntn_level
+    description: NTN log level
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.ntn_level, "--ntn_level", "NTN log level");
+
+  - name: du_level
+    description: Log level for the DU
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.config.loggers.du_level, "--du_level", "Log level for the DU");
+
+  - name: hex_max_size
+    description: Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)
+    type: int
+    range: {min: -1, max: 1024}
+    cli11:
+      capture: true
+
+  - name: broadcast_enabled
+    description: Enable logging in the physical and MAC layer of broadcast messages and all PRACH opportunities
+    type: bool
+    cli11:
+      always_capture: true
+
+  - name: f1ap_json_enabled
+    description: Enable JSON logging of F1AP PDUs
+    type: bool
+    cli11:
+      always_capture: true
+
+  - name: high_latency_diagnostics_enabled
+    description: Log performance diagnostics when high computational latencies are detected
+    type: bool
+    cli11:
+      always_capture: true
+
+# ---------------------------------------------------------------------------
+# Trace subcommand parameters
+# ---------------------------------------------------------------------------
+  - name: executor_tracing_enable
+    description: Enable tracing for DU-high executors
+    type: bool
+    cli11:
+      flag: --du_high_enable
+      capture: true
+
+# ---------------------------------------------------------------------------
+# Metrics subcommand parameters
+# ---------------------------------------------------------------------------
+  - name: du_report_period
+    description: DU statistics report period in milliseconds
+    type: unsigned
+    mode: struct-only
+    cli11:
+      raw_cpp: |
+        add_option(app,
+                   "--du_report_period",
+                   config.config.metrics.du_report_period,
+                   "DU statistics report period in milliseconds")
+            ->capture_default_str()
+            ->check(CLI::Range(0U, static_cast<unsigned>(NOF_SUBFRAMES_PER_FRAME * NOF_SFNS * NOF_HYPER_SFNS)));
+
+  - name: enable_scheduler
+    description: Enable DU scheduler metrics
+    type: bool
+    cli11:
+      flag: --enable_sched
+      capture: true
+
+  - name: enable_rlc
+    description: Enable RLC metrics
+    type: bool
+    cli11:
+      capture: true
+
+  - name: enable_mac
+    description: Enable MAC metrics
+    type: bool
+    cli11:
+      capture: true
+
+  - name: enable_du_proc
+    description: Enable DU management and control procedure metrics
+    type: bool
+    cli11:
+      capture: true
+
+# ---------------------------------------------------------------------------
+# PCAP subcommand parameters (access anonymous sub-structs via cli11.member)
+# ---------------------------------------------------------------------------
+  - name: f1ap_filename
+    description: F1AP PCAP file output path
+    type: string
+    cli11:
+      member: f1ap.filename
+      capture: true
+
+  - name: f1ap_enable
+    description: Enable F1AP packet capture
+    type: bool
+    cli11:
+      member: f1ap.enabled
+      always_capture: true
+
+  - name: f1u_filename
+    description: F1-U PCAP file output path
+    type: string
+    cli11:
+      member: f1u.filename
+      capture: true
+
+  - name: f1u_enable
+    description: Enable F1-U packet capture
+    type: bool
+    cli11:
+      member: f1u.enabled
+      always_capture: true
+
+  - name: rlc_filename
+    description: RLC PCAP file output path
+    type: string
+    cli11:
+      member: rlc.filename
+      capture: true
+
+  - name: rlc_rb_type
+    description: RLC PCAP RB type (all, srb, drb)
+    type: string
+    cli11:
+      member: rlc.rb_type
+      capture: true
+
+  - name: rlc_enable
+    description: Enable RLC packet capture
+    type: bool
+    cli11:
+      member: rlc.enabled
+      always_capture: true
+
+  - name: mac_filename
+    description: MAC PCAP file output path
+    type: string
+    cli11:
+      member: mac.filename
+      capture: true
+
+  - name: mac_type
+    description: MAC PCAP pcap type (dlt or udp)
+    type: string
+    cli11:
+      member: mac.type
+      capture: true
+
+  - name: mac_enable
+    description: Enable MAC packet capture
+    type: bool
+    cli11:
+      member: mac.enabled
+      always_capture: true
+
+# ---------------------------------------------------------------------------
+# DU subcommand parameters
+# ---------------------------------------------------------------------------
+  - name: warn_on_drop
+    description: Log a warning for dropped packets in F1-U, RLC and MAC due to full queues
+    type: bool
+    cli11:
+      member: config.warn_on_drop
+      capture: true
+
+# ---------------------------------------------------------------------------
+# Expert execution subcommand parameters
+# ---------------------------------------------------------------------------
+  - name: ue_data_executor_queue_size
+    description: DU's UE executor task queue size for PDU processing
+    type: unsigned
+    cli11:
+      flag: --du_ue_data_executor_queue_size
+      capture: true
+
+# ---------------------------------------------------------------------------
+# Test mode subcommand parameters
+# ---------------------------------------------------------------------------
+  - name: rnti
+    description: C-RNTI (0x0 if not configured)
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        add_option(app, "--rnti", config.config.test_mode_cfg.test_ue.rnti, "C-RNTI (0x0 if not configured)")
+            ->capture_default_str()
+            ->check(CLI::Range(to_value((rnti_t::INVALID_RNTI)), to_value(rnti_t::MAX_CRNTI)));
+
+  - name: nof_ues
+    description: Number of test UE(s) to create
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        add_option(app, "--nof_ues", config.config.test_mode_cfg.test_ue.nof_ues, "Number of test UE(s) to create.")
+            ->capture_default_str()
+            ->check(CLI::Range((uint16_t)1, (uint16_t)MAX_NOF_DU_UES));
+
+  - name: ue_creation_stagger_slots
+    description: Number of slots between consecutive test mode UE creations
+    type: unsigned
+    range: {min: 0, max: 10240}
+    cli11:
+      capture: true
+
+  - name: auto_ack_indication_delay
+    description: Delay before the UL and DL HARQs are automatically ACKed
+    type: "optional<unsigned>"
+    cli11:
+      capture: true
+
+  - name: attach_detach_duration_ms
+    description: Duration in milliseconds of active traffic before UEs are released and recreated
+    type: "optional<unsigned>"
+    range: {min: 100, max: 10000}
+    cli11:
+      capture: true
+
+  - name: attach_detach_guard_duration_ms
+    description: Guard period duration in milliseconds between a release cycle and the next creation cycle
+    type: unsigned
+    range: {min: 100, max: 60000}
+    cli11:
+      capture: true
+
+  - name: pdsch_active
+    description: PDSCH enabled
+    type: bool
+    cli11:
+      capture: true
+
+  - name: pusch_active
+    description: PUSCH enabled
+    type: bool
+    cli11:
+      capture: true
+
+  - name: cqi
+    description: Channel Quality Information (CQI) to be forwarded to test UE
+    type: unsigned
+    range: {min: 1, max: 15}
+    cli11:
+      capture: true
+
+  - name: ri
+    description: Rank Indicator (RI) to be forwarded to test UE
+    type: unsigned
+    range: {min: 1, max: 4}
+    cli11:
+      capture: true
+
+  - name: pmi
+    description: Precoder Matrix Indicator (PMI) to be forwarded to test UE
+    type: unsigned
+    range: {min: 0, max: 3}
+    cli11:
+      capture: true
+
+  - name: i_1_1
+    description: Precoder Matrix codebook index "i_1_1" to be forwarded to test UE
+    type: unsigned
+    range: {min: 0, max: 7}
+    cli11:
+      capture: true
+
+  - name: i_1_3
+    description: Precoder Matrix codebook index "i_1_3" to be forwarded to test UE
+    type: unsigned
+    range: {min: 0, max: 1}
+    cli11:
+      capture: true
+
+  - name: i_2
+    description: Precoder Matrix codebook index "i_2" to be forwarded to test UE
+    type: unsigned
+    range: {min: 0, max: 3}
+    cli11:
+      capture: true
+
+# ---------------------------------------------------------------------------
+# Subcommand hierarchy
+# ---------------------------------------------------------------------------
+subcommands:
+  - name: log
+    description: Logging configuration
+    configurable: true
+    member: config.loggers
+    parameters: [mac_level, rlc_level, f1ap_level, f1u_level, gtpu_level, ntn_level, du_level,
+                 hex_max_size, broadcast_enabled, f1ap_json_enabled, high_latency_diagnostics_enabled]
+
+  - name: trace
+    description: General tracer configuration
+    configurable: true
+    member: config.tracer
+    subcommands:
+      - name: layers
+        description: Layer basis tracing configuration
+        configurable: true
+        parameters: [executor_tracing_enable]
+
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    member: config.metrics
+    subcommands:
+      - name: periodicity
+        description: Metrics periodicity configuration
+        configurable: true
+        parameters: [du_report_period]
+      - name: layers
+        description: Layer basis metrics configuration
+        configurable: true
+        member: layers_cfg
+        parameters: [enable_scheduler, enable_rlc, enable_mac, enable_du_proc]
+
+  - name: pcap
+    description: PCAP configuration
+    configurable: true
+    member: config.pcaps
+    parameters: [f1ap_filename, f1ap_enable, f1u_filename, f1u_enable,
+                 rlc_filename, rlc_rb_type, rlc_enable,
+                 mac_filename, mac_type, mac_enable]
+
+  - name: du
+    description: DU parameters
+    configurable: true
+    parameters: [warn_on_drop]
+
+  - name: expert_execution
+    description: Expert execution configuration
+    configurable: true
+    member: config.expert_execution_cfg
+    subcommands:
+      - name: queues
+        description: Task executor queue parameters
+        configurable: true
+        member: du_queue_cfg
+        parameters: [ue_data_executor_queue_size]
+
+  - name: test_mode
+    description: Test mode configuration
+    configurable: true
+    member: config.test_mode_cfg
+    subcommands:
+      - name: test_ue
+        description: automatically created UE for testing purposes
+        member: test_ue
+        parameters: [rnti, nof_ues, ue_creation_stagger_slots, auto_ack_indication_delay,
+                     attach_detach_duration_ms, attach_detach_guard_duration_ms,
+                     pdsch_active, pusch_active, cqi, ri, pmi, i_1_1, i_1_3, i_2]
+
+cli11:
+  function: configure_cli11_with_du_high_config_schema
+  post_configure_raw: |
+    app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.config.metrics.common_metrics_cfg);
+
+    // TODO: cell_cfg, cells, qos, srbs — requires complex static helper functions not yet expressed in the schema.
+    // See du_high_config_cli11_schema.cpp lines 2636–2809 for the hand-written implementation.
+

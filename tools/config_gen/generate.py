@@ -58,7 +58,8 @@ def _render_option(param: Parameter, config_var: str, app_var: str = "app") -> s
         chains.append("->capture_default_str()")
         chains.append(f"->check(CLI::IsMember({{{values_str}}}, CLI::ignore_case))")
     else:
-        call = f'add_option({app_var}, "{flag}", {config_var}.{param.name}, "{param.description}")'
+        member = param.cli11.member if param.cli11.member else param.name
+        call = f'add_option({app_var}, "{flag}", {config_var}.{member}, "{param.description}")'
 
     if param.cli11.always_capture:
         chains.append("->always_capture_default()")
@@ -81,27 +82,29 @@ def _render_subcmd_fn(subcmd: Subcommand, schema: Schema) -> str:
 
     Nested subcommands are rendered inline (not as separate static functions).
     """
+    config_var = f"config.{subcmd.member}" if subcmd.member else "config"
     lines = [f"static void configure_cli11_{subcmd.name}_args(CLI::App& app, {schema.name}& config)", "{"]
 
     # Direct parameters of this subcommand go flat on the passed app.
     for pname in subcmd.parameters:
         p = schema.param_by_name(pname)
-        if p.mode == "struct-only":
+        if p.mode == "struct-only" and not p.cli11.raw_cpp:
             continue
-        for line in _render_option(p, "config", app_var="app").splitlines():
+        for line in _render_option(p, config_var, app_var="app").splitlines():
             lines.append("  " + line)
 
     # Nested subcommands are created inline and their options added to their own app.
     for nested in subcmd.subcommands:
+        nested_config_var = f"config.{nested.member}" if nested.member else "config"
         cfg = "->configurable()" if nested.configurable else ""
         lines.append(
             f'  CLI::App* {nested.name}_subcmd = add_subcommand(app, "{nested.name}", "{nested.description}"){cfg};'
         )
         for pname in nested.parameters:
             p = schema.param_by_name(pname)
-            if p.mode == "struct-only":
+            if p.mode == "struct-only" and not p.cli11.raw_cpp:
                 continue
-            for line in _render_option(p, "config", app_var=f"*{nested.name}_subcmd").splitlines():
+            for line in _render_option(p, nested_config_var, app_var=f"*{nested.name}_subcmd").splitlines():
                 lines.append("  " + line)
         if nested.parse_complete_callback:
             cb = nested.parse_complete_callback.rstrip()
@@ -138,7 +141,7 @@ def _render_top_level_fn(schema: Schema) -> str:
     subcmd_params = _all_subcmd_params(schema.subcommands)
 
     for param in schema.parameters:
-        if param.name in subcmd_params or param.mode == "struct-only":
+        if param.name in subcmd_params or (param.mode == "struct-only" and not param.cli11.raw_cpp):
             continue
         for line in _render_option(param, "config").splitlines():
             lines.append("  " + line)
@@ -190,11 +193,14 @@ def _make_env(schema: Schema, schema_rel_path: str) -> jinja2.Environment:
 
 def _render_all(schema: Schema, schema_rel_path: str) -> dict[str, str]:
     env = _make_env(schema, schema_rel_path)
-    return {
-        schema.outputs.header: env.get_template("config_header.h.j2").render(),
-        schema.outputs.cli11_source: env.get_template("cli11_schema_cpp.j2").render(),
+    outputs = {
         schema.outputs.cli11_header: env.get_template("cli11_schema_h.j2").render(),
     }
+    if schema.generate_header:
+        outputs[schema.outputs.header] = env.get_template("config_header.h.j2").render()
+    if schema.generate_cli11_source:
+        outputs[schema.outputs.cli11_source] = env.get_template("cli11_schema_cpp.j2").render()
+    return outputs
 
 
 # ---------------------------------------------------------------------------

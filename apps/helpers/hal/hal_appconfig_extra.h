@@ -8,9 +8,7 @@
 
 namespace ocudu {
 
-struct o_du_high_e2_config;
-
-/// Configures the given CLI11 application with the o-ran du high e2 configuration schema.
-void configure_cli11_with_o_du_high_e2_config_schema(CLI::App& app, o_du_high_e2_config& config);
+/// Returns true if the HAL section is present in the given CLI11 application, otherwise false.
+bool is_hal_section_present(CLI::App& app);
 
 } // namespace ocudu

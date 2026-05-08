@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "du_low_appconfig_cli11_schema.h"
+#include "apps/helpers/hal/hal_appconfig_extra.h"
 #include "apps/helpers/hal/hal_cli11_schema.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_schema.h"
 #include "apps/helpers/tracing/tracer_appconfig_cli11_schema.h"

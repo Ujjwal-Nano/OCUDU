@@ -22,4 +22,12 @@ using namespace {{ ns }};
 {{ render_subcmd_fns() }}
 
 {% endif %}
+{% if schema.cli11_source_preamble %}
+{{ schema.cli11_source_preamble | trim }}
+
+{% endif %}
 {{ render_top_level_fn() }}
+{% if schema.cli11_source_extra %}
+
+{{ schema.cli11_source_extra | trim }}
+{% endif %}

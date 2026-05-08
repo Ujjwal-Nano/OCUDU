@@ -19,6 +19,11 @@ struct {{ schema.name }};
 
 /// Configures the given CLI11 application with the {{ schema.description | lower }} schema.
 void {{ schema.cli11.function }}(CLI::App& app, {{ schema.name }}& config);
+{% if schema.cli11_header_extra %}
+
+{{ schema.cli11_header_extra | trim }}
+
+{% endif %}
 
 {% for ns in schema.namespace_parts | reverse %}
 } // namespace {{ ns }}

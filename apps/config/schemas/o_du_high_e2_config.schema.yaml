@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: o_du_high_e2_config
+namespace: ocudu
+description: O-RAN DU high E2 configuration
+generate_header: false
+
+outputs:
+  header:       apps/units/flexible_o_du/o_du_high/e2/o_du_high_e2_config.h
+  cli11_source: apps/units/flexible_o_du/o_du_high/e2/o_du_high_e2_config_cli11_schema.cpp
+  cli11_header: apps/units/flexible_o_du/o_du_high/e2/o_du_high_e2_config_cli11_schema.h
+
+cli11_extra_includes:
+  - '"apps/helpers/e2/e2_cli11_schema.h"'
+
+parameters:
+  - name: filename
+    description: E2AP PCAP file output path
+    type: string
+    cli11:
+      flag: --e2ap_du_filename
+      capture: true
+
+  - name: enabled
+    description: Enable E2AP packet capture
+    type: bool
+    cli11:
+      flag: --e2ap_enable
+      always_capture: true
+
+subcommands:
+  - name: pcap
+    description: PCAP configuration
+    configurable: true
+    member: pcaps
+    parameters: [filename, enabled]
+
+cli11:
+  function: configure_cli11_with_o_du_high_e2_config_schema
+  post_configure_raw: |
+    configure_cli11_with_e2_config_schema(app, config.base_cfg, "--enable_du_e2", "Enable DU E2 agent");
+

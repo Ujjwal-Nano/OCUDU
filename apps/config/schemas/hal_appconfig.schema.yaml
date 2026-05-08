@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: hal_appconfig
+namespace: ocudu
+description: hal application configuration
+
+outputs:
+  header:       apps/helpers/hal/hal_appconfig.h
+  cli11_source: apps/helpers/hal/hal_cli11_schema.cpp
+  cli11_header: apps/helpers/hal/hal_cli11_schema.h
+
+header_includes:
+  - <string>
+
+parameters:
+  - name: eal_args
+    description: EAL configuration parameters used to initialize DPDK
+    type: string
+
+subcommands:
+  - name: hal
+    description: HAL configuration
+    configurable: true
+    parameters: [eal_args]
+
+cli11:
+  function: configure_cli11_with_hal_appconfig_schema
+

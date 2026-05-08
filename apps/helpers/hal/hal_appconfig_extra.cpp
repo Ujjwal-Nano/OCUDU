@@ -2,16 +2,10 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#pragma once
+#include "hal_appconfig_extra.h"
 
-#include <string>
-
-namespace ocudu {
-
-/// hal application configuration.
-struct hal_appconfig {
-  /// EAL configuration parameters used to initialize DPDK.
-  std::string eal_args;
-};
-
-} // namespace ocudu
+bool ocudu::is_hal_section_present(CLI::App& app)
+{
+  auto subcmd = app.get_subcommand("hal");
+  return subcmd->count_all() != 0;
+}

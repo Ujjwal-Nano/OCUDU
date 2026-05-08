@@ -9,6 +9,7 @@
 #include "cu_cp/cu_cp_unit_config_validator.h"
 #include "cu_cp/cu_cp_unit_config_yaml_writer.h"
 #include "e2/o_cu_cp_e2_config_cli11_schema.h"
+#include "e2/o_cu_cp_e2_config_extra.h"
 #include "e2/o_cu_cp_e2_config_translators.h"
 #include "e2/o_cu_cp_e2_config_yaml_writer.h"
 

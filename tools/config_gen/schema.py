@@ -22,6 +22,9 @@ class Cli11Param:
     capture: bool = False
     raw_cpp: Optional[str] = None
     auto_sentinel: Optional[str] = None
+    # Override the C++ member access path (relative to the subcommand's config_var).
+    # E.g. "f1ap.filename" → config_var.f1ap.filename instead of config_var.<name>.
+    member: Optional[str] = None
 
 
 @dataclass
@@ -82,6 +85,8 @@ class Subcommand:
     parameters: list[str] = field(default_factory=list)
     subcommands: list[Subcommand] = field(default_factory=list)
     parse_complete_callback: Optional[str] = None
+    # When set, parameters in this subcommand access config.<member>.<param> instead of config.<param>.
+    member: Optional[str] = None
 
 
 @dataclass
@@ -118,6 +123,16 @@ class Schema:
     header_includes: list[str] = field(default_factory=list)
     cli11_extra_includes: list[str] = field(default_factory=list)
     struct_extra: Optional[str] = None
+    # Raw C++ appended after the configure function declaration in the generated CLI11 header.
+    cli11_header_extra: Optional[str] = None
+    # Raw C++ inserted between the generated subcommand helpers and the top-level configure function.
+    cli11_source_preamble: Optional[str] = None
+    # Raw C++ appended after the top-level configure function definition in the generated CLI11 source.
+    cli11_source_extra: Optional[str] = None
+    # When False, skip generating the config struct header (use for multi-struct headers).
+    generate_header: bool = True
+    # When False, skip generating the CLI11 source .cpp (use when the source is too complex to express in the schema).
+    generate_cli11_source: bool = True
 
     @property
     def namespace_parts(self) -> list[str]:
@@ -139,6 +154,7 @@ def _load_cli11_param(d: dict) -> Cli11Param:
         capture=d.get("capture", False),
         raw_cpp=d.get("raw_cpp"),
         auto_sentinel=d.get("auto_sentinel"),
+        member=d.get("member"),
     )
 
 
@@ -170,6 +186,7 @@ def _load_subcommand(d: dict) -> Subcommand:
         parameters=d.get("parameters", []),
         subcommands=nested,
         parse_complete_callback=d.get("parse_complete_callback"),
+        member=d.get("member"),
     )
 
 
@@ -206,4 +223,9 @@ def load_schema(path: Path) -> Schema:
         header_includes=d.get("header_includes", []),
         cli11_extra_includes=d.get("cli11_extra_includes", []),
         struct_extra=d.get("struct_extra"),
+        cli11_header_extra=d.get("cli11_header_extra"),
+        cli11_source_preamble=d.get("cli11_source_preamble"),
+        cli11_source_extra=d.get("cli11_source_extra"),
+        generate_header=d.get("generate_header", True),
+        generate_cli11_source=d.get("generate_cli11_source", True),
     )

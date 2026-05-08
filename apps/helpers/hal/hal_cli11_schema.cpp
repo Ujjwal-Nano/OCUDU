@@ -18,9 +18,3 @@ void ocudu::configure_cli11_with_hal_appconfig_schema(CLI::App& app, hal_appconf
   CLI::App* hal_subcmd = add_subcommand(app, "hal", "HAL configuration")->configurable();
   configure_cli11_hal_args(*hal_subcmd, config);
 }
-
-bool ocudu::is_hal_section_present(CLI::App& app)
-{
-  auto subcmd = app.get_subcommand("hal");
-  return subcmd->count_all() != 0;
-}

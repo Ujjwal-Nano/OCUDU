@@ -4,6 +4,7 @@
 
 #include "du_appconfig_cli11_schema.h"
 #include "apps/helpers/f1u/f1u_cli11_schema.h"
+#include "apps/helpers/hal/hal_appconfig_extra.h"
 #include "apps/helpers/hal/hal_cli11_schema.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_schema.h"
 #include "apps/helpers/network/sctp_cli11_schema.h"

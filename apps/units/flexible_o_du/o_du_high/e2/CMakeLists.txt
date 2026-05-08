@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+include(ConfigGenerate)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/o_du_high_e2_config.schema.yaml)
 
 set(SOURCES
+        o_du_high_e2_config_extra.cpp
         o_du_high_e2_config_cli11_schema.cpp
         o_du_high_e2_config_translators.cpp
         o_du_high_e2_config_yaml_writer.cpp)
