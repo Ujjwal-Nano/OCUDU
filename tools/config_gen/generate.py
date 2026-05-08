@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -200,7 +201,21 @@ def _render_all(schema: Schema, schema_rel_path: str) -> dict[str, str]:
 # File I/O
 # ---------------------------------------------------------------------------
 
+def _clang_format(content: str, path: Path) -> str:
+    """Run clang-format-18 on content (only for .h/.cpp files)."""
+    if path.suffix not in (".h", ".cpp"):
+        return content
+    result = subprocess.run(
+        ["clang-format-18", f"--assume-filename={path.name}", "-"],
+        input=content,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout if result.returncode == 0 else content
+
+
 def _write_if_changed(path: Path, content: str, check: bool, changed: list[Path]) -> None:
+    content = _clang_format(content, path)
     if path.exists() and path.read_text() == content:
         return
     if check:
