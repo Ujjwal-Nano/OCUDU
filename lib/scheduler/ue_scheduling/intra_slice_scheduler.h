@@ -39,6 +39,9 @@ public:
   /// Schedule UL grants for a given slice candidate.
   void ul_sched(ul_ran_slice_candidate slice, scheduler_policy& ul_policy);
 
+  /// Returns the PDSCH slot set during the last dl_sched call. May be invalid if no DL was scheduled.
+  slot_point get_pdsch_slot() const { return pdsch_slot; }
+
 private:
   /// Context for a given slice scheduling.
   struct slice_ue_group_scheduler {
