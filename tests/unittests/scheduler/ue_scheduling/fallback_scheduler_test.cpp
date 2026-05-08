@@ -80,21 +80,14 @@ struct test_bench {
       return false;
     }
     ue_db.add_ue(ev.next_config(), create_req.starts_in_fallback, create_req.ul_ccch_slot_rx);
-    auto& ue = ue_db[create_req.ue_index];
-    ue.get_pcell().set_fallback_state(true, false, false);
+    if (not create_req.ul_ccch_slot_rx.has_value() and not create_req.starts_in_fallback) {
+      ue_db.crnti_ce_received(create_req.ue_index);
+    }
     ev.notify_completion();
     return true;
   }
 
-  void set_conres_state(du_ue_index_t ue_index, bool state)
-  {
-    if (not ue_db.contains(ue_index)) {
-      // UE already exists.
-      return;
-    }
-
-    ue_db[ue_index].get_pcell().set_conres_state(state);
-  }
+  void handle_conres_completed(du_ue_index_t ue_index) { ue_db.handle_conres_ce_outcome(ue_index, true); }
 };
 
 class base_fallback_tester
@@ -301,7 +294,6 @@ protected:
     if (tx_conres) {
       bench->ue_db[ue_idx].handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_idx, lcid_dl_sch_t::UE_CON_RES_ID});
       bench->fallback_sched.handle_conres_indication(ue_idx);
-      bench->set_conres_state(ue_idx, false);
     }
 
     // Notify scheduler of DL buffer state.
@@ -415,7 +407,7 @@ TEST_P(fallback_scheduler_tester, successfully_allocated_resources_for_srb1_pdu_
   setup_sched(create_expert_config(3), create_custom_cell_config_request(params.k0));
   // Add UE.
   const du_ue_index_t ue_idx = to_du_ue_index(0);
-  add_ue(to_rnti(0x4601), ue_idx);
+  add_ue(to_rnti(0x4601), ue_idx, false, current_slot);
   auto& test_ue = get_ue(ue_idx);
   // UE reports CQI 0.
   csi_report_data csi_report{};
@@ -437,7 +429,7 @@ TEST_P(fallback_scheduler_tester, successfully_allocated_resources_for_srb1_pdu_
                       return pucch.crnti == test_ue.crnti and pucch.uci_bits.harq_ack_nof_bits != 0 and
                              pucch.format() == ocudu::pucch_format::FORMAT_1;
                     })) {
-      bench->set_conres_state(ue_idx, true);
+      bench->handle_conres_completed(test_ue.ue_index);
     }
 
     const pdcch_dl_information* pdcch_it = get_ue_allocated_pdcch(test_ue);
@@ -496,7 +488,7 @@ TEST_P(fallback_scheduler_tester, when_conres_and_msg4_scheduled_separately_msg4
   setup_sched(create_expert_config(1), create_custom_cell_config_request(params.k0));
 
   // Add UE 1.
-  add_ue(to_rnti(0x4601), to_du_ue_index(0));
+  add_ue(to_rnti(0x4601), to_du_ue_index(0), false, current_slot);
   // Notify about SRB0 message in DL of size 99 bytes (this size is set empirically to force the scheduler to schedule
   // Conres and MSG4 separately).
   unsigned ue1_mac_srb0_sdu_size = 99;
@@ -525,7 +517,7 @@ TEST_P(fallback_scheduler_tester, when_conres_and_msg4_scheduled_separately_msg4
   ASSERT_FALSE(msg4_pdcch.has_value());
 
   // Ack the ConRes to set the Contention Resolution complete.
-  bench->set_conres_state(test_ue.ue_index, true);
+  bench->handle_conres_completed(test_ue.ue_index);
 
   for (; sl_idx != max_test_run_slots * 2; ++sl_idx) {
     run_slot();
@@ -543,7 +535,7 @@ TEST_P(fallback_scheduler_tester, conres_and_msg4_scheduled_scheduled_over_diffe
   setup_sched(create_expert_config(1), create_custom_cell_config_request(params.k0));
 
   // Add UE 1.
-  add_ue(to_rnti(0x4601), to_du_ue_index(0));
+  add_ue(to_rnti(0x4601), to_du_ue_index(0), false, current_slot);
   // Notify about SRB0 message in DL of size 99 bytes (this size is set empirically to force the scheduler to schedule
   // Conres and MSG4 separately).
   unsigned ue1_mac_srb0_sdu_size = 99;
@@ -565,7 +557,7 @@ TEST_P(fallback_scheduler_tester, conres_and_msg4_scheduled_scheduled_over_diffe
                     });
     if (con_res_pucch_allocated) {
       // Set ConRes complete for the UE.
-      bench->set_conres_state(test_ue.ue_index, true);
+      bench->handle_conres_completed(test_ue.ue_index);
     }
 
     const pdcch_dl_information* pdcch_it = get_ue_allocated_pdcch(test_ue);
@@ -587,7 +579,7 @@ TEST_P(fallback_scheduler_tester, when_conres_and_msg4_srb1_scheduled_separately
   setup_sched(create_expert_config(1), create_custom_cell_config_request(params.k0));
 
   // Add UE 1.
-  add_ue(to_rnti(0x4601), to_du_ue_index(0));
+  add_ue(to_rnti(0x4601), to_du_ue_index(0), false, current_slot);
   // Notify about SRB0 message in DL of size 99 bytes.
   unsigned ue1_mac_srb1_sdu_size = 99;
   push_buffer_state_to_dl_ue(to_du_ue_index(0), current_slot, ue1_mac_srb1_sdu_size, false);
@@ -623,7 +615,7 @@ TEST_P(fallback_scheduler_tester, when_conres_and_msg4_srb1_scheduled_separately
   ASSERT_FALSE(msg4_srb1_pdcch.has_value());
 
   // Ack the ConRes to set the Contention Resolution complete.
-  bench->set_conres_state(test_ue.ue_index, true);
+  bench->handle_conres_completed(test_ue.ue_index);
 
   for (; sl_idx != max_test_run_slots * 2; ++sl_idx) {
     run_slot();
@@ -1385,9 +1377,8 @@ TEST_P(fallback_scheduler_srb1_segmentation, test_scheduling_srb1_segmentation)
   // are left unserved (unless it reaches the max_nof_harq_retxs).
 
   for (unsigned du_idx = 0; du_idx < MAX_UES; du_idx++) {
-    add_ue(to_rnti(0x4601 + du_idx), to_du_ue_index(du_idx));
-    // For this test, assumes the ConRes has been transmitted and acked.
-    //    bench->set_conres_complete(to_du_ue_index(du_idx));
+    add_ue(to_rnti(0x4601 + du_idx), to_du_ue_index(du_idx), false, current_slot);
+    bench->handle_conres_completed(to_du_ue_index(du_idx));
     ues_testers.emplace_back(bench->cell_cfg, get_ue(to_du_ue_index(du_idx)), this);
   }
 
@@ -1658,16 +1649,31 @@ TEST_F(fallback_sched_ue_w_out_pucch_cfg, when_reconf_is_after_reest_both_common
 {
   const auto rnti        = to_rnti(0x4601);
   const auto du_ue_index = to_du_ue_index(0);
-  ASSERT_TRUE(add_ue(rnti, du_ue_index));
+  ASSERT_TRUE(add_ue(rnti, du_ue_index, false, current_slot));
   auto& u = bench->ue_db[to_du_ue_index(0)];
   ASSERT_TRUE(u.get_pcell().cfg().init_bwp().ul.ded() != nullptr);
 
+  // Schedule and ACK ConResCE.
+  u.handle_dl_mac_ce_indication(dl_mac_ce_indication{u.ue_index, lcid_dl_sch_t{lcid_dl_sch_t::UE_CON_RES_ID}});
+  bench->fallback_sched.handle_conres_indication(u.ue_index);
+  for (unsigned i = 0; i != MAX_TEST_RUN_SLOTS; ++i) {
+    run_slot();
+    auto&       pucchs       = bench->res_grid[0].result.ul.pucchs;
+    const auto* pucch_common = std::find_if(pucchs.begin(), pucchs.end(), [rnti = u.crnti](const pucch_info& pucch) {
+      return pucch.crnti == rnti and pucch.uci_bits.harq_ack_nof_bits > 0;
+    });
+    if (pucch_common != pucchs.end()) {
+      bench->ue_db.handle_conres_ce_outcome(u.ue_index, true);
+      break;
+    }
+  }
+
   // Signal a UE reconfiguration that happens after re-establishment.
-  auto ue_cfg              = sched_config_helper::create_default_sched_ue_creation_request(bench->cell_cfg.params);
-  ue_cfg.cfg.reestablished = true;
+  auto ue_cfg      = sched_config_helper::create_default_sched_ue_creation_request(bench->cell_cfg.params);
+  ue_cfg.cfg.cause = sched_ue_config_request::causes::rrc_reconf_after_reest;
   sched_ue_reconfiguration_message reconf_msg{.ue_index = du_ue_index, .crnti = rnti, .cfg = ue_cfg.cfg};
   auto                             ev = bench->cfg_mng.update_ue(reconf_msg);
-  bench->ue_db.reconfigure_ue(ev.next_config(), true);
+  bench->ue_db.reconfigure_ue(ev.next_config(), ue_cfg.cfg.cause);
 
   slot_point slot_update_srb_traffic{current_slot.numerology(), generate_srb_traffic_slot()};
 
@@ -1717,7 +1723,8 @@ TEST_F(fallback_sched_ue_w_out_pucch_cfg, when_srb1_is_scheduled_with_crnti_both
 {
   const auto rnti        = to_rnti(0x4601);
   const auto du_ue_index = to_du_ue_index(0);
-  ASSERT_TRUE(add_ue(rnti, du_ue_index));
+  ASSERT_TRUE(add_ue(rnti, du_ue_index, false, current_slot));
+  bench->handle_conres_completed(du_ue_index);
   auto& u = bench->ue_db[to_du_ue_index(0)];
   ASSERT_TRUE(u.get_pcell().cfg().init_bwp().ul.ded() != nullptr);
 
