@@ -6,9 +6,12 @@
 
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/adt/slotted_vector.h"
-#include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/ran/cause/e1ap_cause.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/pdcp/pdcp_discard_timer.h"
+#include "ocudu/ran/pdcp/pdcp_rlc_mode.h"
+#include "ocudu/ran/pdcp/pdcp_sn_size.h"
+#include "ocudu/ran/pdcp/pdcp_t_reordering.h"
 #include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/up_transport_layer_info.h"
 #include "ocudu/security/security.h"
@@ -122,7 +125,7 @@ enum class e1ap_dupl_activation { active = 0, inactive };
 struct e1ap_pdcp_config {
   pdcp_sn_size                        pdcp_sn_size_ul;
   pdcp_sn_size                        pdcp_sn_size_dl;
-  ocudu::pdcp_rlc_mode                rlc_mod;
+  pdcp_rlc_mode                       rlc_mod;
   std::optional<e1ap_rohc_config>     rohc_config;
   std::optional<pdcp_t_reordering>    t_reordering_timer;
   std::optional<pdcp_discard_timer>   discard_timer;

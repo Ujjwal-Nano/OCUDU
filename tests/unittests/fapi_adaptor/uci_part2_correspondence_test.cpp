@@ -3,13 +3,31 @@
 
 #include "ocudu/fapi_adaptor/uci_part2_correspondence_generator.h"
 #include "ocudu/ran/csi_report/csi_report_on_pusch_helpers.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
 using namespace fapi_adaptor;
 
 static constexpr unsigned NUM_CSI_RESOURCES = 1;
+
+namespace ocudu {
+
+inline std::ostream& operator<<(std::ostream& os, const pmi_codebook_config& pmi)
+{
+  return os << to_string(pmi);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const csi_report_quantities& csi)
+{
+  return os << to_string(csi);
+}
+
+} // namespace ocudu
+
+inline std::ostream& operator<<(std::ostream& os, const pmi_codebook_config& pmi)
+{
+  return os << to_string(pmi);
+}
 
 namespace {
 
@@ -30,7 +48,7 @@ TEST_P(uci_part2_correspondence_generator_test, correct_generation_test)
   std::unique_ptr<uci_part2_correspondence_repository> repository;
   std::tie(mapper, repository) = generate_uci_part2_correspondence(NUM_CSI_RESOURCES);
 
-  unsigned            nof_csi_rs_ports = csi_report_get_nof_csi_rs_antenna_ports(codebook);
+  unsigned            nof_csi_rs_ports = get_precoding_codebook_antenna_ports(codebook);
   ri_restriction_type ri_restiction(nof_csi_rs_ports);
   ri_restiction.fill(0, nof_csi_rs_ports);
 

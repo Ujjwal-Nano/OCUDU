@@ -17,6 +17,7 @@
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp_bearer_context_update.h"
 #include "ocudu/ran/plmn_identity.h"
+#include "ocudu/xnap/xnap_types.h"
 #include <optional>
 
 namespace ocudu::ocucp {
@@ -28,7 +29,7 @@ struct cu_cp_ue_context {
   xnc_peer_index_t                 xnc_peer_idx = xnc_peer_index_t::invalid;
   plmn_identity                    plmn         = plmn_identity::test_value();
   gnb_du_id_t                      du_id        = gnb_du_id_t::invalid;
-  ue_index_t                       ue_index     = ue_index_t::invalid;
+  cu_cp_ue_index_t                 ue_index     = cu_cp_ue_index_t::invalid;
   rnti_t                           crnti        = rnti_t::INVALID_RNTI;
   cu_cp_aggregate_maximum_bit_rate ue_ambr;
   /// \brief Flag to disable new UE reconfigurations. This can be used, for instance, to reconfigure UE contexts
@@ -40,22 +41,30 @@ struct cu_cp_ue_context {
 };
 
 struct cu_cp_ue_handover_context {
-  ue_index_t target_ue_index = ue_index_t::invalid;
-  uint8_t    rrc_reconfig_transaction_id;
+  cu_cp_ue_index_t target_ue_index = cu_cp_ue_index_t::invalid;
+  uint8_t          rrc_reconfig_transaction_id;
 };
 
 /// \brief Single CHO candidate cell context.
 struct cu_cp_cho_candidate {
   cond_recfg_id_t cond_recfg_id{
-      cond_recfg_id_t(bounded_integer_invalid_tag{})};       ///< Conditional reconfiguration ID (1-8 per 3GPP).
-  pci_t               target_pci = INVALID_PCI;              ///< Target cell PCI.
-  nr_cell_global_id_t target_cgi;                            ///< Target cell global identity.
-  ue_index_t          target_ue_index = ue_index_t::invalid; ///< Target UE index allocated for this candidate.
-  byte_buffer         prepared_rrc_recfg;                    ///< Pre-packed RRCReconfiguration for this target.
-  unsigned            rrc_reconfig_transaction_id = 0; ///< RRC transaction ID for this candidate's reconfiguration.
+      cond_recfg_id_t(bounded_integer_invalid_tag{})};          ///< Conditional reconfiguration ID (1-8 per 3GPP).
+  pci_t               target_pci = INVALID_PCI;                 ///< Target cell PCI.
+  nr_cell_global_id_t target_cgi;                               ///< Target cell global identity.
+  cu_cp_ue_index_t target_ue_index = cu_cp_ue_index_t::invalid; ///< Target UE index; invalid for inter-CU candidates.
+  byte_buffer      prepared_rrc_recfg;                          ///< Pre-packed RRCReconfiguration for this target.
+  unsigned         rrc_reconfig_transaction_id = 0; ///< RRC transaction ID for this candidate's reconfiguration.
 
   /// \brief E1AP bearer context modification request for CU-UP tunnel update after CHO completion.
   e1ap_bearer_context_modification_request bearer_context_mod_request;
+
+  /// Xn-C peer index; set when the target is served by a remote CU-CP (inter-CU CHO via Xn).
+  std::optional<xnc_peer_index_t> xnc_index;
+  /// Target XNAP UE ID returned in HO Request Ack; needed for ConditionalHandoverCancel.
+  peer_xnap_ue_id_t peer_xnap_ue_id = peer_xnap_ue_id_t::invalid;
+
+  /// \brief Returns true if this candidate targets a remote CU-CP (Xn-based CHO).
+  bool is_inter_cu() const { return xnc_index.has_value(); }
 };
 
 /// \brief CHO context for a UE (supports 1-8 candidates per 3GPP).
@@ -76,16 +85,16 @@ struct cu_cp_ue_cho_context {
     target, ///< This UE is a CHO target candidate, awaiting Access Success.
   };
 
-  role_t                           role            = role_t::source;      ///< CHO role of this UE.
-  ue_index_t                       source_ue_index = ue_index_t::invalid; ///< For target UEs: the source UE index.
-  state_t                          state           = state_t::idle;       ///< Current CHO state.
-  std::vector<cu_cp_cho_candidate> candidates;                            ///< CHO candidate cells (1-8).
+  role_t           role            = role_t::source;            ///< CHO role of this UE.
+  cu_cp_ue_index_t source_ue_index = cu_cp_ue_index_t::invalid; ///< For target UEs: the source UE index.
+  state_t          state           = state_t::idle;             ///< Current CHO state.
+  std::vector<cu_cp_cho_candidate> candidates;                  ///< CHO candidate cells (1-8).
   unique_timer cho_execution_timer; ///< Fires conditional_handover_cancellation_routine if UE never executes CHO.
 
   /// \brief Find candidate by target UE index.
   /// \param[in] target_ue_idx Target UE index to search for.
   /// \return Pointer to candidate if found, nullptr otherwise.
-  cu_cp_cho_candidate* find_candidate(ue_index_t target_ue_idx)
+  cu_cp_cho_candidate* find_candidate(cu_cp_ue_index_t target_ue_idx)
   {
     for (auto& candidate : candidates) {
       if (candidate.target_ue_index == target_ue_idx) {
@@ -114,7 +123,7 @@ struct cu_cp_ue_cho_context {
   {
     cho_execution_timer.stop();
     role            = role_t::source;
-    source_ue_index = ue_index_t::invalid;
+    source_ue_index = cu_cp_ue_index_t::invalid;
     state           = state_t::idle;
     candidates.clear();
   }
@@ -123,7 +132,7 @@ struct cu_cp_ue_cho_context {
 class cu_cp_ue : public cu_cp_ue_impl_interface
 {
 public:
-  cu_cp_ue(ue_index_t                     ue_index_,
+  cu_cp_ue(cu_cp_ue_index_t               ue_index_,
            du_index_t                     du_index_,
            timer_manager&                 timers_,
            task_executor&                 task_exec_,
@@ -139,7 +148,7 @@ public:
   void stop();
 
   /// \brief Get the UE index of the UE.
-  ue_index_t get_ue_index() const override { return ue_index; }
+  cu_cp_ue_index_t get_ue_index() const override { return ue_index; }
 
   /// \brief Get the PCI of the UE.
   [[nodiscard]] pci_t get_pci() const { return pci; }
@@ -258,7 +267,7 @@ public:
 
 private:
   // Common context.
-  ue_index_t             ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t       ue_index = cu_cp_ue_index_t::invalid;
   ue_task_scheduler_impl task_sched;
   up_resource_manager    up_mng;
   ue_security_manager    sec_mng;

@@ -38,6 +38,7 @@
 #include "ocudu/e2/gateways/e2_network_client_factory.h"
 #include "ocudu/f1ap/gateways/f1c_local_connector_factory.h"
 #include "ocudu/f1u/local_connector/f1u_local_connector.h"
+#include "ocudu/gtpu/gtpu_teid_pool_factory.h"
 #include "ocudu/ngap/gateways/n2_connection_client_factory.h"
 #include "ocudu/support/backtrace.h"
 #include "ocudu/support/config_parsers.h"
@@ -426,6 +427,19 @@ int main(int argc, char** argv)
     cu_timers    = dummy_timers.get();
   }
 
+  // Create F1-U TEID allocator (CU-UP)
+  gtpu_allocator_creation_request cu_f1u_alloc_msg = {
+      .max_nof_teids = o_cu_up_app_unit->get_o_cu_up_unit_config().cu_up_cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
+      .teid_release_linger_time = GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
+      .timers                   = *cu_timers};
+  std::unique_ptr<gtpu_teid_pool> cu_f1u_teid_allocator = create_gtpu_allocator(cu_f1u_alloc_msg);
+
+  // Create F1-U TEID allocator (DU)
+  gtpu_allocator_creation_request du_f1u_alloc_msg      = {.max_nof_teids            = MAX_NOF_DU_UES * MAX_NOF_DRBS,
+                                                           .teid_release_linger_time = GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
+                                                           .timers                   = time_ctrl->get_timer_manager()};
+  std::unique_ptr<gtpu_teid_pool> du_f1u_teid_allocator = create_gtpu_allocator(du_f1u_alloc_msg);
+
   // Create F1-U connector
   std::unique_ptr<f1u_local_connector> f1u_conn = std::make_unique<f1u_local_connector>();
 
@@ -482,6 +496,7 @@ int main(int argc, char** argv)
   o_cu_up_unit_dependencies o_cuup_unit_deps;
   o_cuup_unit_deps.workers                = &workers;
   o_cuup_unit_deps.e1ap_conn_client       = e1_gw.get();
+  o_cuup_unit_deps.f1u_teid_allocator     = cu_f1u_teid_allocator.get();
   o_cuup_unit_deps.f1u_gateway            = f1u_conn->get_f1u_cu_up_gateway();
   o_cuup_unit_deps.gtpu_pcap              = cu_up_dlt_pcaps.n3.get();
   o_cuup_unit_deps.timers                 = cu_timers;
@@ -500,6 +515,7 @@ int main(int argc, char** argv)
   o_du_unit_dependencies odu_dependencies;
   odu_dependencies.workers                = &workers;
   odu_dependencies.f1c_client_handler     = f1c_gw.get();
+  odu_dependencies.f1u_teid_allocator     = du_f1u_teid_allocator.get();
   odu_dependencies.f1u_gw                 = f1u_conn->get_f1u_du_gateway();
   odu_dependencies.timer_ctrl             = time_ctrl.get();
   odu_dependencies.mac_p                  = du_pcaps.mac.get();
