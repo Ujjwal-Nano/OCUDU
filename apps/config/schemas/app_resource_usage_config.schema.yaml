@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: app_resource_usage_config
+namespace: ocudu::app_services
+description: Application resource usage configuration
+
+outputs:
+  header:       apps/services/app_resource_usage/app_resource_usage_config.h
+  cli11_source: apps/services/app_resource_usage/app_resource_usage_config_cli11_schema.cpp
+  cli11_header: apps/services/app_resource_usage/app_resource_usage_config_cli11_schema.h
+
+header_includes:
+  - '"apps/helpers/metrics/metrics_config.h"'
+
+cli11_extra_includes:
+  - '"apps/helpers/metrics/metrics_config_cli11_schema.h"'
+
+parameters:
+  - name: metrics_consumers_cfg
+    description: Common metrics configuration
+    type: "app_helpers::metrics_config"
+    mode: struct-only
+
+  - name: enable_app_usage
+    description: Enable application usage metrics
+    type: bool
+    default: "false"
+    cli11:
+      capture: true
+
+subcommands:
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    subcommands:
+      - name: layers
+        description: Layer basis metrics configuration
+        configurable: true
+        parameters: [enable_app_usage]
+
+cli11:
+  function: configure_cli11_with_app_resource_usage_config_schema
+  post_configure_raw: |
+    app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_consumers_cfg);

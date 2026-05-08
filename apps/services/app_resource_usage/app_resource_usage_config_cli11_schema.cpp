@@ -10,18 +10,17 @@
 using namespace ocudu;
 using namespace app_services;
 
-static void configure_cli11_metrics_args(CLI::App& app, bool& enable_metrics)
+static void configure_cli11_metrics_args(CLI::App& app, app_resource_usage_config& config)
 {
-  auto* layers_subcmd = add_subcommand(app, "layers", "Layer basis metrics configuration")->configurable();
-  add_option(*layers_subcmd, "--enable_app_usage", enable_metrics, "Enable application usage metrics")
+  CLI::App* layers_subcmd = add_subcommand(app, "layers", "Layer basis metrics configuration")->configurable();
+  add_option(*layers_subcmd, "--enable_app_usage", config.enable_app_usage, "Enable application usage metrics")
       ->capture_default_str();
 }
 
 void ocudu::app_services::configure_cli11_with_app_resource_usage_config_schema(CLI::App&                  app,
                                                                                 app_resource_usage_config& config)
 {
-  // Metrics section.
   CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, config.enable_app_usage);
+  configure_cli11_metrics_args(*metrics_subcmd, config);
   app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_consumers_cfg);
 }

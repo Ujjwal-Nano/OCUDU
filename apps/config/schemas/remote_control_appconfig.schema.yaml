@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: remote_control_appconfig
+namespace: ocudu
+description: Remote control application configuration
+
+outputs:
+  header:       apps/services/remote_control/remote_control_appconfig.h
+  cli11_source: apps/services/remote_control/remote_control_appconfig_cli11_schema.cpp
+  cli11_header: apps/services/remote_control/remote_control_appconfig_cli11_schema.h
+
+header_includes:
+  - <cstdint>
+  - <string>
+
+parameters:
+  - name: enabled
+    description: Enables the Remote Control Server
+    type: bool
+    default: "false"
+    cli11:
+      always_capture: true
+
+  - name: bind_addr
+    description: Remote Control Server bind address
+    type: string
+    default: '"127.0.0.1"'
+    cli11:
+      capture: true
+
+  - name: port
+    description: Port where the remote control server listens for incoming connections
+    type: uint16_t
+    default: "8001"
+    cli11:
+      capture: true
+    range: {min: 0, max: 65535}
+
+  - name: enable_metrics_subscription
+    description: Enable JSON metrics reporting
+    type: bool
+    default: "false"
+    cli11:
+      flag: --enable_json
+      always_capture: true
+
+subcommands:
+  - name: remote_control
+    description: Remote control configuration
+    configurable: true
+    parameters: [enabled, bind_addr, port]
+
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    parameters: [enable_metrics_subscription]
+
+cli11:
+  function: configure_cli11_with_remote_control_appconfig_schema

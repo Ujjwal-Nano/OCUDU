@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: udp_appconfig
+namespace: ocudu
+description: UDP gateway configuration
+
+outputs:
+  header:       apps/helpers/network/udp_appconfig.h
+  cli11_source: apps/helpers/network/udp_cli11_schema.cpp
+  cli11_header: apps/helpers/network/udp_cli11_schema.h
+
+header_includes:
+  - <optional>
+  - <string>
+
+parameters:
+  - name: rx_max_msgs
+    description: Maximum amount of messages RX in a single syscall
+    type: unsigned
+    default: "256"
+    cli11:
+      flag: --max_rx_msgs
+      capture: true
+
+  - name: tx_qsize
+    description: Batched queue size
+    type: unsigned
+    default: "4096"
+    cli11:
+      capture: true
+
+  - name: tx_max_msgs
+    description: Maximum amount of messages TX in a single syscall
+    type: unsigned
+    default: "256"
+    cli11:
+      flag: --max_tx_msgs
+      capture: true
+
+  - name: tx_max_segments
+    description: Maximum amount of segments in a single TX SDU
+    type: unsigned
+    default: "256"
+    cli11:
+      flag: --max_tx_segments
+      capture: true
+
+  - name: pool_threshold
+    description: Pool accupancy threshold after which packets are dropped
+    type: float
+    default: "0.9"
+    cli11:
+      capture: true
+
+  - name: dscp
+    description: Differentiated Services Code Point value
+    type: "optional<unsigned>"
+    cli11:
+      capture: true
+    range: {min: 0, max: 63}
+
+  - name: reuse_addr
+    description: Allow multiple sockets to re-use the bind port
+    type: bool
+    default: "false"
+    cli11:
+      capture: true
+
+  - name: ext_addr
+    description: External address advertised by the UDP-GW
+    type: string
+    default: '"auto"'
+    cli11:
+      raw_cpp: |
+        add_option(app, "--ext_addr", config.ext_addr, "External IP address that is advertised for receiving UDP packets.")
+            ->check(CLI::ValidIPV4 | CLI::IsMember({"auto"}));
+
+subcommands:
+  - name: udp
+    description: UDP parameters
+    configurable: true
+    parameters: [rx_max_msgs, tx_qsize, tx_max_msgs, tx_max_segments, pool_threshold, reuse_addr, dscp]
+
+cli11:
+  function: configure_cli11_with_udp_config_schema

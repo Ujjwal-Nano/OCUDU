@@ -9,7 +9,7 @@
 
 namespace ocudu {
 
-/// UDP specific configuration of an UDP gateway.
+/// UDP gateway configuration.
 struct udp_appconfig {
   /// Maximum amount of messages RX in a single syscall.
   unsigned rx_max_msgs = 256;

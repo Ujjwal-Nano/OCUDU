@@ -8,21 +8,20 @@
 
 using namespace ocudu;
 
-static void configure_cli11_udp_args(CLI::App& app, udp_appconfig& udp_params)
+static void configure_cli11_udp_args(CLI::App& app, udp_appconfig& config)
 {
-  add_option(app, "--max_rx_msgs", udp_params.rx_max_msgs, "Maximum amount of messages RX in a single syscall")
+  add_option(app, "--max_rx_msgs", config.rx_max_msgs, "Maximum amount of messages RX in a single syscall")
       ->capture_default_str();
-  add_option(app, "--tx_qsize", udp_params.tx_qsize, "Size of TX queue used for batching SDUs.")->capture_default_str();
-  add_option(app, "--max_tx_msgs", udp_params.tx_max_msgs, "Maximum amount of messages TX in a single syscall")
+  add_option(app, "--tx_qsize", config.tx_qsize, "Batched queue size")->capture_default_str();
+  add_option(app, "--max_tx_msgs", config.tx_max_msgs, "Maximum amount of messages TX in a single syscall")
       ->capture_default_str();
-  add_option(app, "--max_tx_segments", udp_params.tx_max_segments, "Maximum amount of segments TX in a single SDU")
+  add_option(app, "--max_tx_segments", config.tx_max_segments, "Maximum amount of segments in a single TX SDU")
       ->capture_default_str();
-  add_option(
-      app, "--pool_threshold", udp_params.pool_threshold, "Pool accupancy threshold after which packets are dropped")
+  add_option(app, "--pool_threshold", config.pool_threshold, "Pool accupancy threshold after which packets are dropped")
       ->capture_default_str();
-  add_option(app, "--reuse_addr", udp_params.reuse_addr, "Allow multiple sockets to bind to the same port.")
+  add_option(app, "--reuse_addr", config.reuse_addr, "Allow multiple sockets to re-use the bind port")
       ->capture_default_str();
-  add_option(app, "--dscp", udp_params.dscp, "Differentiated Services Code Point value.")
+  add_option(app, "--dscp", config.dscp, "Differentiated Services Code Point value")
       ->capture_default_str()
       ->check(CLI::Range(0, 63));
 }
@@ -31,7 +30,6 @@ void ocudu::configure_cli11_with_udp_config_schema(CLI::App& app, udp_appconfig&
 {
   add_option(app, "--ext_addr", config.ext_addr, "External IP address that is advertised for receiving UDP packets.")
       ->check(CLI::ValidIPV4 | CLI::IsMember({"auto"}));
-
   CLI::App* udp_subcmd = add_subcommand(app, "udp", "UDP parameters")->configurable();
   configure_cli11_udp_args(*udp_subcmd, config);
 }

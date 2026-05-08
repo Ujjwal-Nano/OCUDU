@@ -4,6 +4,7 @@
 
 include(ConfigGenerate)
 generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/sctp_appconfig.schema.yaml)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/udp_appconfig.schema.yaml)
 
 set(SOURCES sctp_cli11_schema.cpp
 	sctp_config_yaml_writer.cpp

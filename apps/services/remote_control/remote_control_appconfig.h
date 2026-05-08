@@ -11,10 +11,14 @@ namespace ocudu {
 
 /// Remote control application configuration.
 struct remote_control_appconfig {
-  bool        enabled                     = false;
-  std::string bind_addr                   = "127.0.0.1";
-  uint16_t    port                        = 8001;
-  bool        enable_metrics_subscription = false;
+  /// Enables the Remote Control Server.
+  bool enabled = false;
+  /// Remote Control Server bind address.
+  std::string bind_addr = "127.0.0.1";
+  /// Port where the remote control server listens for incoming connections.
+  uint16_t port = 8001;
+  /// Enable JSON metrics reporting.
+  bool enable_metrics_subscription = false;
 };
 
 } // namespace ocudu

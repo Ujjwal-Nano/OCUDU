@@ -10,10 +10,7 @@ namespace ocudu {
 
 struct udp_appconfig;
 
-/// \brief Configures the given CLI11 application with the UDP application configuration schema.
-///
-/// \param[out] app CLI11 application to configure.
-/// \param[out] config UDP configuration that stores the parameters.
+/// Configures the given CLI11 application with the udp gateway configuration schema.
 void configure_cli11_with_udp_config_schema(CLI::App& app, udp_appconfig& config);
 
 } // namespace ocudu

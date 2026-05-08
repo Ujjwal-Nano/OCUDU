@@ -11,8 +11,10 @@ namespace app_services {
 
 /// Application resource usage configuration.
 struct app_resource_usage_config {
+  /// Common metrics configuration.
   app_helpers::metrics_config metrics_consumers_cfg;
-  bool                        enable_app_usage = false;
+  /// Enable application usage metrics.
+  bool enable_app_usage = false;
 };
 
 } // namespace app_services
