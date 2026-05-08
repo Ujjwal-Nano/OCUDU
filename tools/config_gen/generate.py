@@ -215,7 +215,7 @@ def _clang_format(content: str, path: Path) -> str:
 
 
 def _write_if_changed(path: Path, content: str, check: bool, changed: list[Path]) -> None:
-    content = _clang_format(content, path)
+    content = _clang_format(content.lstrip("\n"), path)
     if path.exists() and path.read_text() == content:
         return
     if check:
