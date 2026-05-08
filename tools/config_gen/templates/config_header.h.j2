@@ -1,0 +1,39 @@
+{#
+SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+#}
+
+// SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+// SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+// Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+//
+// This file was auto-generated from {{ schema_rel_path }}.
+// Do not edit manually — edit the schema and re-run tools/config_gen/generate.py.
+
+#pragma once
+{% if schema.header_includes %}
+
+{% for inc in schema.header_includes %}
+#include {{ inc }}
+{% endfor %}
+{% endif %}
+
+{% for ns in schema.namespace_parts %}
+namespace {{ ns }} {
+{% endfor %}
+
+/// {{ schema.description }}.
+struct {{ schema.name }} {
+{% for param in schema.parameters %}
+  /// {{ param.description }}.
+  {{ param.cpp_type }} {{ param.name }}{% if param.default %} = {{ param.default }}{% endif %};
+{% endfor %}
+{% if schema.struct_extra %}
+
+{{ schema.struct_extra | trim | indent(2, first=True) }}
+{% endif %}
+};
+
+{% for ns in schema.namespace_parts | reverse %}
+} // namespace {{ ns }}
+{% endfor %}

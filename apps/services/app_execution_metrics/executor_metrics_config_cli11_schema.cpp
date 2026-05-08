@@ -14,14 +14,14 @@ using namespace app_services;
 
 static void configure_cli11_metrics_args(CLI::App& app, executor_metrics_config& config)
 {
-  auto* layers_subcmd = add_subcommand(app, "layers", "Layer basis metrics configuration")->configurable();
+  CLI::App* layers_subcmd = add_subcommand(app, "layers", "Layer basis metrics configuration")->configurable();
   add_option(*layers_subcmd,
              "--enable_executor",
              config.enable_executor_metrics,
              "Whether to log application executors metrics")
       ->capture_default_str();
-
-  auto* periodicity_subcmd = add_subcommand(app, "periodicity", "Metrics periodicity configuration")->configurable();
+  CLI::App* periodicity_subcmd =
+      add_subcommand(app, "periodicity", "Metrics periodicity configuration")->configurable();
   add_option(*periodicity_subcmd,
              "--executors_report_period",
              config.report_period_ms,

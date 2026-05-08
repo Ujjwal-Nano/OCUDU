@@ -11,7 +11,7 @@ namespace app_services {
 
 struct executor_metrics_config;
 
-/// Configures the given CLI11 application with the metrics logger application configuration schema.
+/// Configures the given CLI11 application with the executor metrics configuration schema.
 void configure_cli11_with_executor_metrics_appconfig_schema(CLI::App& app, executor_metrics_config& config);
 
 } // namespace app_services

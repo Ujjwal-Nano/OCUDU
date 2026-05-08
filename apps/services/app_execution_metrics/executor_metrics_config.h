@@ -14,10 +14,10 @@ namespace app_services {
 struct executor_metrics_config {
   /// Common metrics config.
   app_helpers::metrics_config common_metrics_cfg;
-  /// Whether to log performace metrics of application executors.
+  /// Whether to log application executors metrics.
   bool enable_executor_metrics = false;
-  /// Periodicity of executors metrics in milliseconds, if enabled.
-  std::chrono::milliseconds report_period_ms{1000};
+  /// Executors metrics report period in milliseconds.
+  std::chrono::milliseconds report_period_ms = std::chrono::milliseconds{1000};
 };
 
 } // namespace app_services

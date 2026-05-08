@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: executor_metrics_config
+namespace: ocudu::app_services
+description: Executor metrics configuration
+
+outputs:
+  header:       apps/services/app_execution_metrics/executor_metrics_config.h
+  cli11_source: apps/services/app_execution_metrics/executor_metrics_config_cli11_schema.cpp
+  cli11_header: apps/services/app_execution_metrics/executor_metrics_config_cli11_schema.h
+
+header_includes:
+  - '"apps/helpers/metrics/metrics_config.h"'
+  - <chrono>
+
+cli11_extra_includes:
+  - '"apps/helpers/metrics/metrics_config_cli11_schema.h"'
+  - '"ocudu/ran/slot_point.h"'
+  - '"ocudu/ran/slot_point_extended.h"'
+
+parameters:
+  # Embedded sub-config: appears in the struct but is configured via a separate schema call.
+  - name: common_metrics_cfg
+    description: Common metrics config
+    type: "app_helpers::metrics_config"
+    mode: struct-only
+
+  - name: enable_executor_metrics
+    description: Whether to log application executors metrics
+    type: bool
+    mode: default
+    default: "false"
+    cli11:
+      flag: --enable_executor
+      capture: true
+
+  # std::chrono::milliseconds uses brace-init; range check references RAN slot constants.
+  - name: report_period_ms
+    description: Executors metrics report period in milliseconds
+    type: "std::chrono::milliseconds"
+    mode: default
+    default: "std::chrono::milliseconds{1000}"
+    cli11:
+      flag: --executors_report_period
+      raw_cpp: |
+        add_option(*periodicity_subcmd, "--executors_report_period", config.report_period_ms, "Executors metrics report period in milliseconds")
+            ->capture_default_str()
+            ->check(CLI::Range(0U, static_cast<unsigned>(NOF_SUBFRAMES_PER_FRAME * NOF_SFNS * NOF_HYPER_SFNS)));
+
+subcommands:
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    subcommands:
+      - name: layers
+        description: Layer basis metrics configuration
+        configurable: true
+        parameters: [enable_executor_metrics]
+      - name: periodicity
+        description: Metrics periodicity configuration
+        configurable: true
+        parameters: [report_period_ms]
+
+cli11:
+  function: configure_cli11_with_executor_metrics_appconfig_schema
+  post_configure_raw: |
+    app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.common_metrics_cfg);

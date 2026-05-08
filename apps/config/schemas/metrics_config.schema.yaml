@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: metrics_config
+namespace: ocudu::app_helpers
+description: Metrics configuration structure
+
+outputs:
+  header:       apps/helpers/metrics/metrics_config.h
+  cli11_source: apps/helpers/metrics/metrics_config_cli11_schema.cpp
+  cli11_header: apps/helpers/metrics/metrics_config_cli11_schema.h
+
+struct_extra: |
+  /// Returns true if the metrics are enabled, otherwise false.
+  bool enabled() const { return enable_log_metrics || enable_json_metrics; }
+
+parameters:
+  - name: enable_json_metrics
+    description: Enables the metrics in JSON format
+    type: bool
+    mode: default
+    default: "false"
+    cli11:
+      flag: --enable_json
+      always_capture: true
+
+  - name: enable_log_metrics
+    description: Enables the metrics in the log
+    type: bool
+    mode: default
+    default: "false"
+    cli11:
+      flag: --enable_log
+      always_capture: true
+
+  - name: enable_verbose
+    description: Enable extended detail metrics reporting
+    type: bool
+    mode: default
+    default: "false"
+    cli11:
+      always_capture: true
+
+subcommands:
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    parameters: [enable_json_metrics, enable_log_metrics, enable_verbose]
+
+cli11:
+  function: configure_cli11_with_metrics_appconfig_schema

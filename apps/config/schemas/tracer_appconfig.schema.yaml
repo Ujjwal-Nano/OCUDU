@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: tracer_appconfig
+namespace: ocudu
+description: Configuration of the tracing service
+
+outputs:
+  header:       apps/helpers/tracing/tracer_appconfig.h
+  cli11_source: apps/helpers/tracing/tracer_appconfig_cli11_schema.cpp
+  cli11_header: apps/helpers/tracing/tracer_appconfig_cli11_schema.h
+
+header_includes:
+  - <string>
+
+parameters:
+  - name: filename
+    description: Set to a valid file path to enable tracing and write the trace to the file
+    type: string
+    mode: default
+    cli11:
+      capture: true
+
+  - name: max_tracing_events_per_file
+    description: Maximum number of events per file. Set to zero for no limit
+    type: unsigned
+    mode: default
+    default: "1000000"
+    cli11:
+      capture: true
+
+  - name: nof_tracing_events_after_severe
+    description: Number of events to write prior to a severe event. Set to zero for writing all events
+    type: unsigned
+    mode: default
+    default: "0"
+    cli11:
+      capture: true
+
+subcommands:
+  - name: trace
+    description: General tracer configuration
+    configurable: true
+    parameters: [filename, max_tracing_events_per_file, nof_tracing_events_after_severe]
+
+cli11:
+  function: configure_cli11_with_tracer_appconfig_schema

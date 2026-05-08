@@ -10,7 +10,7 @@ namespace ocudu {
 
 struct tracer_appconfig;
 
-/// Configures the given CLI11 application with the tracer application configuration schema.
+/// Configures the given CLI11 application with the configuration of the tracing service schema.
 void configure_cli11_with_tracer_appconfig_schema(CLI::App& app, tracer_appconfig& config);
 
 } // namespace ocudu

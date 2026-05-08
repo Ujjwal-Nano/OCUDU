@@ -4,19 +4,16 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 namespace ocudu {
 namespace app_helpers {
 
 /// Metrics configuration structure.
 struct metrics_config {
-  /// Enables the metrics in the log.
-  bool enable_log_metrics = false;
   /// Enables the metrics in JSON format.
   bool enable_json_metrics = false;
-  /// Enable verbose metrics.
+  /// Enables the metrics in the log.
+  bool enable_log_metrics = false;
+  /// Enable extended detail metrics reporting.
   bool enable_verbose = false;
 
   /// Returns true if the metrics are enabled, otherwise false.

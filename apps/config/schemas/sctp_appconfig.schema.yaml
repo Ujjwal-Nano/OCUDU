@@ -1,0 +1,87 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: sctp_appconfig
+namespace: ocudu
+description: Common SCTP socket option parameters shared across application configurations
+
+outputs:
+  header:       apps/helpers/network/sctp_appconfig.h
+  cli11_source: apps/helpers/network/sctp_cli11_schema.cpp
+  cli11_header: apps/helpers/network/sctp_cli11_schema.h
+
+parameters:
+  - name: rto_initial_ms
+    description: SCTP initial RTO value in milliseconds (-1 to use system default)
+    type: int
+    mode: default
+    default: "120"
+    cli11:
+      flag: --sctp_rto_initial
+
+  - name: rto_min_ms
+    description: SCTP RTO min in milliseconds (-1 to use system default)
+    type: int
+    mode: default
+    default: "120"
+    cli11:
+      flag: --sctp_rto_min
+
+  - name: rto_max_ms
+    description: SCTP RTO max in milliseconds (-1 to use system default)
+    type: int
+    mode: default
+    default: "500"
+    cli11:
+      flag: --sctp_rto_max
+
+  - name: init_max_attempts
+    description: SCTP init max attempts (-1 to use system default)
+    type: int
+    mode: default
+    default: "3"
+    cli11:
+      flag: --sctp_init_max_attempts
+
+  - name: max_init_timeo_ms
+    description: SCTP max init timeout in milliseconds (-1 to use system default)
+    type: int
+    mode: default
+    default: "500"
+    cli11:
+      flag: --sctp_max_init_timeo
+
+  - name: hb_interval_ms
+    description: SCTP heartbeat interval in milliseconds (-1 to use system default)
+    type: int
+    mode: default
+    default: "30000"
+    cli11:
+      flag: --sctp_hb_interval
+      capture: true
+
+  - name: assoc_max_retx
+    description: SCTP association max retransmissions (-1 to use system default)
+    type: int
+    mode: default
+    default: "10"
+    cli11:
+      flag: --sctp_assoc_max_retx
+      capture: true
+
+  - name: nodelay
+    description: Send SCTP messages as soon as possible without any Nagle-like algorithm
+    type: bool
+    mode: default
+    default: "false"
+    cli11:
+      flag: --sctp_nodelay
+
+# No subcommands — all options are added flat to the caller's app.
+subcommands: []
+
+cli11:
+  function: configure_cli11_sctp_socket_args

@@ -9,21 +9,18 @@
 using namespace ocudu;
 using namespace app_helpers;
 
-static void configure_cli11_metrics_args(CLI::App& app, metrics_config& metrics_params)
+static void configure_cli11_metrics_args(CLI::App& app, metrics_config& config)
 {
-  // JSON metrics configuration.
-  add_option(app, "--enable_json", metrics_params.enable_json_metrics, "Enable JSON metrics reporting")
+  add_option(app, "--enable_json", config.enable_json_metrics, "Enables the metrics in JSON format")
       ->always_capture_default();
-
-  // Log metrics configuration.
-  add_option(app, "--enable_log", metrics_params.enable_log_metrics, "Enable log metrics reporting")
+  add_option(app, "--enable_log", config.enable_log_metrics, "Enables the metrics in the log")
       ->always_capture_default();
-  add_option(app, "--enable_verbose", metrics_params.enable_verbose, "Enable extended detail metrics reporting")
+  add_option(app, "--enable_verbose", config.enable_verbose, "Enable extended detail metrics reporting")
       ->always_capture_default();
 }
 
 void ocudu::app_helpers::configure_cli11_with_metrics_appconfig_schema(CLI::App& app, metrics_config& config)
 {
-  CLI::App* log_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*log_subcmd, config);
+  CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
+  configure_cli11_metrics_args(*metrics_subcmd, config);
 }

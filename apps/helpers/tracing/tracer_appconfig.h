@@ -13,7 +13,7 @@ struct tracer_appconfig {
   /// Set to a valid file path to enable tracing and write the trace to the file.
   std::string filename;
   /// Maximum number of events per file. Set to zero for no limit.
-  unsigned max_tracing_events_per_file = 1e6;
+  unsigned max_tracing_events_per_file = 1000000;
   /// Number of events to write prior to a severe event. Set to zero for writing all events.
   unsigned nof_tracing_events_after_severe = 0;
 };
