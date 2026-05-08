@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: fapi_unit_config
+namespace: ocudu
+description: FAPI configuration
+
+outputs:
+  header:       apps/units/flexible_o_du/o_du_high/fapi/fapi_config.h
+  cli11_source: apps/units/flexible_o_du/o_du_high/fapi/fapi_config_cli11_schema.cpp
+  cli11_header: apps/units/flexible_o_du/o_du_high/fapi/fapi_config_cli11_schema.h
+
+header_includes:
+  - '"ocudu/ocudulog/logger.h"'
+
+cli11_extra_includes:
+  - '"apps/helpers/logger/logger_appconfig_cli11_utils.h"'
+
+parameters:
+  - name: fapi_level
+    description: FAPI log level
+    type: "ocudulog::basic_levels"
+    default: "ocudulog::basic_levels::warning"
+    cli11:
+      raw_cpp: |
+        app_helpers::add_log_option(app, config.fapi_level, "--fapi_level", "FAPI log level");
+
+subcommands:
+  - name: log
+    description: Logging configuration
+    configurable: true
+    parameters: [fapi_level]
+
+cli11:
+  function: configure_cli11_with_fapi_config_schema

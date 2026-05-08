@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: metrics_appconfig
+namespace: ocudu::app_services
+description: Metrics service application configuration
+
+outputs:
+  header:       apps/services/metrics/metrics_appconfig.h
+  cli11_source: apps/services/metrics/metrics_config_cli11_schema.cpp
+  cli11_header: apps/services/metrics/metrics_config_cli11_schema.h
+
+parameters:
+  - name: app_usage_report_period
+    description: Application usage report period in milliseconds
+    type: unsigned
+    default: "1000"
+    cli11:
+      capture: true
+
+subcommands:
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    subcommands:
+      - name: periodicity
+        description: Metrics periodicity configuration
+        configurable: true
+        parameters: [app_usage_report_period]
+
+cli11:
+  function: configure_cli11_with_metrics_appconfig_schema

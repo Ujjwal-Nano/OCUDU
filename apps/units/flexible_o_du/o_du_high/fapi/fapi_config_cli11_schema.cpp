@@ -9,14 +9,13 @@
 
 using namespace ocudu;
 
-static void configure_cli11_log_args(CLI::App& app, fapi_unit_config& log_params)
+static void configure_cli11_log_args(CLI::App& app, fapi_unit_config& config)
 {
-  app_helpers::add_log_option(app, log_params.fapi_level, "--fapi_level", "FAPI log level");
+  app_helpers::add_log_option(app, config.fapi_level, "--fapi_level", "FAPI log level");
 }
 
-void ocudu::configure_cli11_with_fapi_config_schema(CLI::App& app, fapi_unit_config& parsed_cfg)
+void ocudu::configure_cli11_with_fapi_config_schema(CLI::App& app, fapi_unit_config& config)
 {
-  // Loggers section.
   CLI::App* log_subcmd = add_subcommand(app, "log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, parsed_cfg);
+  configure_cli11_log_args(*log_subcmd, config);
 }

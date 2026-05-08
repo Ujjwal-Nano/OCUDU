@@ -10,7 +10,7 @@ namespace ocudu {
 
 struct fapi_unit_config;
 
-/// Configures the given CLI11 application with the FAPI configuration schema.
-void configure_cli11_with_fapi_config_schema(CLI::App& app, fapi_unit_config& parsed_cfg);
+/// Configures the given CLI11 application with the fapi configuration schema.
+void configure_cli11_with_fapi_config_schema(CLI::App& app, fapi_unit_config& config);
 
 } // namespace ocudu

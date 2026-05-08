@@ -11,7 +11,7 @@ namespace app_services {
 
 struct metrics_appconfig;
 
-/// Configures the given CLI11 application with the metrics logger application configuration schema.
+/// Configures the given CLI11 application with the metrics service application configuration schema.
 void configure_cli11_with_metrics_appconfig_schema(CLI::App& app, metrics_appconfig& config);
 
 } // namespace app_services

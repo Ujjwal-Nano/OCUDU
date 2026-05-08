@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-
+include(ConfigGenerate)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/metrics_appconfig.schema.yaml)
 
 set(SOURCES
         metrics_config_cli11_schema.cpp
