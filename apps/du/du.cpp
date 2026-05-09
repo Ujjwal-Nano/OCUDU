@@ -21,6 +21,7 @@
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_pcap_factory.h"
 #include "du_appconfig.h"
 #include "du_appconfig_cli11_schema.h"
+#include "du_appconfig_cli11_schema_extra.h"
 #include "du_appconfig_translators.h"
 #include "du_appconfig_validators.h"
 #include "du_appconfig_yaml_writer.h"

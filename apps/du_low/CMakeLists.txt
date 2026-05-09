@@ -2,9 +2,13 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+include(ConfigGenerate)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/du_low_appconfig.schema.yaml
+                       TARGETS odu_low_base)
 
 set(SOURCES
         du_low_appconfig_cli11_schema.cpp
+        du_low_appconfig_cli11_schema_extra.cpp
         du_low_appconfig_validators.cpp
         du_low_appconfig_translators.cpp
         du_low_appconfig_yaml_writer.cpp)

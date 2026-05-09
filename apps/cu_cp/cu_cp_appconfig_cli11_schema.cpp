@@ -38,34 +38,19 @@ static void configure_cli11_f1ap_args(CLI::App& app, ocucp::f1ap_appconfig& f1ap
   configure_cli11_sctp_socket_args(app, f1ap_params.sctp);
 }
 
-void ocudu::configure_cli11_with_cu_cp_appconfig_schema(CLI::App& app, cu_cp_appconfig& cu_cp_cfg)
+void ocudu::configure_cli11_with_cu_cp_appconfig_schema(CLI::App& app, cu_cp_appconfig& config)
 {
-  app.add_flag("--dryrun", cu_cp_cfg.enable_dryrun, "Enable application dry run mode")->capture_default_str();
-
-  // Logging section.
-  configure_cli11_with_logger_appconfig_schema(app, cu_cp_cfg.log_cfg);
-
-  // Tracers section.
-  configure_cli11_with_tracer_appconfig_schema(app, cu_cp_cfg.trace_cfg);
-
-  // Buffer pool section.
-  configure_cli11_with_buffer_pool_appconfig_schema(app, cu_cp_cfg.buffer_pool_config);
-
-  // Expert execution section.
-  configure_cli11_with_worker_manager_appconfig_schema(app, cu_cp_cfg.expert_execution_cfg);
-
-  // Remote control section.
-  configure_cli11_with_remote_control_appconfig_schema(app, cu_cp_cfg.remote_control_config);
-
-  // Metrics section.
-  app_services::configure_cli11_with_app_resource_usage_config_schema(app, cu_cp_cfg.metrics_cfg.rusage_config);
-  app_services::configure_cli11_with_metrics_appconfig_schema(app, cu_cp_cfg.metrics_cfg.metrics_service_cfg);
-
+  app.add_flag("--dryrun", config.enable_dryrun, "Enable application dry run mode")->capture_default_str();
+  configure_cli11_with_logger_appconfig_schema(app, config.log_cfg);
+  configure_cli11_with_tracer_appconfig_schema(app, config.trace_cfg);
+  configure_cli11_with_buffer_pool_appconfig_schema(app, config.buffer_pool_config);
+  configure_cli11_with_worker_manager_appconfig_schema(app, config.expert_execution_cfg);
+  configure_cli11_with_remote_control_appconfig_schema(app, config.remote_control_config);
+  app_services::configure_cli11_with_app_resource_usage_config_schema(app, config.metrics_cfg.rusage_config);
+  app_services::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_cfg.metrics_service_cfg);
   CLI::App* cu_cp_subcmd = add_subcommand(app, "cu_cp", "CU-CP parameters")->configurable();
-  // E1AP section.
-  CLI::App* e1ap_subcmd = add_subcommand(*cu_cp_subcmd, "e1ap", "E1AP parameters")->configurable();
-  configure_cli11_e1ap_args(*e1ap_subcmd, cu_cp_cfg.e1ap_cfg);
-  // F1AP section.
+  CLI::App* e1ap_subcmd  = add_subcommand(*cu_cp_subcmd, "e1ap", "E1AP parameters")->configurable();
+  configure_cli11_e1ap_args(*e1ap_subcmd, config.e1ap_cfg);
   CLI::App* f1ap_subcmd = add_subcommand(*cu_cp_subcmd, "f1ap", "F1AP parameters")->configurable();
-  configure_cli11_f1ap_args(*f1ap_subcmd, cu_cp_cfg.f1ap_cfg);
+  configure_cli11_f1ap_args(*f1ap_subcmd, config.f1ap_cfg);
 }

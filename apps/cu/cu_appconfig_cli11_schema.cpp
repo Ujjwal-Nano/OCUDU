@@ -27,33 +27,19 @@ static void configure_cli11_f1ap_args(CLI::App& app, ocu::cu_f1ap_appconfig& f1a
   configure_cli11_sctp_socket_args(app, f1ap_params.sctp);
 }
 
-void ocudu::configure_cli11_with_cu_appconfig_schema(CLI::App& app, cu_appconfig& cu_cfg)
+void ocudu::configure_cli11_with_cu_appconfig_schema(CLI::App& app, cu_appconfig& config)
 {
-  app.add_flag("--dryrun", cu_cfg.enable_dryrun, "Enable application dry run mode")->capture_default_str();
-
-  // Logging section.
-  configure_cli11_with_logger_appconfig_schema(app, cu_cfg.log_cfg);
-
-  // Buffer pool section.
-  configure_cli11_with_buffer_pool_appconfig_schema(app, cu_cfg.buffer_pool_config);
-
-  // Expert execution section.
-  configure_cli11_with_worker_manager_appconfig_schema(app, cu_cfg.expert_execution_cfg);
-
-  // Remote control section.
-  configure_cli11_with_remote_control_appconfig_schema(app, cu_cfg.remote_control_config);
-
-  // Metrics section.
-  app_services::configure_cli11_with_app_resource_usage_config_schema(app, cu_cfg.metrics_cfg.rusage_config);
-  app_services::configure_cli11_with_metrics_appconfig_schema(app, cu_cfg.metrics_cfg.metrics_service_cfg);
-
-  // F1AP section.
+  app.add_flag("--dryrun", config.enable_dryrun, "Enable application dry run mode")->capture_default_str();
+  configure_cli11_with_logger_appconfig_schema(app, config.log_cfg);
+  configure_cli11_with_buffer_pool_appconfig_schema(app, config.buffer_pool_config);
+  configure_cli11_with_worker_manager_appconfig_schema(app, config.expert_execution_cfg);
+  configure_cli11_with_remote_control_appconfig_schema(app, config.remote_control_config);
+  app_services::configure_cli11_with_app_resource_usage_config_schema(app, config.metrics_cfg.rusage_config);
+  app_services::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_cfg.metrics_service_cfg);
   CLI::App* cu_cp_subcmd = add_subcommand(app, "cu_cp", "CU-CP parameters")->configurable();
   CLI::App* f1ap_subcmd  = add_subcommand(*cu_cp_subcmd, "f1ap", "F1AP parameters")->configurable();
-  configure_cli11_f1ap_args(*f1ap_subcmd, cu_cfg.f1ap_cfg);
-
-  // NR-U section.
+  configure_cli11_f1ap_args(*f1ap_subcmd, config.f1ap_cfg);
   CLI::App* cu_up_subcmd = add_subcommand(app, "cu_up", "CU-UP parameters")->configurable();
   CLI::App* f1u_subcmd   = add_subcommand(*cu_up_subcmd, "f1u", "F1-U parameters")->configurable();
-  configure_cli11_f1u_sockets_args(*f1u_subcmd, cu_cfg.f1u_cfg);
+  configure_cli11_f1u_sockets_args(*f1u_subcmd, config.f1u_cfg);
 }

@@ -16,6 +16,7 @@
 #include "apps/units/flexible_o_du/split_6/o_du_low/split6_o_du_low_application_unit_impl.h"
 #include "du_low_appconfig.h"
 #include "du_low_appconfig_cli11_schema.h"
+#include "du_low_appconfig_cli11_schema_extra.h"
 #include "du_low_appconfig_translators.h"
 #include "du_low_appconfig_validators.h"
 #include "du_low_appconfig_yaml_writer.h"

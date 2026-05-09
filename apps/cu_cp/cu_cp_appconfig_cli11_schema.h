@@ -10,7 +10,7 @@ namespace ocudu {
 
 struct cu_cp_appconfig;
 
-/// Configures the given CLI11 application with the CU application configuration schema.
-void configure_cli11_with_cu_cp_appconfig_schema(CLI::App& app, cu_cp_appconfig& cu_cfg);
+/// Configures the given CLI11 application with the cu-cp application configuration schema.
+void configure_cli11_with_cu_cp_appconfig_schema(CLI::App& app, cu_cp_appconfig& config);
 
 } // namespace ocudu

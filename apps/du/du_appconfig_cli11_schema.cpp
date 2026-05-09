@@ -48,79 +48,33 @@ static void configure_cli11_f1u_args(CLI::App& app, odu::f1u_appconfig& f1u_para
   configure_cli11_f1u_sockets_args(app, f1u_params.f1u_sockets);
 }
 
-void ocudu::configure_cli11_with_du_appconfig_schema(CLI::App& app, du_appconfig& du_cfg)
+void ocudu::configure_cli11_with_du_appconfig_schema(CLI::App& app, du_appconfig& config)
 {
-  app.add_flag("--dryrun", du_cfg.enable_dryrun, "Enable application dry run mode")->capture_default_str();
-
-  // Loggers section.
-  configure_cli11_with_logger_appconfig_schema(app, du_cfg.log_cfg);
-
-  // Tracers section.
-  configure_cli11_with_tracer_appconfig_schema(app, du_cfg.trace_cfg);
-
-  // Buffer pool section.
-  configure_cli11_with_buffer_pool_appconfig_schema(app, du_cfg.buffer_pool_config);
-
-  // Expert execution section.
-  configure_cli11_with_worker_manager_appconfig_schema(app, du_cfg.expert_execution_cfg);
-
-  // F1-C section.
+  app.add_flag("--dryrun", config.enable_dryrun, "Enable application dry run mode")->capture_default_str();
+  configure_cli11_with_logger_appconfig_schema(app, config.log_cfg);
+  configure_cli11_with_tracer_appconfig_schema(app, config.trace_cfg);
+  configure_cli11_with_buffer_pool_appconfig_schema(app, config.buffer_pool_config);
+  configure_cli11_with_worker_manager_appconfig_schema(app, config.expert_execution_cfg);
   CLI::App* f1ap_subcmd = app.add_subcommand("f1ap", "F1AP interface configuration")->configurable();
-  configure_cli11_f1ap_args(*f1ap_subcmd, du_cfg.f1ap_cfg);
-
-  // F1-U section.
+  configure_cli11_f1ap_args(*f1ap_subcmd, config.f1ap_cfg);
   CLI::App* f1u_subcmd = app.add_subcommand("f1u", "F1-U interface configuration")->configurable();
-  configure_cli11_f1u_args(*f1u_subcmd, du_cfg.f1u_cfg);
-
-  // Metrics section.
+  configure_cli11_f1u_args(*f1u_subcmd, config.f1u_cfg);
   CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, du_cfg.metrics_cfg);
-  app_services::configure_cli11_with_app_resource_usage_config_schema(app, du_cfg.metrics_cfg.rusage_config);
-  app_services::configure_cli11_with_metrics_appconfig_schema(app, du_cfg.metrics_cfg.metrics_service_cfg);
-
+  configure_cli11_metrics_args(*metrics_subcmd, config.metrics_cfg);
+  app_services::configure_cli11_with_app_resource_usage_config_schema(app, config.metrics_cfg.rusage_config);
+  app_services::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_cfg.metrics_service_cfg);
 #ifdef DPDK_FOUND
-  // HAL section.
-  du_cfg.hal_config.emplace();
-  configure_cli11_with_hal_appconfig_schema(app, *du_cfg.hal_config);
+  config.hal_config.emplace();
+  configure_cli11_with_hal_appconfig_schema(app, *config.hal_config);
 #else
   app.failure_message([](const CLI::App* application, const CLI::Error& e) -> std::string {
     if (std::string(e.what()).find("INI was not able to parse hal.++") == std::string::npos) {
       return CLI::FailureMessage::simple(application, e);
     }
-
     return "Invalid configuration detected, 'hal' section is present but the application was built without DPDK "
            "support\n" +
            CLI::FailureMessage::simple(application, e);
   });
 #endif
-
-  // Remote control section.
-  configure_cli11_with_remote_control_appconfig_schema(app, du_cfg.remote_control_config);
-}
-
-#ifdef DPDK_FOUND
-static void manage_hal_optional(CLI::App& app, du_appconfig& du_cfg)
-{
-  if (!is_hal_section_present(app)) {
-    du_cfg.hal_config.reset();
-  }
-}
-#endif
-
-static void configure_default_f1u(du_appconfig& du_cfg)
-{
-  if (du_cfg.f1u_cfg.f1u_sockets.f1u_socket_cfg.empty()) {
-    f1u_socket_appconfig default_f1u_cfg;
-    default_f1u_cfg.bind_addr = "127.0.10.2";
-    du_cfg.f1u_cfg.f1u_sockets.f1u_socket_cfg.push_back(default_f1u_cfg);
-  }
-}
-
-void ocudu::autoderive_du_parameters_after_parsing(CLI::App& app, du_appconfig& du_cfg)
-{
-#ifdef DPDK_FOUND
-  manage_hal_optional(app, du_cfg);
-#endif
-
-  configure_default_f1u(du_cfg);
+  configure_cli11_with_remote_control_appconfig_schema(app, config.remote_control_config);
 }

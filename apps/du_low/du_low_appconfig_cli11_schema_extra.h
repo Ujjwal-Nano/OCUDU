@@ -8,9 +8,9 @@
 
 namespace ocudu {
 
-struct cu_appconfig;
+struct du_low_appconfig;
 
-/// Configures the given CLI11 application with the cu application configuration schema.
-void configure_cli11_with_cu_appconfig_schema(CLI::App& app, cu_appconfig& config);
+/// Auto derive DU low parameters after the parsing.
+void autoderive_du_low_parameters_after_parsing(CLI::App& app, du_low_appconfig& config);
 
 } // namespace ocudu

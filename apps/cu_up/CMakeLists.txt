@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+include(ConfigGenerate)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/cu_up_appconfig.schema.yaml
+                       TARGETS ocuup)
 
 add_executable(ocuup
         cu_up.cpp
