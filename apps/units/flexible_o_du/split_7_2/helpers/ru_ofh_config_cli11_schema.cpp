@@ -476,30 +476,30 @@ static void configure_cli11_metrics_args(CLI::App& app, ru_ofh_unit_metrics_conf
       ->capture_default_str();
 }
 
-void ocudu::configure_cli11_with_ru_ofh_config_schema(CLI::App& app, ru_ofh_unit_parsed_config& parsed_cfg)
+void ocudu::configure_cli11_with_ru_ofh_config_schema(CLI::App& app, ru_ofh_unit_parsed_config& config)
 {
   // OFH RU section.
   CLI::App* ru_ofh_subcmd = add_subcommand(app, "ru_ofh", "Open Fronthaul Radio Unit configuration")->configurable();
-  configure_cli11_ru_ofh_args(*ru_ofh_subcmd, parsed_cfg);
+  configure_cli11_ru_ofh_args(*ru_ofh_subcmd, config);
 
   // Loggers section.
   CLI::App* log_subcmd = add_subcommand(app, "log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, parsed_cfg.config.loggers);
+  configure_cli11_log_args(*log_subcmd, config.config.loggers);
 
   // Expert execution section.
   CLI::App* expert_subcmd = add_subcommand(app, "expert_execution", "Expert execution configuration")->configurable();
-  configure_cli11_expert_execution_args(*expert_subcmd, parsed_cfg.config.expert_execution_cfg);
+  configure_cli11_expert_execution_args(*expert_subcmd, config.config.expert_execution_cfg);
 
-  // HAL section only available when DPDK is present.
+// HAL section only available when DPDK is present.
 #ifdef DPDK_FOUND
   CLI::App* hal_subcmd = add_subcommand(app, "hal", "HAL configuration")->configurable();
-  configure_cli11_hal_args(*hal_subcmd, parsed_cfg.config.hal_config);
+  configure_cli11_hal_args(*hal_subcmd, config.config.hal_config);
 #endif
 
   // Metrics section.
-  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, parsed_cfg.config.metrics_cfg.metrics_cfg);
+  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.config.metrics_cfg.metrics_cfg);
   CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, parsed_cfg.config.metrics_cfg);
+  configure_cli11_metrics_args(*metrics_subcmd, config.config.metrics_cfg);
 }
 
 #ifdef DPDK_FOUND
