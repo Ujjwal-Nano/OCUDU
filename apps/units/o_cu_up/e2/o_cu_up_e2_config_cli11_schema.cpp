@@ -9,24 +9,15 @@
 
 using namespace ocudu;
 
-static void configure_cli11_pcap_args(CLI::App& app, o_cu_up_e2_pcap_config& pcap_params)
+static void configure_cli11_pcap_args(CLI::App& app, o_cu_up_e2_config& config)
 {
-  add_option(app, "--e2ap_cu_up_filename", pcap_params.filename, "E2AP PCAP file output path")->capture_default_str();
-  add_option(app, "--e2ap_enable", pcap_params.enabled, "Enable E2AP packet capture")->always_capture_default();
+  add_option(app, "--e2ap_cu_up_filename", config.pcaps.filename, "E2AP PCAP file output path")->capture_default_str();
+  add_option(app, "--e2ap_enable", config.pcaps.enabled, "Enable E2AP packet capture")->always_capture_default();
 }
 
-void ocudu::configure_cli11_with_o_cu_up_e2_config_schema(CLI::App& app, o_cu_up_e2_config& unit_cfg)
+void ocudu::configure_cli11_with_o_cu_up_e2_config_schema(CLI::App& app, o_cu_up_e2_config& config)
 {
-  // E2 section.
-  configure_cli11_with_e2_config_schema(app, unit_cfg.base_config, "--enable_cu_up_e2", "Enable CU-UP E2 agent");
-
-  // PCAP section.
   CLI::App* pcap_subcmd = add_subcommand(app, "pcap", "Logging configuration")->configurable();
-  configure_cli11_pcap_args(*pcap_subcmd, unit_cfg.pcaps);
-}
-
-void ocudu::autoderive_o_cu_up_e2_parameters_after_parsing(o_cu_up_e2_config& unit_cfg)
-{
-  // If CU UP E2 agent is disabled do not enable e2ap pcap for it.
-  unit_cfg.pcaps.enabled = unit_cfg.base_config.enable_unit_e2 && unit_cfg.pcaps.enabled;
+  configure_cli11_pcap_args(*pcap_subcmd, config);
+  configure_cli11_with_e2_config_schema(app, config.base_config, "--enable_cu_up_e2", "Enable CU-UP E2 agent");
 }

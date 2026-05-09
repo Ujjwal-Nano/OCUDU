@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: expert_execution_appconfig
+namespace: ocudu
+description: worker manager application configuration
+generate_header: false
+
+outputs:
+  header:       apps/services/worker_manager/worker_manager_appconfig.h
+  cli11_source: apps/services/worker_manager/worker_manager_cli11_schema.cpp
+  cli11_header: apps/services/worker_manager/worker_manager_cli11_schema.h
+
+cli11_extra_includes:
+  - '"apps/services/worker_manager/cli11_cpu_affinities_parser_helper.h"'
+  - '"ocudu/support/error_handling.h"'
+
+parameters:
+  - name: nof_threads
+    description: Number of threads for processing upper PHY and upper layers.
+    type: "optional<unsigned>"
+    cli11:
+      capture: true
+
+  - name: task_queue_size
+    description: Main thread pool task queue size.
+    type: unsigned
+    cli11:
+      capture: true
+
+  - name: backoff_period
+    description: Main thread pool back-off period, in microseconds.
+    type: unsigned
+    cli11:
+      capture: true
+
+  - name: main_pool_cpus
+    description: CPU cores assigned to main thread pool
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        add_option_function<std::string>(
+            app,
+            "--main_pool_cpus",
+            [&config](const std::string& value) {
+              parse_affinity_mask(config.affinities.main_pool_cpu_cfg.mask, value, "main_pool_cpus");
+            },
+            "CPU cores assigned to main thread pool");
+
+  - name: main_pool_pinning
+    description: Policy used for assigning CPU cores to the main thread pool
+    type: struct-only
+    cli11:
+      raw_cpp: |
+        add_option_function<std::string>(
+            app,
+            "--main_pool_pinning",
+            [&config](const std::string& value) {
+              config.affinities.main_pool_cpu_cfg.pinning_policy = to_affinity_mask_policy(value);
+              if (config.affinities.main_pool_cpu_cfg.pinning_policy == sched_affinity_mask_policy::last) {
+                report_error("Incorrect value={} used in {} property", value, "main_pool_pinning");
+              }
+            },
+            "Policy used for assigning CPU cores to the main thread pool");
+
+subcommands:
+  - name: affinities
+    description: Application CPU affinities configuration
+    configurable: true
+    parameters: [main_pool_cpus, main_pool_pinning]
+
+  - name: threads
+    description: Threads configuration
+    configurable: true
+    subcommands:
+      - name: main_pool
+        description: Main thread pool configuration
+        configurable: true
+        member: threads.main_pool
+        parameters: [nof_threads, task_queue_size, backoff_period]
+
+cli11:
+  function: configure_cli11_with_worker_manager_appconfig_schema
+  top_subcommand:
+    name: expert_execution
+    description: Expert execution configuration
