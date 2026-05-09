@@ -10,7 +10,7 @@ namespace ocudu {
 
 struct split6_o_du_low_unit_config;
 
-/// Configures the given CLI11 application with the O-RAN DU low Split 6 unit configuration schema.
+/// Configures the given CLI11 application with the o-ran du low split 6 unit configuration schema.
 void configure_cli11_with_split6_o_du_low_unit_config_schema(CLI::App& app, split6_o_du_low_unit_config& config);
 
 /// Auto derive O-RAN DU low Split 6 parameters after the parsing.

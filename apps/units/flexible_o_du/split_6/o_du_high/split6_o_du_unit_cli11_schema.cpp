@@ -5,6 +5,7 @@
 #include "split6_o_du_unit_cli11_schema.h"
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_config_cli11_schema.h"
 #include "split6_o_du_unit_config.h"
+#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 

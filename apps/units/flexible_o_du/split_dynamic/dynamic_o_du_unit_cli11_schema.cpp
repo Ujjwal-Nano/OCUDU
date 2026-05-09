@@ -79,10 +79,10 @@ static void configure_cli11_metrics_args(CLI::App& app, ru_dummy_unit_metrics_co
   add_option(*layers_subcmd, "--enable_ru", config.enable_ru_metrics, "Enable Radio Unit metrics");
 }
 
-void ocudu::configure_cli11_with_dynamic_o_du_unit_config_schema(CLI::App& app, dynamic_o_du_unit_config& parsed_cfg)
+void ocudu::configure_cli11_with_dynamic_o_du_unit_config_schema(CLI::App& app, dynamic_o_du_unit_config& config)
 {
-  configure_cli11_with_o_du_high_config_schema(app, parsed_cfg.odu_high_cfg);
-  configure_cli11_with_du_low_config_schema(app, parsed_cfg.du_low_cfg);
+  configure_cli11_with_o_du_high_config_schema(app, config.odu_high_cfg);
+  configure_cli11_with_du_low_config_schema(app, config.du_low_cfg);
   configure_cli11_with_ru_ofh_config_schema(app, ofh_cfg);
   configure_cli11_with_ru_sdr_config_schema(app, sdr_cfg);
 

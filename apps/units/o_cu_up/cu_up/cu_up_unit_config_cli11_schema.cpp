@@ -6,8 +6,8 @@
 #include "apps/helpers/logger/logger_appconfig_cli11_utils.h"
 #include "apps/helpers/metrics/metrics_config_cli11_schema.h"
 #include "apps/helpers/network/udp_cli11_schema.h"
-#include "apps/units/o_cu_up/cu_up/cu_up_unit_config.h"
 #include "apps/units/o_cu_up/cu_up/cu_up_unit_pcap_config.h"
+#include "cu_up_unit_config.h"
 #include "ocudu/ran/cu_up_constants.h"
 #include "ocudu/support/cli11_utils.h"
 #include "ocudu/support/config_parsers.h"
@@ -225,54 +225,54 @@ static void configure_cli11_qos_args(CLI::App& app, cu_up_unit_qos_config& qos_p
   configure_cli11_f1u_cu_up_args(*f1u_cu_up_subcmd, qos_params.f1u_cu_up);
 }
 
-void ocudu::configure_cli11_with_cu_up_unit_config_schema(CLI::App& app, cu_up_unit_config& unit_cfg)
+void ocudu::configure_cli11_with_cu_up_unit_config_schema(CLI::App& app, cu_up_unit_config& config)
 {
-  add_option(app, "--gnb_id", unit_cfg.gnb_id.id, "gNodeB identifier")->capture_default_str();
+  add_option(app, "--gnb_id", config.gnb_id.id, "gNodeB identifier")->capture_default_str();
   // Adding a default function to display correctly the uint8_t type.
-  add_option(app, "--gnb_id_bit_length", unit_cfg.gnb_id.bit_length, "gNodeB identifier length in bits")
-      ->default_function([&value = unit_cfg.gnb_id.bit_length]() { return std::to_string(value); })
+  add_option(app, "--gnb_id_bit_length", config.gnb_id.bit_length, "gNodeB identifier length in bits")
+      ->default_function([&value = config.gnb_id.bit_length]() { return std::to_string(value); })
       ->capture_default_str()
       ->check(CLI::Range(22, 32));
-  add_option(app, "--gnb_cu_up_id", unit_cfg.gnb_cu_up_id, "gNB-CU-UP Id")
+  add_option(app, "--gnb_cu_up_id", config.gnb_cu_up_id, "gNB-CU-UP Id")
       ->capture_default_str()
       ->check(CLI::Range(static_cast<uint64_t>(0U), static_cast<uint64_t>((uint64_t(1) << 36) - 1)));
 
   // CU-UP section.
   CLI::App* cu_up_subcmd = add_subcommand(app, "cu_up", "CU-UP parameters")->configurable();
-  configure_cli11_cu_up_args(*cu_up_subcmd, unit_cfg);
+  configure_cli11_cu_up_args(*cu_up_subcmd, config);
 
   // Execution section.
   CLI::App* exec_subcmd = add_subcommand(app, "expert_execution", "Execution parameters")->configurable();
-  configure_cli11_execution_args(*exec_subcmd, unit_cfg.exec_cfg);
+  configure_cli11_execution_args(*exec_subcmd, config.exec_cfg);
 
   // Loggers section.
   CLI::App* log_subcmd = add_subcommand(app, "log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, unit_cfg.loggers);
+  configure_cli11_log_args(*log_subcmd, config.loggers);
 
   // PCAP section.
   CLI::App* pcap_subcmd = add_subcommand(app, "pcap", "Logging configuration")->configurable();
-  configure_cli11_pcap_args(*pcap_subcmd, unit_cfg.pcap_cfg);
+  configure_cli11_pcap_args(*pcap_subcmd, config.pcap_cfg);
 
   // Metrics section.
   CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, unit_cfg.metrics);
-  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, unit_cfg.metrics.common_metrics_cfg);
+  configure_cli11_metrics_args(*metrics_subcmd, config.metrics);
+  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.metrics.common_metrics_cfg);
 
   // Trace section.
   CLI::App* tracing_subcmd = add_subcommand(app, "trace", "General tracer configuration")->configurable();
-  configure_cli11_trace(*tracing_subcmd, unit_cfg.trace_cfg);
+  configure_cli11_trace(*tracing_subcmd, config.trace_cfg);
 
   // QoS section.
-  auto qos_lambda = [&unit_cfg](const std::vector<std::string>& values) {
+  auto qos_lambda = [&config](const std::vector<std::string>& values) {
     // Prepare the radio bearers
-    unit_cfg.qos_cfg.resize(values.size());
+    config.qos_cfg.resize(values.size());
 
     // Format every QoS setting.
     for (unsigned i = 0, e = values.size(); i != e; ++i) {
       CLI::App subapp("QoS parameters", "QoS config, item #" + std::to_string(i));
       subapp.config_formatter(create_yaml_config_parser());
       subapp.allow_config_extras(CLI::config_extras_mode::capture);
-      configure_cli11_qos_args(subapp, unit_cfg.qos_cfg[i]);
+      configure_cli11_qos_args(subapp, config.qos_cfg[i]);
       std::istringstream ss(values[i]);
       subapp.parse_from_stream(ss);
     }

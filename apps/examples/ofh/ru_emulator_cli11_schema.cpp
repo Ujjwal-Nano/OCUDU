@@ -150,11 +150,11 @@ static void configure_cli11_ru_emu_args(CLI::App& app, ru_emulator_ofh_appconfig
       ->check(check_prach_format);
 }
 
-void ocudu::configure_cli11_with_ru_emulator_appconfig_schema(CLI::App& app, ru_emulator_appconfig& ru_emu_parsed_cfg)
+void ocudu::configure_cli11_with_ru_emulator_appconfig_schema(CLI::App& app, ru_emulator_appconfig& config)
 {
   // Logging section.
   CLI::App* log_subcmd = app.add_subcommand("log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, ru_emu_parsed_cfg.log_cfg);
+  configure_cli11_log_args(*log_subcmd, config.log_cfg);
 
   // RU emulators section.
   CLI::App* ru_subcmd =
@@ -163,14 +163,14 @@ void ocudu::configure_cli11_with_ru_emulator_appconfig_schema(CLI::App& app, ru_
   // Cell parameters.
   ru_subcmd->add_option_function<std::vector<std::string>>(
       "--cells",
-      [&ru_emu_parsed_cfg](const std::vector<std::string>& values) {
-        ru_emu_parsed_cfg.ru_cfg.resize(values.size());
+      [&config](const std::vector<std::string>& values) {
+        config.ru_cfg.resize(values.size());
 
         for (unsigned i = 0, e = values.size(); i != e; ++i) {
           CLI::App subapp("RU emulators");
           subapp.config_formatter(create_yaml_config_parser());
           subapp.allow_config_extras(CLI::config_extras_mode::error);
-          configure_cli11_ru_emu_args(subapp, ru_emu_parsed_cfg.ru_cfg[i]);
+          configure_cli11_ru_emu_args(subapp, config.ru_cfg[i]);
           std::istringstream ss(values[i]);
           subapp.parse_from_stream(ss);
         }
@@ -178,20 +178,20 @@ void ocudu::configure_cli11_with_ru_emulator_appconfig_schema(CLI::App& app, ru_
       "Sets the RU emulator configuration");
 
   CLI::App* dpdk_subcmd = app.add_subcommand("dpdk", "DPDK configuration")->configurable();
-  configure_cli11_ru_emu_dpdk_args(*dpdk_subcmd, ru_emu_parsed_cfg.dpdk_config);
+  configure_cli11_ru_emu_dpdk_args(*dpdk_subcmd, config.dpdk_config);
 
   app.callback([&]() {
     // Clean the DPDK optional.
     if (app.get_subcommand("dpdk")->count_all() == 0) {
-      ru_emu_parsed_cfg.dpdk_config.reset();
+      config.dpdk_config.reset();
     }
 #ifdef DPDK_FOUND
-    bool uses_dpdk = ru_emu_parsed_cfg.dpdk_config.has_value();
-    if (uses_dpdk && ru_emu_parsed_cfg.dpdk_config->eal_args.empty()) {
+    bool uses_dpdk = config.dpdk_config.has_value();
+    if (uses_dpdk && config.dpdk_config->eal_args.empty()) {
       report_error("It is mandatory to fill the EAL configuration arguments to initialize DPDK correctly");
     }
 #else
-    if (ru_emu_parsed_cfg.dpdk_config.has_value()) {
+    if (config.dpdk_config.has_value()) {
       report_error("Unable to use DPDK as the application was not compiled with DPDK support");
     }
 #endif
