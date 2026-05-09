@@ -368,35 +368,35 @@ static void configure_cli11_metrics_args(CLI::App& app, du_low_unit_metrics_conf
       ->capture_default_str();
 }
 
-void ocudu::configure_cli11_with_du_low_config_schema(CLI::App& app, du_low_unit_config& parsed_cfg)
+void ocudu::configure_cli11_with_du_low_config_schema(CLI::App& app, du_low_unit_config& config)
 {
   // Loggers section.
   CLI::App* log_subcmd = add_subcommand(app, "log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, parsed_cfg.loggers);
+  configure_cli11_log_args(*log_subcmd, config.loggers);
 
   // Tracer section.
   CLI::App* trace_subcmd = add_subcommand(app, "trace", "General tracer configuration")->configurable();
-  configure_cli11_trace_args(*trace_subcmd, parsed_cfg.tracer);
+  configure_cli11_trace_args(*trace_subcmd, config.tracer);
 
   // Expert upper PHY section.
   CLI::App* expert_phy_subcmd =
       add_subcommand(app, "expert_phy", "Expert physical layer configuration")->configurable();
-  configure_cli11_expert_phy_args(*expert_phy_subcmd, parsed_cfg.expert_phy_cfg);
+  configure_cli11_expert_phy_args(*expert_phy_subcmd, config.expert_phy_cfg);
 
   // Expert execution section.
   CLI::App* expert_subcmd = add_subcommand(app, "expert_execution", "Expert execution configuration")->configurable();
-  configure_cli11_expert_execution_args(*expert_subcmd, parsed_cfg.expert_execution_cfg);
+  configure_cli11_expert_execution_args(*expert_subcmd, config.expert_execution_cfg);
 
 #ifdef DPDK_FOUND
   // HAL section.
   CLI::App* hal_subcmd = add_subcommand(app, "hal", "HAL configuration")->configurable();
-  configure_cli11_hal_args(*hal_subcmd, parsed_cfg.hal_config);
+  configure_cli11_hal_args(*hal_subcmd, config.hal_config);
 #endif
 
   // Metrics section.
-  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, parsed_cfg.metrics_cfg.common_metrics_cfg);
+  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_cfg.common_metrics_cfg);
   CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, parsed_cfg.metrics_cfg);
+  configure_cli11_metrics_args(*metrics_subcmd, config.metrics_cfg);
 }
 
 void ocudu::autoderive_du_low_parameters_after_parsing(CLI::App& app, du_low_unit_config& parsed_cfg, duplex_mode mode)

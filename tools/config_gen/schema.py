@@ -123,6 +123,8 @@ class Schema:
     header_includes: list[str] = field(default_factory=list)
     cli11_extra_includes: list[str] = field(default_factory=list)
     struct_extra: Optional[str] = None
+    # Extra #include lines added to the generated CLI11 header (after CLI/CLI11.hpp).
+    cli11_header_extra_includes: list[str] = field(default_factory=list)
     # Raw C++ appended after the configure function declaration in the generated CLI11 header.
     cli11_header_extra: Optional[str] = None
     # Raw C++ inserted between the generated subcommand helpers and the top-level configure function.
@@ -223,6 +225,7 @@ def load_schema(path: Path) -> Schema:
         header_includes=d.get("header_includes", []),
         cli11_extra_includes=d.get("cli11_extra_includes", []),
         struct_extra=d.get("struct_extra"),
+        cli11_header_extra_includes=d.get("cli11_header_extra_includes", []),
         cli11_header_extra=d.get("cli11_header_extra"),
         cli11_source_preamble=d.get("cli11_source_preamble"),
         cli11_source_extra=d.get("cli11_source_extra"),

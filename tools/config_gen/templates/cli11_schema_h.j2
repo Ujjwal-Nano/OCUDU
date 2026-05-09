@@ -10,6 +10,9 @@ SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 #pragma once
 
 #include "CLI/CLI11.hpp"
+{% for inc in schema.cli11_header_extra_includes %}
+#include {{ inc }}
+{% endfor %}
 
 {% for ns in schema.namespace_parts %}
 namespace {{ ns }} {

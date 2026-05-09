@@ -266,24 +266,24 @@ static void configure_cli11_metrics_args(CLI::App& app, ru_sdr_unit_metrics_conf
   add_option(*layers_subcmd, "--enable_ru", config.enable_ru_metrics, "Enable Radio Unit metrics");
 }
 
-void ocudu::configure_cli11_with_ru_sdr_config_schema(CLI::App& app, ocudu::ru_sdr_unit_config& parsed_cfg)
+void ocudu::configure_cli11_with_ru_sdr_config_schema(CLI::App& app, ru_sdr_unit_config& config)
 {
   /// RU SDR section.
   CLI::App* ru_sdr_subcmd = add_subcommand(app, "ru_sdr", "SDR Radio Unit configuration")->configurable();
-  configure_cli11_ru_sdr_args(*ru_sdr_subcmd, parsed_cfg);
+  configure_cli11_ru_sdr_args(*ru_sdr_subcmd, config);
 
   // Loggers section.
   CLI::App* log_subcmd = add_subcommand(app, "log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, parsed_cfg.loggers);
+  configure_cli11_log_args(*log_subcmd, config.loggers);
 
   // Expert execution section.
   CLI::App* expert_subcmd = add_subcommand(app, "expert_execution", "Expert execution configuration")->configurable();
-  configure_cli11_expert_execution_args(*expert_subcmd, parsed_cfg.expert_execution_cfg);
+  configure_cli11_expert_execution_args(*expert_subcmd, config.expert_execution_cfg);
 
   // Metrics section.
-  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, parsed_cfg.metrics_cfg.metrics_cfg);
+  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_cfg.metrics_cfg);
   CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, parsed_cfg.metrics_cfg);
+  configure_cli11_metrics_args(*metrics_subcmd, config.metrics_cfg);
 }
 
 void ocudu::autoderive_ru_sdr_parameters_after_parsing(CLI::App&           app,
