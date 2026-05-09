@@ -8,6 +8,7 @@
 #include "apps/units/flexible_o_du/split_8/helpers/ru_sdr_config_translator.h"
 #include "split_8_o_du_factory.h"
 #include "split_8_o_du_unit_cli11_schema.h"
+#include "split_8_o_du_unit_cli11_schema_extra.h"
 #include "split_8_o_du_unit_config_validator.h"
 #include "split_8_o_du_unit_config_yaml_writer.h"
 #include "split_8_o_du_unit_logger_registrator.h"

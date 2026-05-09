@@ -8,6 +8,7 @@
 #include "apps/units/flexible_o_du/split_7_2/helpers/ru_ofh_config_translator.h"
 #include "split_7_2_o_du_factory.h"
 #include "split_7_2_o_du_unit_cli11_schema.h"
+#include "split_7_2_o_du_unit_cli11_schema_extra.h"
 #include "split_7_2_o_du_unit_config_validator.h"
 #include "split_7_2_o_du_unit_config_yaml_writer.h"
 #include "split_7_2_o_du_unit_logger_registrator.h"

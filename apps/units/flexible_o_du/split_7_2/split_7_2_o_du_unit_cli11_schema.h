@@ -10,10 +10,7 @@ namespace ocudu {
 
 struct split_7_2_o_du_unit_config;
 
-/// Configures the given CLI11 application with the split 7.2 O-RAN DU unit configuration schema.
-void configure_cli11_with_split_7_2_o_du_unit_config_schema(CLI::App& app, split_7_2_o_du_unit_config& parsed_cfg);
-
-/// Auto derive split 7.2 O-RAN DU parameters after the parsing.
-void autoderive_split_7_2_o_du_parameters_after_parsing(CLI::App& app, split_7_2_o_du_unit_config& parsed_cfg);
+/// Configures the given CLI11 application with the split 7.2 o-ran du unit configuration schema.
+void configure_cli11_with_split_7_2_o_du_unit_config_schema(CLI::App& app, split_7_2_o_du_unit_config& config);
 
 } // namespace ocudu

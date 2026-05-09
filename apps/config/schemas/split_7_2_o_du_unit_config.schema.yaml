@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: split_7_2_o_du_unit_config
+namespace: ocudu
+description: split 7.2 o-ran du unit configuration
+generate_header: false
+
+outputs:
+  header:       apps/units/flexible_o_du/split_7_2/split_7_2_o_du_unit_config.h
+  cli11_source: apps/units/flexible_o_du/split_7_2/split_7_2_o_du_unit_cli11_schema.cpp
+  cli11_header: apps/units/flexible_o_du/split_7_2/split_7_2_o_du_unit_cli11_schema.h
+
+cli11_extra_includes:
+  - '"apps/units/flexible_o_du/o_du_high/o_du_high_unit_config_cli11_schema.h"'
+  - '"apps/units/flexible_o_du/o_du_low/du_low_config_cli11_schema.h"'
+  - '"apps/units/flexible_o_du/split_7_2/helpers/ru_ofh_config_cli11_schema.h"'
+
+cli11:
+  function: configure_cli11_with_split_7_2_o_du_unit_config_schema
+  post_configure_raw: |
+    configure_cli11_with_o_du_high_config_schema(app, config.odu_high_cfg);
+    configure_cli11_with_du_low_config_schema(app, config.du_low_cfg);
+    configure_cli11_with_ru_ofh_config_schema(app, config.ru_cfg);

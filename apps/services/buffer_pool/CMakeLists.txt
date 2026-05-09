@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+include(ConfigGenerate)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/buffer_pool_appconfig.schema.yaml
+                       TARGETS ocudu_buffer_pool_app_service)
 
 set(SOURCES
         buffer_pool_appconfig_cli11_schema.cpp

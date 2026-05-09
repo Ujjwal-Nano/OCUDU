@@ -2,15 +2,18 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-
-
 add_subdirectory(helpers)
+
+include(ConfigGenerate)
+generate_config_schema(SCHEMA ${CMAKE_SOURCE_DIR}/apps/config/schemas/split_8_o_du_unit_config.schema.yaml
+                       TARGETS ocudu_flexible_o_du_split_8)
 
 # Build the flexible du split 8 library when it is selected in the definition.
 set(SOURCES
         split_8_o_du_application_unit_impl.cpp
         split_8_o_du_factory.cpp
         split_8_o_du_unit_cli11_schema.cpp
+        split_8_o_du_unit_cli11_schema_extra.cpp
         split_8_o_du_unit_config_validator.cpp
         split_8_o_du_unit_config_yaml_writer.cpp)
 

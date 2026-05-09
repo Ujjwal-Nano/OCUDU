@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+schema_version: 1
+
+name: buffer_pool_appconfig
+namespace: ocudu::app_services
+description: buffer pool application configuration
+generate_header: false
+
+outputs:
+  header:       apps/services/buffer_pool/buffer_pool_appconfig.h
+  cli11_source: apps/services/buffer_pool/buffer_pool_appconfig_cli11_schema.cpp
+  cli11_header: apps/services/buffer_pool/buffer_pool_appconfig_cli11_schema.h
+
+cli11_extra_includes:
+  - '"apps/helpers/metrics/metrics_config_cli11_schema.h"'
+
+parameters:
+  - name: nof_segments
+    description: Number of segments allocated by the buffer pool
+    type: "std::size_t"
+    cli11:
+      capture: true
+
+  - name: segment_size
+    description: Size of each buffer pool segment in bytes
+    type: "std::size_t"
+    cli11:
+      capture: true
+
+  - name: enable_app_usage
+    description: Enable application usage metrics
+    type: bool
+    cli11:
+      member: metrics_config.enable_metrics
+      capture: true
+
+subcommands:
+  - name: buffer_pool
+    description: Buffer pool configuration
+    configurable: true
+    parameters: [nof_segments, segment_size]
+
+  - name: metrics
+    description: Metrics configuration
+    configurable: true
+    subcommands:
+      - name: layers
+        description: Layer basis metrics configuration
+        configurable: true
+        parameters: [enable_app_usage]
+
+cli11:
+  function: configure_cli11_with_buffer_pool_appconfig_schema
+  post_configure_raw: |
+    app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.metrics_config.common_metrics_cfg);
