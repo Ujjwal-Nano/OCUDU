@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+# Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+
+# App composition spec for the GNB application.
+# This file feeds app_doc_schema.py to generate a unified CLI reference.
+#
+# root_params: CLI options at the top level of the app (not inside any subcommand).
+#   These are set in gnb_appconfig's post_configure_raw or by the CLI11 framework itself.
+# schemas: YAML schema files whose subcommands compose the GNB CLI.
+#   Subcommands with the same name across multiple schemas are merged.
+
+title: GNB Application
+
+root_params:
+  - {flag: "-c,--config",         description: "Configuration file path (INI or YAML format)", type: string}
+  - {flag: "-v,--version",        description: "Print version information and exit"}
+  - {flag: "--dryrun",            description: "Enable application dry run mode",              type: bool,     default: "false"}
+  - {flag: "--gnb_id",            description: "gNodeB identifier",                            type: unsigned}
+  - {flag: "--gnb_id_bit_length", description: "gNodeB identifier length in bits",             type: unsigned, range: {min: 22, max: 32}}
+  - {flag: "--ran_node_name",     description: "RAN node name",                                type: string}
+
+schemas:
+  # Logging — logger_appconfig adds --filename/--all_level/etc. via raw C++ preamble (not yet
+  # a structured schema), so the log subcommand is populated only by schemas below.
+  - schemas/du_high_config.schema.yaml          # log: mac/rlc/f1ap/f1u/gtpu/du levels + misc
+  - schemas/fapi_unit_config.schema.yaml        # log: fapi_level
+
+  # Tracing
+  - schemas/tracer_appconfig.schema.yaml        # trace: filename, max_tracing_events_per_file, nof_tracing_events_after_severe
+                                                # trace.layers comes from du_high_config above
+
+  # Packet capture (multiple E2/unit schemas contribute to the same pcap subcommand)
+  - schemas/o_cu_cp_e2_config.schema.yaml       # pcap: cu-cp E2 capture
+  - schemas/o_cu_up_e2_config.schema.yaml       # pcap: cu-up E2 capture
+  - schemas/o_du_high_e2_config.schema.yaml     # pcap: du-high E2 capture
+
+  # Metrics (all schemas add to the metrics subcommand; subcommands with the same name merge)
+  - schemas/app_resource_usage_config.schema.yaml   # metrics.layers: enable_app_usage
+  - schemas/executor_metrics_config.schema.yaml     # metrics.layers: enable_executor
+                                                    # metrics.periodicity: executors_report_period
+  - schemas/metrics_appconfig.schema.yaml           # metrics: autostart_stdout_metrics (doc-only)
+                                                    # metrics.periodicity: app_usage_report_period
+  - schemas/metrics_config.schema.yaml              # metrics: enable_json, enable_log, enable_verbose
+
+  # Buffer pool
+  - schemas/buffer_pool_appconfig.schema.yaml   # buffer_pool: nof_segments, segment_size
+
+  # Worker threads and executor affinities
+  - schemas/worker_manager_appconfig.schema.yaml  # affinities, threads
+
+  # Optional: HAL / DPDK
+  - schemas/hal_appconfig.schema.yaml           # hal: eal_args
+
+  # Remote control
+  - schemas/remote_control_appconfig.schema.yaml  # remote_control: enabled, bind_addr, port
+                                                   # metrics: enable_metrics_subscription
+
+  # UDP gateway (used for GTP-U / F1-U user-plane)
+  - schemas/udp_appconfig.schema.yaml           # udp: rx_max_msgs, tx_qsize, tx_max_msgs, etc.
