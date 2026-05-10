@@ -55,8 +55,8 @@ void ocudu::configure_cli11_with_worker_manager_appconfig_schema(CLI::App& app, 
 {
   CLI::App* top_subcmd = add_subcommand(app, "expert_execution", "Expert execution configuration")->configurable();
   CLI::App* affinities_subcmd =
-      add_subcommand(top_subcmd, "affinities", "Application CPU affinities configuration")->configurable();
+      add_subcommand(*top_subcmd, "affinities", "Application CPU affinities configuration")->configurable();
   configure_cli11_affinities_args(*affinities_subcmd, config);
-  CLI::App* threads_subcmd = add_subcommand(top_subcmd, "threads", "Threads configuration")->configurable();
+  CLI::App* threads_subcmd = add_subcommand(*top_subcmd, "threads", "Threads configuration")->configurable();
   configure_cli11_threads_args(*threads_subcmd, config);
 }
