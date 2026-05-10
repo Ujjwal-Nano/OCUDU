@@ -6,7 +6,10 @@
 """Generate a Markdown reference document from one or more YAML schema files.
 
 Usage:
+    # Single schema — schema is the document root (#), subcommands are ##
     python3 tools/config_gen/doc_schema.py apps/config/schemas/metrics_config.schema.yaml
+
+    # Multiple schemas — each schema is ##, subcommands are ###
     python3 tools/config_gen/doc_schema.py apps/config/schemas/*.schema.yaml -o docs/config_reference.md
 """
 
@@ -90,6 +93,28 @@ def _all_subcmd_param_names(subcommands: list[Subcommand]) -> set[str]:
     return names
 
 
+def _has_visible_params(sub: Subcommand, schema: Schema) -> bool:
+    """Return True if this subcommand (or any descendant) has at least one visible parameter."""
+    for name in sub.parameters:
+        try:
+            p = schema.param_by_name(name)
+            if not (p.mode == "struct-only" and not p.cli11.raw_cpp):
+                return True
+        except KeyError:
+            pass
+    return any(_has_visible_params(nested, schema) for nested in sub.subcommands)
+
+
+def _schema_has_content(schema: Schema) -> bool:
+    """Return True if the schema has anything worth documenting."""
+    claimed = _all_subcmd_param_names(schema.subcommands)
+    top_params = [p for p in schema.parameters if p.name not in claimed]
+    visible_top = [p for p in top_params if not (p.mode == "struct-only" and not p.cli11.raw_cpp)]
+    if visible_top:
+        return True
+    return any(_has_visible_params(sub, schema) for sub in schema.subcommands)
+
+
 def _render_subcommand(
     sub: Subcommand,
     schema: Schema,
@@ -122,11 +147,16 @@ def _render_subcommand(
 # ---------------------------------------------------------------------------
 
 
-def render_schema(schema: Schema, out: IO[str]) -> None:
+def render_schema(schema: Schema, out: IO[str], schema_level: int = 1) -> None:
+    """Render one schema.  schema_level controls the heading depth of the schema title:
+    1 → the schema is the document root (#), subcommands start at ##.
+    2 → the schema is a section (##), subcommands start at ###.
+    """
     desc = schema.description
     if desc and desc[0].islower():
         desc = desc[0].upper() + desc[1:]
-    out.write(f"# {desc}\n")
+    heading = "#" * schema_level
+    out.write(f"{heading} {desc}\n")
 
     claimed = _all_subcmd_param_names(schema.subcommands)
     top_params = [p for p in schema.parameters if p.name not in claimed]
@@ -138,7 +168,7 @@ def render_schema(schema: Schema, out: IO[str]) -> None:
             _render_param(param, out)
 
     for sub in schema.subcommands:
-        _render_subcommand(sub, schema, out, 2)
+        _render_subcommand(sub, schema, out, schema_level + 1)
 
     out.write("\n")
 
@@ -164,14 +194,21 @@ def main() -> int:
             print(f"error: {path}: {exc}", file=sys.stderr)
             return 1
 
+    def write_all(out: IO[str]) -> None:
+        if len(schemas) == 1:
+            render_schema(schemas[0], out, schema_level=1)
+        else:
+            out.write("# Configuration Reference\n\n")
+            for schema in schemas:
+                if _schema_has_content(schema):
+                    render_schema(schema, out, schema_level=2)
+
     if args.output:
         with args.output.open("w") as f:
-            for schema in schemas:
-                render_schema(schema, f)
+            write_all(f)
         print(f"wrote {args.output}", file=sys.stderr)
     else:
-        for schema in schemas:
-            render_schema(schema, sys.stdout)
+        write_all(sys.stdout)
 
     return 0
 
