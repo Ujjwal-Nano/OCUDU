@@ -8,6 +8,7 @@ name: buffer_pool_appconfig
 namespace: ocudu::app_services
 description: buffer pool application configuration
 generate_header: false
+doc_exclude: true
 
 outputs:
   header:       apps/services/buffer_pool/buffer_pool_appconfig.h

@@ -135,6 +135,8 @@ class Schema:
     generate_header: bool = True
     # When False, skip generating the CLI11 source .cpp (use when the source is too complex to express in the schema).
     generate_cli11_source: bool = True
+    # When True, exclude this schema from the combined documentation reference (use for pure sub-component schemas).
+    doc_exclude: bool = False
 
     @property
     def namespace_parts(self) -> list[str]:
@@ -231,4 +233,5 @@ def load_schema(path: Path) -> Schema:
         cli11_source_extra=d.get("cli11_source_extra"),
         generate_header=d.get("generate_header", True),
         generate_cli11_source=d.get("generate_cli11_source", True),
+        doc_exclude=d.get("doc_exclude", False),
     )

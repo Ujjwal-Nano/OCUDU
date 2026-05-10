@@ -12,25 +12,6 @@ Layer basis metrics configuration.
 
 - **`--enable_app_usage`** (`bool`): Enable application usage metrics. Default: `false`.
 
-## Buffer pool application configuration
-
-### `buffer_pool`
-
-Buffer pool configuration.
-
-- **`--nof_segments`** (`size_t`): Number of segments allocated by the buffer pool.
-- **`--segment_size`** (`size_t`): Size of each buffer pool segment in bytes.
-
-### `metrics`
-
-Metrics configuration.
-
-#### `layers`
-
-Layer basis metrics configuration.
-
-- **`--enable_app_usage`** (`bool`): Enable application usage metrics.
-
 ## Du high configuration
 
 - **`--gnb_id`** (`unsigned`): gNodeB identifier.
@@ -175,6 +156,8 @@ HAL configuration.
 ### `metrics`
 
 Metrics configuration.
+
+- **`--autostart_stdout_metrics`** (`bool`): Autostart stdout metrics reporting. Default: `false`.
 
 #### `periodicity`
 

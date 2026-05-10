@@ -21,10 +21,17 @@ parameters:
     cli11:
       capture: true
 
+  - name: autostart_stdout_metrics
+    description: Autostart stdout metrics reporting
+    type: bool
+    mode: doc-only
+    default: "false"
+
 subcommands:
   - name: metrics
     description: Metrics configuration
     configurable: true
+    parameters: [autostart_stdout_metrics]
     subcommands:
       - name: periodicity
         description: Metrics periodicity configuration

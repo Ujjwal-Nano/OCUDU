@@ -22,8 +22,10 @@ namespace {{ ns }} {
 /// {{ schema.description }}.
 struct {{ schema.name }} {
 {% for param in schema.parameters %}
+{% if param.mode != 'doc-only' %}
   /// {{ param.description }}.
   {{ param.cpp_type }} {{ param.name }}{% if param.default %} = {{ param.default }}{% endif %};
+{% endif %}
 {% endfor %}
 {% if schema.struct_extra %}
 

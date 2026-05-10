@@ -200,7 +200,7 @@ def main() -> int:
         else:
             out.write("# Configuration Reference\n\n")
             for schema in schemas:
-                if _schema_has_content(schema):
+                if not schema.doc_exclude and _schema_has_content(schema):
                     render_schema(schema, out, schema_level=2)
 
     if args.output:

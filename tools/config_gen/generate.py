@@ -88,7 +88,7 @@ def _render_subcmd_fn(subcmd: Subcommand, schema: Schema) -> str:
     # Direct parameters of this subcommand go flat on the passed app.
     for pname in subcmd.parameters:
         p = schema.param_by_name(pname)
-        if p.mode == "struct-only" and not p.cli11.raw_cpp:
+        if p.mode in ("struct-only", "doc-only") and not p.cli11.raw_cpp:
             continue
         for line in _render_option(p, config_var, app_var="app").splitlines():
             lines.append("  " + line)
@@ -102,7 +102,7 @@ def _render_subcmd_fn(subcmd: Subcommand, schema: Schema) -> str:
         )
         for pname in nested.parameters:
             p = schema.param_by_name(pname)
-            if p.mode == "struct-only" and not p.cli11.raw_cpp:
+            if p.mode in ("struct-only", "doc-only") and not p.cli11.raw_cpp:
                 continue
             for line in _render_option(p, nested_config_var, app_var=f"*{nested.name}_subcmd").splitlines():
                 lines.append("  " + line)
@@ -141,7 +141,7 @@ def _render_top_level_fn(schema: Schema) -> str:
     subcmd_params = _all_subcmd_params(schema.subcommands)
 
     for param in schema.parameters:
-        if param.name in subcmd_params or (param.mode == "struct-only" and not param.cli11.raw_cpp):
+        if param.name in subcmd_params or (param.mode in ("struct-only", "doc-only") and not param.cli11.raw_cpp):
             continue
         for line in _render_option(param, "config").splitlines():
             lines.append("  " + line)
