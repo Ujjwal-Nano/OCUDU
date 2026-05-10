@@ -27,6 +27,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
 from schema import Parameter, Range, Schema, Subcommand, load_schema
+from doc_schema import render_schema
 
 
 # ---------------------------------------------------------------------------
@@ -231,31 +232,51 @@ def load_app_spec(path: Path) -> tuple[str, list[InlineParam], list[Schema]]:
 # ---------------------------------------------------------------------------
 
 
+def _is_schema_file(path: Path) -> bool:
+    """Return True if path is a schema YAML (has schema_version key) rather than an app spec."""
+    with open(path) as f:
+        d = yaml.safe_load(f)
+    return isinstance(d, dict) and "schema_version" in d
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate a Markdown CLI reference for one application from its composition spec."
+        description="Generate a Markdown CLI reference. "
+        "Accepts an app composition spec YAML (with 'schemas:' list) "
+        "or a single schema YAML (with 'schema_version:')."
     )
-    parser.add_argument("app_spec", type=Path, metavar="APP_SPEC", help="App composition spec YAML")
+    parser.add_argument("input", type=Path, metavar="FILE", help="App spec YAML or schema YAML")
     parser.add_argument("-o", "--output", type=Path, metavar="FILE", help="Output Markdown file (default: stdout)")
     args = parser.parse_args()
 
     try:
-        title, root_params, schemas = load_app_spec(args.app_spec)
+        if _is_schema_file(args.input):
+            schema = load_schema(args.input)
+            writer = lambda out: render_schema(schema, out, schema_level=1)
+        else:
+            title, root_params, schemas = load_app_spec(args.input)
+            tree = build_tree(schemas)
+            writer = lambda out: render(title, root_params, tree, out)
     except Exception as exc:
-        print(f"error: {args.app_spec}: {exc}", file=sys.stderr)
+        print(f"error: {args.input}: {exc}", file=sys.stderr)
         return 1
-
-    tree = build_tree(schemas)
-
-    def write_all(out: IO[str]) -> None:
-        render(title, root_params, tree, out)
 
     if args.output:
         with args.output.open("w") as f:
-            write_all(f)
+            writer(f)
         print(f"wrote {args.output}", file=sys.stderr)
+        # Warn if the file is nearly empty (schema with no structured content).
+        text = args.output.read_text().strip()
+        if text.count("\n") < 2:
+            print(
+                f"warning: output contains only a title. "
+                f"If you passed a schema file, its CLI may be defined in raw C++ preambles "
+                f"and won't appear here. Pass an app spec YAML (e.g. apps/config/gnb.app.yaml) "
+                f"to generate a full reference.",
+                file=sys.stderr,
+            )
     else:
-        write_all(sys.stdout)
+        writer(sys.stdout)
 
     return 0
 
