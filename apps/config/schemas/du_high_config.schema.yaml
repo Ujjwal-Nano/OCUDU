@@ -389,6 +389,1905 @@ parameters:
       capture: true
 
 # ---------------------------------------------------------------------------
+# cell_cfg subcommand parameters — doc-only, hand-written C++ in du_high_config_cli11_schema.cpp
+# ---------------------------------------------------------------------------
+
+  # --- Direct cell_cfg options ---
+  - name: cell_pci
+    description: PCI
+    type: int
+    mode: doc-only
+    range: {min: 0, max: 1007}
+    cli11:
+      flag: --pci
+
+  - name: cell_sector_id
+    description: "Sector ID (4-14 bits). Concatenated with gNB Id to form the NR Cell Identity (NCI). Auto-derived if not specified"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 16383}
+    cli11:
+      flag: --sector_id
+
+  - name: cell_dl_arfcn
+    description: Downlink ARFCN
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --dl_arfcn
+
+  - name: cell_band
+    description: NR band
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --band
+
+  - name: cell_common_scs
+    description: Cell common subcarrier spacing
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --common_scs
+
+  - name: cell_channel_bandwidth_MHz
+    description: Channel bandwidth in MHz
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --channel_bandwidth_MHz
+
+  - name: cell_nof_antennas_ul
+    description: Number of antennas in uplink
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_antennas_ul
+
+  - name: cell_nof_antennas_dl
+    description: Number of antennas in downlink
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_antennas_dl
+
+  - name: cell_plmn
+    description: PLMN
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --plmn
+
+  - name: cell_additional_plmns
+    description: List of PLMNs
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --additional_plmns
+
+  - name: cell_tac
+    description: TAC
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --tac
+
+  - name: cell_enabled
+    description: Automatically activate the cell on startup
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --enabled
+
+  - name: cell_cell_barred
+    description: "MIB cellBarred: if true, UEs cannot camp on this cell"
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --cell_barred
+
+  - name: cell_intra_freq_reselection
+    description: "MIB intraFreqReselection: if true, intra-frequency cell reselection is allowed when cell is barred"
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --intra_freq_reselection
+
+  - name: cell_q_rx_lev_min
+    description: "q-RxLevMin: required minimum received RSRP level for cell selection/re-selection, in dBm"
+    type: int
+    mode: doc-only
+    range: {min: -70, max: -22}
+    cli11:
+      flag: --q_rx_lev_min
+
+  - name: cell_q_qual_min
+    description: "q-QualMin: required minimum received RSRQ level for cell selection/re-selection, in dB"
+    type: int
+    mode: doc-only
+    range: {min: -43, max: -12}
+    cli11:
+      flag: --q_qual_min
+
+  - name: cell_pcg_p_nr_fr1
+    description: "p-nr-fr1: maximum total TX power to be used by the UE in this NR cell group across FR1"
+    type: int
+    mode: doc-only
+    range: {min: -30, max: 23}
+    cli11:
+      flag: --pcg_p_nr_fr1
+
+  - name: cell_slicing
+    description: "Network slicing configuration (list of slice configs with sst, sd, and sched_cfg)"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --slicing
+
+  # --- MAC Cell Group: BSR ---
+  - name: bsr_periodic_bsr_timer
+    description: "Periodic BSR Timer in nof. subframes. Value 0 equates to infinity"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --periodic_bsr_timer
+
+  - name: bsr_retx_bsr_timer
+    description: "Retransmission BSR Timer in nof. subframes"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --retx_bsr_timer
+
+  - name: bsr_lc_sr_delay_timer
+    description: "Logical Channel SR delay timer in nof. subframes"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --lc_sr_delay_timer
+
+  # --- MAC Cell Group: PHR ---
+  - name: phr_prohib_timer
+    description: PHR prohibit timer in nof. subframes
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --phr_prohibit_timer
+
+  # --- MAC Cell Group: SR ---
+  - name: sr_trans_max
+    description: Maximum number of SR transmissions
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --sr_trans_max
+
+  - name: sr_prohibit_timer
+    description: Timer for SR transmission on PUCCH in ms
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --sr_prohibit_timer
+
+  # --- SSB ---
+  - name: ssb_period_msec
+    description: Period of SSB scheduling in milliseconds
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --ssb_period
+
+  - name: ssb_block_power
+    description: SS_PBCH_power_block in dBm
+    type: int
+    mode: doc-only
+    range: {min: -60, max: 50}
+    cli11:
+      flag: --ssb_block_power_dbm
+
+  - name: ssb_pss_to_sss_epre
+    description: "SSB PSS to SSS EPRE ratio in dB {0, 3}"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --pss_to_sss_epre_db
+
+  # --- SIB direct ---
+  - name: sib_si_window_len
+    description: "Length of the SI scheduling window in slots. Must be shorter or equal to SI period"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --si_window_length
+
+  - name: sib_si_sched_info
+    description: "Scheduling for each SI-message (list of {si_period, sib_mapping, si_window_position})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --si_sched_info
+
+  - name: sib_t300
+    description: RRC Connection Establishment timer in ms
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --t300
+
+  - name: sib_t301
+    description: RRC Connection Re-establishment timer in ms
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --t301
+
+  - name: sib_t310
+    description: Out-of-sync timer in ms
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --t310
+
+  - name: sib_n310
+    description: Out-of-sync counter
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --n310
+
+  - name: sib_t311
+    description: RRC Connection Re-establishment procedure timer in ms
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --t311
+
+  - name: sib_n311
+    description: In-sync counter
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --n311
+
+  - name: sib_t319
+    description: RRC Connection Resume timer in ms
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --t319
+
+  # --- SIB2 ---
+  - name: sib2_q_hyst
+    description: Hysteresis value for ranking criteria
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --q_hyst
+
+  - name: sib2_thresh_serving_low_p
+    description: Rx level threshold for serving cell when reselecting towards a lower priority RAT/frequency
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --thresh_serving_low_p
+
+  - name: sib2_cell_reselection_priority
+    description: Integer part of the cell reselection priority for the frequency of this cell
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 7}
+    cli11:
+      flag: --cell_reselection_priority
+
+  - name: sib2_q_rx_lev_min
+    description: Minimum required Rx level in the cell in dBm
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --q_rx_lev_min
+
+  - name: sib2_s_intra_search_p
+    description: Rx level threshold for intra frequency measurements in dB
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --s_intra_search_p
+
+  - name: sib2_t_reselection_nr
+    description: Cell reselection timer value in seconds
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 7}
+    cli11:
+      flag: --t_reselection_nr
+
+  # --- SIB3 ---
+  - name: sib3_intra_freq_neigh_cell_list
+    description: "Intra frequency neighbor cell list (list of {pci, q_offset_cell})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --intra_freq_neigh_cell_list
+
+  - name: sib3_intra_freq_excluded_cell_list
+    description: "Intra frequency excluded cell list (list of {start, size})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --intra_freq_excluded_cell_list
+
+  # --- SIB4 ---
+  - name: sib4_inter_freq_carrier_freq_list
+    description: "Inter frequency carrier frequency list (list of {arfcn, ssb_scs, q_rx_lev_min, thresh_x_high_p, thresh_x_low_p, q_offset_freq})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --inter_freq_carrier_freq_list
+
+  # --- SIB5 ---
+  - name: sib5_t_reselection_eutra
+    description: Cell reselection timer value in seconds for EUTRA
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 7}
+    cli11:
+      flag: --t_reselection_eutra
+
+  - name: sib5_carrier_freq_list_eutra
+    description: "EUTRA carrier frequency list (list of {earfcn, allowed_meas_bandwidth, cell_reselection_priority, thresh_x_high, thresh_x_low, q_rx_lev_min, q_qual_min, p_max_eutra})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --carrier_freq_list_eutra
+
+  # --- SIB16 ---
+  - name: sib16_freq_prio_list_slicing
+    description: "Frequency priority slicing list (list of {dl_implicit_carrier_freq, slice_info_list})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --freq_prio_list_slicing
+
+  # --- ETWS ---
+  - name: etws_message_id
+    description: ETWS message ID
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --message_id
+
+  - name: etws_serial_num
+    description: ETWS message serial number
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --serial_num
+
+  - name: etws_warning_type
+    description: ETWS warning type
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --warning_type
+
+  - name: etws_data_coding_scheme
+    description: ETWS message CBS coding scheme
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --data_coding_scheme
+
+  - name: etws_warning_message
+    description: ETWS warning message
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --warning_message
+
+  # --- CMAS ---
+  - name: cmas_message_id
+    description: CMAS message ID
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --message_id
+
+  - name: cmas_serial_num
+    description: CMAS message serial number
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --serial_num
+
+  - name: cmas_data_coding_scheme
+    description: CMAS message CBS coding scheme
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --data_coding_scheme
+
+  - name: cmas_warning_message
+    description: CMAS warning message
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --warning_message
+
+  # --- UL common ---
+  - name: ul_p_max
+    description: Maximum transmit power allowed in this serving cell
+    type: int
+    mode: doc-only
+    range: {min: -30, max: 23}
+    cli11:
+      flag: --p_max
+
+  - name: ul_max_pucchs_per_slot
+    description: Maximum number of PUCCH grants that can be allocated per slot
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_pucchs_per_slot
+
+  - name: ul_max_ul_grants_per_slot
+    description: Maximum number of UL grants that can be allocated per slot
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_ul_grants_per_slot
+
+  - name: ul_min_pucch_pusch_prb_distance
+    description: Minimum PRB distance between PUCCH and UE-dedicated PUSCH grants
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --min_pucch_pusch_prb_distance
+
+  # --- PDCCH common ---
+  - name: pdcch_common_coreset0_index
+    description: "CORESET#0 index"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 15}
+    cli11:
+      flag: --coreset0_index
+
+  - name: pdcch_common_ss1_n_candidates
+    description: "Number of PDCCH candidates per aggregation level for SearchSpace#1"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --ss1_n_candidates
+
+  - name: pdcch_common_ss0_index
+    description: "SearchSpace#0 index"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 15}
+    cli11:
+      flag: --ss0_index
+
+  - name: pdcch_common_max_coreset0_duration
+    description: "Maximum CORESET#0 duration in OFDM symbols to consider when deriving CORESET#0 index"
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 2}
+    cli11:
+      flag: --max_coreset0_duration
+
+  # --- PDCCH dedicated ---
+  - name: pdcch_ded_coreset1_rb_start
+    description: "Starting CRB number for CORESET 1 relative to CRB 0"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 275}
+    cli11:
+      flag: --coreset1_rb_start
+
+  - name: pdcch_ded_coreset1_l_crb
+    description: Length of CORESET 1 in number of CRBs
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 275}
+    cli11:
+      flag: --coreset1_l_crb
+
+  - name: pdcch_ded_coreset1_duration
+    description: Duration of CORESET 1 in number of OFDM symbols
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 2}
+    cli11:
+      flag: --coreset1_duration
+
+  - name: pdcch_ded_ss2_n_candidates
+    description: "Number of PDCCH candidates per aggregation level for SearchSpace#2"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --ss2_n_candidates
+
+  - name: pdcch_ded_dci_format_0_1_and_1_1
+    description: "DCI format to use in UE dedicated SearchSpace#2"
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --dci_format_0_1_and_1_1
+
+  - name: pdcch_ded_ss2_type
+    description: "SearchSpace type for UE dedicated SearchSpace#2"
+    type: string_enum
+    enum_cpp_type: search_space_type
+    mode: doc-only
+    allowed_values:
+      - {value: "common", cpp: "search_space_configuration::type_t::common"}
+      - {value: "ue_dedicated", cpp: "search_space_configuration::type_t::ue_dedicated"}
+    cli11:
+      flag: --ss2_type
+
+  - name: pdcch_ded_al_cqi_offset
+    description: Offset to apply to the CQI value used in the PDCCH aggregation level calculation
+    type: int
+    mode: doc-only
+    range: {min: -15, max: 15}
+    cli11:
+      flag: --al_cqi_offset
+
+  # --- PDSCH ---
+  - name: pdsch_min_ue_mcs
+    description: Minimum UE MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --min_ue_mcs
+
+  - name: pdsch_max_ue_mcs
+    description: Maximum UE MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --max_ue_mcs
+
+  - name: pdsch_fixed_rar_mcs
+    description: Fixed RAR MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --fixed_rar_mcs
+
+  - name: pdsch_fixed_sib1_mcs
+    description: Fixed SIB1 MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --fixed_sib1_mcs
+
+  - name: pdsch_harq_feedback_disabled
+    description: "Disable DL HARQ Feedback (NTN cells). Set to true/false or a 32-bit bitmask (0x.../0b...)"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --harq_feedback_disabled
+
+  - name: pdsch_nof_harqs
+    description: "Number of DL HARQ processes (32 applies only for NTN cells)"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_harqs
+
+  - name: pdsch_max_nof_harq_retxs
+    description: Maximum number of times a DL HARQ can be retransmitted before being discarded
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 64}
+    cli11:
+      flag: --max_nof_harq_retxs
+
+  - name: pdsch_harq_retx_timeout
+    description: "Maximum time in ms between a HARQ NACK and the scheduler allocating the HARQ for retransmission"
+    type: unsigned
+    mode: doc-only
+    range: {min: 10, max: 500}
+    cli11:
+      flag: --harq_retx_timeout
+
+  - name: pdsch_max_consecutive_kos
+    description: Maximum number of HARQ-ACK consecutive KOs before a Radio Link Failure is reported
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_consecutive_kos
+
+  - name: pdsch_rv_sequence
+    description: "RV sequence for PDSCH (e.g. [0 2 3 1])"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --rv_sequence
+
+  - name: pdsch_mcs_table
+    description: MCS table to use for PDSCH
+    type: string_enum
+    enum_cpp_type: pdsch_mcs_table
+    mode: doc-only
+    allowed_values:
+      - {value: "qam64", cpp: "pdsch_mcs_table::qam64"}
+      - {value: "qam256", cpp: "pdsch_mcs_table::qam256"}
+      - {value: "qam64lowse", cpp: "pdsch_mcs_table::qam64LowSe"}
+    cli11:
+      flag: --mcs_table
+
+  - name: pdsch_min_rb_size
+    description: Minimum RB size for UE PDSCH resource allocation
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --min_rb_size
+
+  - name: pdsch_max_rb_size
+    description: Maximum RB size for UE PDSCH resource allocation
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_rb_size
+
+  - name: pdsch_start_rb
+    description: Start RB for resource allocation of UE PDSCHs
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --start_rb
+
+  - name: pdsch_end_rb
+    description: End RB for resource allocation of UE PDSCHs
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --end_rb
+
+  - name: pdsch_max_pdschs_per_slot
+    description: Maximum number of PDSCH grants per slot, including SIB, RAR, Paging and UE data
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_pdschs_per_slot
+
+  - name: pdsch_max_alloc_attempts
+    description: Maximum number of DL or UL PDCCH grant allocation attempts per slot
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_alloc_attempts
+
+  - name: pdsch_olla_cqi_inc_step
+    description: "Outer-loop link adaptation (OLLA) increment value. Value 0 disables OLLA"
+    type: float
+    mode: doc-only
+    range: {min: 0.0, max: 1.0}
+    cli11:
+      flag: --olla_cqi_inc_step
+
+  - name: pdsch_olla_target_bler
+    description: Target DL BLER in Outer-loop link adaptation (OLLA) algorithm
+    type: float
+    mode: doc-only
+    range: {min: 0.0, max: 0.5}
+    cli11:
+      flag: --olla_target_bler
+
+  - name: pdsch_olla_max_cqi_offset
+    description: Maximum offset that OLLA can apply to CQI
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --olla_max_cqi_offset
+
+  - name: pdsch_dc_offset
+    description: "DC offset in subcarriers. Set to 'outside', 'undetermined', 'center', or an integer"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --dc_offset
+
+  - name: pdsch_harq_la_cqi_drop_threshold
+    description: "LA threshold for CQI drop above which HARQ retransmissions are cancelled (0 = disabled)"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 15}
+    cli11:
+      flag: --harq_la_cqi_drop_threshold
+
+  - name: pdsch_harq_la_ri_drop_threshold
+    description: "LA threshold for nof. layers drop above which HARQ retransmission is cancelled (0 = disabled)"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 4}
+    cli11:
+      flag: --harq_la_ri_drop_threshold
+
+  - name: pdsch_dmrs_additional_position
+    description: PDSCH DMRS additional position
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 3}
+    cli11:
+      flag: --dmrs_additional_position
+
+  - name: pdsch_interleaving_bundle_size
+    description: "PDSCH interleaving bundle size. Valid values: [0, 2, 4]"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --interleaving_bundle_size
+
+  - name: pdsch_max_rank
+    description: Maximum number of PDSCH transmission layers
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_rank
+
+  - name: pdsch_enable_csi_rs_pdsch_multiplexing
+    description: Enable multiplexing of CSI-RS and PDSCH
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --enable_csi_rs_pdsch_multiplexing
+
+  # --- PUSCH ---
+  - name: pusch_min_ue_mcs
+    description: Minimum UE MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --min_ue_mcs
+
+  - name: pusch_max_ue_mcs
+    description: Maximum UE MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --max_ue_mcs
+
+  - name: pusch_harq_mode_b
+    description: "Set HARQ Mode B (NTN cells). Set to true/false or a 32-bit bitmask (0x.../0b...)"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --harq_mode_b
+
+  - name: pusch_nof_harqs
+    description: "Number of UL HARQ processes (32 applies only for NTN cells)"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_harqs
+
+  - name: pusch_max_nof_harq_retxs
+    description: Maximum number of times a UL HARQ can be retransmitted before being discarded
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 64}
+    cli11:
+      flag: --max_nof_harq_retxs
+
+  - name: pusch_harq_retx_timeout
+    description: "Maximum time in ms between a CRC=KO and the scheduler allocating the HARQ for retransmission"
+    type: unsigned
+    mode: doc-only
+    range: {min: 10, max: 500}
+    cli11:
+      flag: --harq_retx_timeout
+
+  - name: pusch_max_consecutive_kos
+    description: Maximum number of CRC consecutive KOs before a Radio Link Failure is reported
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_consecutive_kos
+
+  - name: pusch_rv_sequence
+    description: "RV sequence for PUSCH (e.g. [0 2 3 1])"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --rv_sequence
+
+  - name: pusch_mcs_table
+    description: MCS table to use for PUSCH
+    type: string_enum
+    enum_cpp_type: pusch_mcs_table
+    mode: doc-only
+    allowed_values:
+      - {value: "qam64", cpp: "pusch_mcs_table::qam64"}
+      - {value: "qam256", cpp: "pusch_mcs_table::qam256"}
+      - {value: "qam64lowse", cpp: "pusch_mcs_table::qam64LowSe"}
+    cli11:
+      flag: --mcs_table
+
+  - name: pusch_max_rank
+    description: Maximum number of PUSCH transmission layers
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 4}
+    cli11:
+      flag: --max_rank
+
+  - name: pusch_msg3_delta_preamble
+    description: msg3-DeltaPreamble, power offset between msg3 and RACH preamble
+    type: int
+    mode: doc-only
+    range: {min: -1, max: 6}
+    cli11:
+      flag: --msg3_delta_preamble
+
+  - name: pusch_p0_nominal_with_grant
+    description: "P0 value for PUSCH with grant (except msg3) in dBm. Must be multiple of 2 in [-202, 24]"
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --p0_nominal_with_grant
+
+  - name: pusch_msg3_delta_power
+    description: "Target power level at network receiver side in dBm. Must be multiple of 2 in [-6, 8]"
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --msg3_delta_power
+
+  - name: pusch_max_puschs_per_slot
+    description: Maximum number of PUSCH grants per slot
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_puschs_per_slot
+
+  - name: pusch_beta_offset_ack_idx_1
+    description: betaOffsetACK-Index1 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_ack_idx_1
+
+  - name: pusch_beta_offset_ack_idx_2
+    description: betaOffsetACK-Index2 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_ack_idx_2
+
+  - name: pusch_beta_offset_ack_idx_3
+    description: betaOffsetACK-Index3 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_ack_idx_3
+
+  - name: pusch_beta_offset_csi_p1_idx_1
+    description: betaOffsetCSI-Part1-Index1 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_csi_p1_idx_1
+
+  - name: pusch_beta_offset_csi_p1_idx_2
+    description: betaOffsetCSI-Part1-Index2 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_csi_p1_idx_2
+
+  - name: pusch_beta_offset_csi_p2_idx_1
+    description: betaOffsetCSI-Part2-Index1 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_csi_p2_idx_1
+
+  - name: pusch_beta_offset_csi_p2_idx_2
+    description: betaOffsetCSI-Part2-Index2 part of UCI-OnPUSCH
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 31}
+    cli11:
+      flag: --beta_offset_csi_p2_idx_2
+
+  - name: pusch_min_k2
+    description: "Minimum value of K2 (difference in slots between PDCCH and PUSCH)"
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 4}
+    cli11:
+      flag: --min_k2
+
+  - name: pusch_dc_offset
+    description: "DC offset in subcarriers. Set to 'outside', 'undetermined', 'center', or an integer"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --dc_offset
+
+  - name: pusch_olla_snr_inc_step
+    description: "OLLA increment value. Value 0 disables OLLA"
+    type: float
+    mode: doc-only
+    range: {min: 0.0, max: 1.0}
+    cli11:
+      flag: --olla_snr_inc_step
+
+  - name: pusch_olla_target_bler
+    description: Target UL BLER in OLLA algorithm
+    type: float
+    mode: doc-only
+    range: {min: 0.0, max: 0.5}
+    cli11:
+      flag: --olla_target_bler
+
+  - name: pusch_olla_max_snr_offset
+    description: Maximum offset that OLLA can apply to estimated UL SINR
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --olla_max_snr_offset
+
+  - name: pusch_dmrs_additional_position
+    description: PUSCH DMRS additional position
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 3}
+    cli11:
+      flag: --dmrs_additional_position
+
+  - name: pusch_min_rb_size
+    description: Minimum RB size for UE PUSCH resource allocation
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --min_rb_size
+
+  - name: pusch_max_rb_size
+    description: Maximum RB size for UE PUSCH resource allocation
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_rb_size
+
+  - name: pusch_start_rb
+    description: Start RB for resource allocation of UE PUSCHs
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --start_rb
+
+  - name: pusch_end_rb
+    description: End RB for resource allocation of UE PUSCHs
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --end_rb
+
+  - name: pusch_enable_cl_loop_pw_control
+    description: Enable closed-loop power control for PUSCH
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --enable_cl_loop_pw_control
+
+  - name: pusch_enable_phr_bw_adaptation
+    description: Enable bandwidth adaptation to prevent negative PHR
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --enable_phr_bw_adaptation
+
+  - name: pusch_target_sinr
+    description: Target PUSCH SINR in dB
+    type: float
+    mode: doc-only
+    range: {min: -5.0, max: 30.0}
+    cli11:
+      flag: --target_sinr
+
+  - name: pusch_ref_path_loss
+    description: Reference path-loss for target PUSCH SINR in dB
+    type: float
+    mode: doc-only
+    range: {min: 50.0, max: 120.0}
+    cli11:
+      flag: --ref_path_loss
+
+  - name: pusch_pl_compensation_factor
+    description: Fractional path-loss compensation factor in PUSCH power control
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --pl_compensation_factor
+
+  - name: pusch_enable_transform_precoding
+    description: Enable transform precoding for PUSCH
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --enable_transform_precoding
+
+  # --- PUCCH ---
+  - name: pucch_p0_nominal
+    description: "Power control P0 for PUCCH in dBm. Must be multiple of 2 in [-202, 24]"
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --p0_nominal
+
+  - name: pucch_resource_common
+    description: Index of PUCCH resource set for common configuration
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 15}
+    cli11:
+      flag: --pucch_resource_common
+
+  - name: pucch_sr_period_ms
+    description: SR period in ms
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --sr_period_ms
+
+  - name: pucch_formats
+    description: "PUCCH formats combination to use"
+    type: string_enum
+    enum_cpp_type: pucch_formats
+    mode: doc-only
+    allowed_values:
+      - {value: "f0_and_f2", cpp: "pucch_formats::f0_and_f2"}
+      - {value: "f1_and_f2", cpp: "pucch_formats::f1_and_f2"}
+      - {value: "f1_and_f3", cpp: "pucch_formats::f1_and_f3"}
+      - {value: "f1_and_f4", cpp: "pucch_formats::f1_and_f4"}
+    cli11:
+      flag: --formats
+
+  - name: pucch_resource_set_size
+    description: Number of PUCCH resources in each PUCCH resource set
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 8}
+    cli11:
+      flag: --resource_set_size
+
+  - name: pucch_nof_cell_res_set_configs
+    description: Number of PUCCH Resource Set configurations available per cell
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 10}
+    cli11:
+      flag: --nof_cell_res_set_configs
+
+  - name: pucch_nof_cell_sr_res
+    description: "Number of PUCCH F0/F1 resources available per cell for SR"
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 100}
+    cli11:
+      flag: --nof_cell_sr_res
+
+  - name: pucch_nof_cell_csi_res
+    description: "Number of PUCCH F2/F3/F4 resources available per cell for CSI"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 100}
+    cli11:
+      flag: --nof_cell_csi_res
+
+  - name: pucch_f0_intraslot_freq_hop
+    description: Enable intra-slot frequency hopping for PUCCH F0
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f0_intraslot_freq_hop
+
+  - name: pucch_f1_enable_occ
+    description: Enable OCC for PUCCH F1
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f1_enable_occ
+
+  - name: pucch_f1_nof_cyclic_shifts
+    description: Number of possible cyclic shifts available for PUCCH F1 resources
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --f1_nof_cyclic_shifts
+
+  - name: pucch_f1_intraslot_freq_hop
+    description: Enable intra-slot frequency hopping for PUCCH F1
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f1_intraslot_freq_hop
+
+  - name: pucch_f2_max_nof_rbs
+    description: Max number of RBs for PUCCH F2 resources
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 16}
+    cli11:
+      flag: --f2_max_nof_rbs
+
+  - name: pucch_f2_max_payload
+    description: Min required payload capacity in bits for PUCCH F2 resources
+    type: unsigned
+    mode: doc-only
+    range: {min: 4, max: 40}
+    cli11:
+      flag: --f2_max_payload
+
+  - name: pucch_f2_max_code_rate
+    description: "PUCCH F2 max code rate"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --f2_max_code_rate
+
+  - name: pucch_f2_intraslot_freq_hop
+    description: Enable intra-slot frequency hopping for PUCCH F2
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f2_intraslot_freq_hop
+
+  - name: pucch_f3_max_nof_rbs
+    description: Max number of RBs for PUCCH F3 resources
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --f3_max_nof_rbs
+
+  - name: pucch_f3_max_payload
+    description: Min required payload capacity in bits for PUCCH F3 resources
+    type: unsigned
+    mode: doc-only
+    range: {min: 4, max: 40}
+    cli11:
+      flag: --f3_max_payload
+
+  - name: pucch_f3_max_code_rate
+    description: "PUCCH F3 max code rate"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --f3_max_code_rate
+
+  - name: pucch_f3_intraslot_freq_hop
+    description: Enable intra-slot frequency hopping for PUCCH F3
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f3_intraslot_freq_hop
+
+  - name: pucch_f3_additional_dmrs
+    description: Enable additional DM-RS for PUCCH F3
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f3_additional_dmrs
+
+  - name: pucch_f3_pi2_bpsk
+    description: Enable pi/2-BPSK modulation for PUCCH F3
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f3_pi2_bpsk
+
+  - name: pucch_f4_max_code_rate
+    description: "PUCCH F4 max code rate"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --f4_max_code_rate
+
+  - name: pucch_f4_intraslot_freq_hop
+    description: Enable intra-slot frequency hopping for PUCCH F4
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f4_intraslot_freq_hop
+
+  - name: pucch_f4_additional_dmrs
+    description: Enable additional DM-RS for PUCCH F4
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f4_additional_dmrs
+
+  - name: pucch_f4_pi2_bpsk
+    description: Enable pi/2-BPSK modulation for PUCCH F4
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f4_pi2_bpsk
+
+  - name: pucch_f4_occ_length
+    description: OCC length for PUCCH F4
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --f4_occ_length
+
+  - name: pucch_f4_enable_occ
+    description: Enable OCC multiplexing for PUCCH F4
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --f4_enable_occ
+
+  - name: pucch_min_k1
+    description: "Minimum value of K1 (difference in slots between PDSCH and HARQ-ACK)"
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 4}
+    cli11:
+      flag: --min_k1
+
+  - name: pucch_max_consecutive_kos
+    description: "Maximum number of consecutive undecoded PUCCH F2 for CSI before an RLF is reported"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --max_consecutive_kos
+
+  - name: pucch_enable_cl_loop_pw_control
+    description: Enable closed-loop power control for PUCCH
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --enable_cl_loop_pw_control
+
+  - name: pucch_target_sinr_f0
+    description: Target PUCCH F0 SINR in dB
+    type: float
+    mode: doc-only
+    range: {min: -10.0, max: 20.0}
+    cli11:
+      flag: --target_sinr_f0
+
+  - name: pucch_target_sinr_f2
+    description: Target PUCCH F2 SINR in dB
+    type: float
+    mode: doc-only
+    range: {min: -10.0, max: 20.0}
+    cli11:
+      flag: --target_sinr_f2
+
+  - name: pucch_target_sinr_f3
+    description: Target PUCCH F3 SINR in dB
+    type: float
+    mode: doc-only
+    range: {min: -15.0, max: 10.0}
+    cli11:
+      flag: --target_sinr_f3
+
+  # --- SRS ---
+  - name: srs_type_enabled
+    description: "Enable/disable SRS and set resource type"
+    type: string_enum
+    enum_cpp_type: srs_resource_type
+    mode: doc-only
+    allowed_values:
+      - {value: "disabled", cpp: "srs_type::disabled"}
+      - {value: "periodic", cpp: "srs_type::periodic"}
+      - {value: "aperiodic", cpp: "srs_type::aperiodic"}
+    cli11:
+      flag: --type_enabled
+
+  - name: srs_period_ms
+    description: "SRS period in ms (for aperiodic SRS, a tentative timing)"
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --period_ms
+
+  - name: srs_max_nof_sym_per_slot
+    description: Number of symbols for UL slot reserved for SRS cell resources
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 6}
+    cli11:
+      flag: --max_nof_sym_per_slot
+
+  - name: srs_nof_sym_per_resource
+    description: Number of symbols per SRS resource
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_sym_per_resource
+
+  - name: srs_c_srs
+    description: "C_SRS parameter for SRS. Auto-computed from cell parameters if not set"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 63}
+    cli11:
+      flag: --c_srs
+
+  - name: srs_freq_domain_shift
+    description: SRS frequency domain shift (only applies if c_srs is set)
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 268}
+    cli11:
+      flag: --freq_domain_shift
+
+  - name: srs_tx_comb
+    description: SRS TX comb size
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --tx_comb
+
+  - name: srs_cyclic_shift_reuse
+    description: SRS cyclic shift reuse factor
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --cyclic_shift_reuse
+
+  - name: srs_sequence_id_reuse
+    description: Enable reuse of SRS sequence id with the set reuse factor
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --sequence_id_reuse
+
+  - name: srs_p0
+    description: "P0 value for SRS in dBm. Must be multiple of 2 in [-202, 24]"
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --p0
+
+  # --- PRACH ---
+  - name: prach_config_index
+    description: "PRACH configuration index. Auto-derived to fit in UL slot if not set"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 255}
+    cli11:
+      flag: --prach_config_index
+
+  - name: prach_root_sequence_index
+    description: "PRACH root sequence index. [0,837] for format 0-3; [0,137] for other formats"
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 837}
+    cli11:
+      flag: --prach_root_sequence_index
+
+  - name: prach_zero_correlation_zone
+    description: Zero correlation zone index
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 15}
+    cli11:
+      flag: --zero_correlation_zone
+
+  - name: prach_fixed_msg3_mcs
+    description: Fixed message 3 MCS
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --fixed_msg3_mcs
+
+  - name: prach_max_msg3_harq_retx
+    description: Maximum number of message 3 HARQ retransmissions
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 4}
+    cli11:
+      flag: --max_msg3_harq_retx
+
+  - name: prach_total_nof_ra_preambles
+    description: Number of different contention-based PRACH preambles per occasion
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 64}
+    cli11:
+      flag: --total_nof_ra_preambles
+
+  - name: prach_cfra_enabled
+    description: Whether to enable Contention-free Random Access (CFRA)
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --cfra_enabled
+
+  - name: prach_frequency_start
+    description: PRACH message frequency offset in PRBs
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 274}
+    cli11:
+      flag: --prach_frequency_start
+
+  - name: prach_preamble_rx_target_pw
+    description: "Target power level at network receiver side in dBm. Must be multiple of 2 in [-202, -60]"
+    type: int
+    mode: doc-only
+    cli11:
+      flag: --preamble_rx_target_pw
+
+  - name: prach_preamble_trans_max
+    description: Max number of RA preamble transmissions before declaring a failure
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --preamble_trans_max
+
+  - name: prach_power_ramping_step_db
+    description: Power ramping steps for PRACH
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --power_ramping_step_db
+
+  - name: prach_ports
+    description: List of antenna ports
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --ports
+
+  - name: prach_nof_ssb_per_ro
+    description: Number of SSBs per RACH occasion
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_ssb_per_ro
+
+  - name: prach_nof_cb_preambles_per_ssb
+    description: Number of Contention Based preambles per SSB
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_cb_preambles_per_ssb
+
+  - name: prach_ra_resp_window
+    description: RA-Response window length in number of slots
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --ra_resp_window
+
+  - name: prach_nof_prach_guardbands_rbs
+    description: Number of RBs used as guardband on each side of the PRACH RBs for short PRACH formats
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 10}
+    cli11:
+      flag: --nof_prach_guardbands_rbs
+
+  - name: prach_slice_based_ra_prioritization
+    description: "List of configurations for slice-based RA prioritization ({power_ramp_step_high_priority, scaling_factor_bi, nsag_ids})"
+    type: string
+    mode: doc-only
+    cli11:
+      flag: --slice_based_ra_prioritization
+
+  # --- PRACH two_step ---
+  - name: two_step_cb_preambles_per_ssb_per_shared_ro
+    description: Number of CB preambles per SSB per shared RACH occasion for 2-step RA
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 60}
+    cli11:
+      flag: --cb_preambles_per_ssb_per_shared_ro
+
+  - name: two_step_msgA_rsrp_thres_dbm
+    description: RSRP threshold in dBm above which UE selects 2-step RA over 4-step RA
+    type: int
+    mode: doc-only
+    range: {min: -156, max: -29}
+    cli11:
+      flag: --msgA_rsrp_thres_dbm
+
+  - name: two_step_msgB_response_window_slots
+    description: MsgB response window length in slots
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --msgB_response_window_slots
+
+  - name: two_step_td_offset
+    description: Time-domain offset in slots from PRACH slot to MsgA PUSCH slot
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 32}
+    cli11:
+      flag: --td_offset
+
+  - name: two_step_pusch_td_res_index
+    description: Index into PUSCH-TimeDomainAllocationResource table for MsgA PUSCH scheduling
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --pusch_td_res_index
+
+  - name: two_step_mcs
+    description: MCS index for MsgA PUSCH transmission
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 28}
+    cli11:
+      flag: --mcs
+
+  - name: two_step_nof_prbs_per_msgA_po
+    description: Number of PRBs per MsgA PUSCH occasion
+    type: unsigned
+    mode: doc-only
+    range: {min: 1, max: 32}
+    cli11:
+      flag: --nof_prbs_per_msgA_po
+
+  - name: two_step_prb_start
+    description: Frequency offset in PRBs of the lowest MsgA PUSCH occasion from PRB 0
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --prb_start
+
+  - name: two_step_po_fdm
+    description: Number of MsgA PUSCH occasions FDMed in one time instance
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --po_fdm
+
+  # --- TDD UL DL ---
+  - name: tdd_dl_ul_period_slots
+    description: "TDD pattern periodicity in slots"
+    type: unsigned
+    mode: doc-only
+    range: {min: 2, max: 80}
+    cli11:
+      flag: --dl_ul_tx_period
+
+  - name: tdd_nof_dl_slots
+    description: TDD pattern nof. consecutive full DL slots
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 80}
+    cli11:
+      flag: --nof_dl_slots
+
+  - name: tdd_nof_dl_symbols
+    description: TDD pattern nof. DL symbols at the beginning of the slot following full DL slots
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 13}
+    cli11:
+      flag: --nof_dl_symbols
+
+  - name: tdd_nof_ul_slots
+    description: TDD pattern nof. consecutive full UL slots
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 80}
+    cli11:
+      flag: --nof_ul_slots
+
+  - name: tdd_nof_ul_symbols
+    description: TDD pattern nof. UL symbols at the end of the slot preceding the first full UL slot
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 13}
+    cli11:
+      flag: --nof_ul_symbols
+
+  - name: tdd_p2_dl_ul_period_slots
+    description: "TDD pattern2 periodicity in slots"
+    type: unsigned
+    mode: doc-only
+    range: {min: 2, max: 80}
+    cli11:
+      flag: --dl_ul_tx_period
+
+  - name: tdd_p2_nof_dl_slots
+    description: TDD pattern2 nof. consecutive full DL slots
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 80}
+    cli11:
+      flag: --nof_dl_slots
+
+  - name: tdd_p2_nof_dl_symbols
+    description: TDD pattern2 nof. DL symbols at the beginning of the slot following full DL slots
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 13}
+    cli11:
+      flag: --nof_dl_symbols
+
+  - name: tdd_p2_nof_ul_slots
+    description: TDD pattern2 nof. consecutive full UL slots
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 80}
+    cli11:
+      flag: --nof_ul_slots
+
+  - name: tdd_p2_nof_ul_symbols
+    description: TDD pattern2 nof. UL symbols at the end of the slot preceding the first full UL slot
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 13}
+    cli11:
+      flag: --nof_ul_symbols
+
+  # --- Paging ---
+  - name: paging_pg_search_space_id
+    description: SearchSpace to use for Paging
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --pg_search_space_id
+
+  - name: paging_default_pg_cycle_in_rf
+    description: Default Paging cycle in nof. Radio Frames
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --default_pg_cycle_in_rf
+
+  - name: paging_nof_pf_per_paging_cycle
+    description: "Number of paging frames per DRX cycle"
+    type: string_enum
+    enum_cpp_type: paging_nof_pf_per_drx_cycle
+    mode: doc-only
+    allowed_values:
+      - {value: "oneT", cpp: "pcch_config::nof_pf_per_drx_cycle::oneT"}
+      - {value: "halfT", cpp: "pcch_config::nof_pf_per_drx_cycle::halfT"}
+      - {value: "quarterT", cpp: "pcch_config::nof_pf_per_drx_cycle::quarterT"}
+      - {value: "oneEighthT", cpp: "pcch_config::nof_pf_per_drx_cycle::oneEighthT"}
+      - {value: "oneSixteethT", cpp: "pcch_config::nof_pf_per_drx_cycle::oneSixteethT"}
+    cli11:
+      flag: --nof_pf_per_paging_cycle
+
+  - name: paging_pf_offset
+    description: Paging frame offset
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --pf_offset
+
+  - name: paging_nof_po_per_pf
+    description: Number of paging occasions per paging frame
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_po_per_pf
+
+  - name: paging_edrx_enabled
+    description: Enable eDRX
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --edrx_enabled
+
+  # --- CSI ---
+  - name: csi_csi_rs_enabled
+    description: Enable CSI-RS resources and CSI reporting
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --csi_rs_enabled
+
+  - name: csi_csi_rs_period
+    description: CSI-RS period in milliseconds
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --csi_rs_period
+
+  - name: csi_report_type
+    description: "Type of CSI reporting configuration to use"
+    type: string_enum
+    enum_cpp_type: csi_report_type
+    mode: doc-only
+    allowed_values:
+      - {value: "periodic", cpp: "csi_report_type::periodic"}
+      - {value: "aperiodic", cpp: "csi_report_type::aperiodic"}
+    cli11:
+      flag: --report_type
+
+  - name: csi_meas_csi_rs_slot_offset
+    description: Slot offset of first CSI-RS resource used for measurement
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --meas_csi_rs_slot_offset
+
+  - name: csi_tracking_csi_rs_slot_offset
+    description: Slot offset of first CSI-RS resource used for tracking
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --tracking_csi_rs_slot_offset
+
+  - name: csi_zp_csi_rs_slot_offset
+    description: Slot offset of the ZP CSI-RS resources
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --zp_csi_rs_slot_offset
+
+  - name: csi_pwr_ctrl_offset
+    description: "powerControlOffset: power offset of PDSCH RE to NZP CSI-RS RE in dB"
+    type: int
+    mode: doc-only
+    range: {min: -8, max: 15}
+    cli11:
+      flag: --pwr_ctrl_offset
+
+  # --- Scheduler ---
+  - name: sched_nof_preselected_newtx_ues
+    description: "Number of UEs pre-selected for potential newTx allocations in a slot"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --nof_preselected_newtx_ues
+
+  - name: sched_qos_combine_function
+    description: "QoS-aware scheduler policy weight combining function"
+    type: string_enum
+    enum_cpp_type: qos_combine_function_type
+    mode: doc-only
+    allowed_values:
+      - {value: "gbr_prioritized", cpp: "time_qos_scheduler_config::combine_function_type::gbr_prioritized"}
+      - {value: "geometric_mean", cpp: "time_qos_scheduler_config::combine_function_type::geometric_mean"}
+    cli11:
+      flag: --combine_function
+
+  - name: sched_qos_pf_fairness_coeff
+    description: Fairness Coefficient to use in Proportional Fair (PF) weight
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --pf_fairness_coeff
+
+  - name: sched_qos_prio_enabled
+    description: Whether to take into account the QoS Flow priority in QoS-aware scheduling
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --prio_enabled
+
+  - name: sched_qos_pdb_enabled
+    description: Whether to take into account the QoS Flow Packet Delay Budget (PDB) in QoS-aware scheduling
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --pdb_enabled
+
+  - name: sched_qos_gbr_enabled
+    description: Whether to take into account the QoS Flow Guaranteed Bit Rate (GBR) in QoS-aware scheduling
+    type: bool
+    mode: doc-only
+    cli11:
+      flag: --gbr_enabled
+
+  # --- TA ---
+  - name: ta_measurement_slot_period
+    description: Measurements periodicity in slots over which the new TA Command is computed
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --ta_measurement_slot_period
+
+  - name: ta_measurement_slot_prohibit_period
+    description: Delay in slots between issuing TA_CMD and starting TA measurements
+    type: unsigned
+    mode: doc-only
+    range: {min: 0, max: 10000}
+    cli11:
+      flag: --ta_measurement_slot_prohibit_period
+
+  - name: ta_cmd_offset_threshold
+    description: "TA offset threshold above which TA Command is triggered. Set to -1 to disable"
+    type: int
+    mode: doc-only
+    range: {min: -1, max: 31}
+    cli11:
+      flag: --ta_cmd_offset_threshold
+
+  - name: ta_target
+    description: Timing Advance target in units of TA
+    type: float
+    mode: doc-only
+    range: {min: -30.0, max: 30.0}
+    cli11:
+      flag: --ta_target
+
+  - name: ta_update_measurement_ul_sinr_threshold
+    description: UL SINR threshold (in dB) above which N_TA update measurement is considered valid
+    type: float
+    mode: doc-only
+    cli11:
+      flag: --ta_update_measurement_ul_sinr_threshold
+
+  - name: ta_outlier_detection_zscore_threshold
+    description: "Z-score threshold for outlier detection in N_TA measurements. 0.0 disables detection"
+    type: float
+    mode: doc-only
+    range: {min: 0.0, max: 5.0}
+    cli11:
+      flag: --ta_outlier_detection_zscore_threshold
+
+  # --- DRX ---
+  - name: drx_on_duration_timer
+    description: "Minimum duration in ms that UE stays active when DRX is configured"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --on_duration_timer
+
+  - name: drx_inactivity_timer
+    description: "Duration in ms that UE stays active after PDCCH reception when DRX is configured"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --inactivity_timer
+
+  - name: drx_retx_timer_dl
+    description: "Maximum duration in slots until a DL ReTX is received by the UE when DRX is configured"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --retx_timer_dl
+
+  - name: drx_retx_timer_ul
+    description: "Maximum duration in slots until a grant for UL ReTX is received by the UE when DRX is configured"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --retx_timer_ul
+
+  - name: drx_long_cycle
+    description: "Duration in ms between UE DRX long cycles. Value 0 disables DRX"
+    type: unsigned
+    mode: doc-only
+    cli11:
+      flag: --long_cycle
+
+  # --- RLM ---
+  - name: rlm_resource_type
+    description: "Radio Link Monitoring resource detection type"
+    type: string_enum
+    enum_cpp_type: rlm_resource_type
+    mode: doc-only
+    allowed_values:
+      - {value: "default_type", cpp: "rlm_resource_type::default_type"}
+      - {value: "ssb", cpp: "rlm_resource_type::ssb"}
+      - {value: "csi_rs", cpp: "rlm_resource_type::csi_rs"}
+      - {value: "ssb_and_csi_rs", cpp: "rlm_resource_type::ssb_and_csi_rs"}
+    cli11:
+      flag: --rlm_resource_type
+
+# ---------------------------------------------------------------------------
 # Subcommand hierarchy
 # ---------------------------------------------------------------------------
 subcommands:
@@ -460,11 +2359,209 @@ subcommands:
                      attach_detach_duration_ms, attach_detach_guard_duration_ms,
                      pdsch_active, pusch_active, cqi, ri, pmi, i_1_1, i_1_3, i_2]
 
+  - name: cell_cfg
+    description: Default cell configuration
+    configurable: true
+    parameters: [cell_pci, cell_sector_id, cell_dl_arfcn, cell_band, cell_common_scs,
+                 cell_channel_bandwidth_MHz, cell_nof_antennas_ul, cell_nof_antennas_dl,
+                 cell_plmn, cell_additional_plmns, cell_tac, cell_enabled, cell_cell_barred,
+                 cell_intra_freq_reselection, cell_q_rx_lev_min, cell_q_qual_min,
+                 cell_pcg_p_nr_fr1, cell_slicing]
+    subcommands:
+      - name: mac_cell_group
+        description: MAC Cell Group parameters
+        configurable: true
+        subcommands:
+          - name: bsr_cfg
+            description: Buffer status report configuration parameters
+            parameters: [bsr_periodic_bsr_timer, bsr_retx_bsr_timer, bsr_lc_sr_delay_timer]
+          - name: phr_cfg
+            description: Power Headroom report configuration parameters
+            parameters: [phr_prohib_timer]
+          - name: sr_cfg
+            description: Scheduling Request configuration parameters
+            parameters: [sr_trans_max, sr_prohibit_timer]
+
+      - name: ssb
+        description: SSB parameters
+        parameters: [ssb_period_msec, ssb_block_power, ssb_pss_to_sss_epre]
+
+      - name: sib
+        description: SIB configuration parameters
+        parameters: [sib_si_window_len, sib_si_sched_info,
+                     sib_t300, sib_t301, sib_t310, sib_n310, sib_t311, sib_n311, sib_t319]
+        subcommands:
+          - name: sib2
+            description: SIB2 parameters
+            configurable: true
+            parameters: [sib2_q_hyst, sib2_thresh_serving_low_p, sib2_cell_reselection_priority,
+                         sib2_q_rx_lev_min, sib2_s_intra_search_p, sib2_t_reselection_nr]
+          - name: sib3
+            description: SIB3 parameters
+            configurable: true
+            parameters: [sib3_intra_freq_neigh_cell_list, sib3_intra_freq_excluded_cell_list]
+          - name: sib4
+            description: SIB4 parameters
+            configurable: true
+            parameters: [sib4_inter_freq_carrier_freq_list]
+          - name: sib5
+            description: SIB5 parameters
+            configurable: true
+            parameters: [sib5_t_reselection_eutra, sib5_carrier_freq_list_eutra]
+          - name: sib16
+            description: SIB16 parameters
+            configurable: true
+            parameters: [sib16_freq_prio_list_slicing]
+          - name: etws
+            description: ETWS configuration parameters
+            configurable: true
+            parameters: [etws_message_id, etws_serial_num, etws_warning_type,
+                         etws_data_coding_scheme, etws_warning_message]
+          - name: cmas
+            description: CMAS configuration parameters
+            configurable: true
+            parameters: [cmas_message_id, cmas_serial_num, cmas_data_coding_scheme, cmas_warning_message]
+
+      - name: ul_common
+        description: UL common parameters
+        parameters: [ul_p_max, ul_max_pucchs_per_slot, ul_max_ul_grants_per_slot,
+                     ul_min_pucch_pusch_prb_distance]
+
+      - name: pdcch
+        description: PDCCH parameters
+        subcommands:
+          - name: common
+            description: PDCCH Common configuration parameters
+            parameters: [pdcch_common_coreset0_index, pdcch_common_ss1_n_candidates,
+                         pdcch_common_ss0_index, pdcch_common_max_coreset0_duration]
+          - name: dedicated
+            description: PDCCH Dedicated configuration parameters
+            parameters: [pdcch_ded_coreset1_rb_start, pdcch_ded_coreset1_l_crb,
+                         pdcch_ded_coreset1_duration, pdcch_ded_ss2_n_candidates,
+                         pdcch_ded_dci_format_0_1_and_1_1, pdcch_ded_ss2_type, pdcch_ded_al_cqi_offset]
+
+      - name: pdsch
+        description: PDSCH parameters
+        parameters: [pdsch_min_ue_mcs, pdsch_max_ue_mcs, pdsch_fixed_rar_mcs, pdsch_fixed_sib1_mcs,
+                     pdsch_harq_feedback_disabled, pdsch_nof_harqs, pdsch_max_nof_harq_retxs,
+                     pdsch_harq_retx_timeout, pdsch_max_consecutive_kos, pdsch_rv_sequence,
+                     pdsch_mcs_table, pdsch_min_rb_size, pdsch_max_rb_size, pdsch_start_rb,
+                     pdsch_end_rb, pdsch_max_pdschs_per_slot, pdsch_max_alloc_attempts,
+                     pdsch_olla_cqi_inc_step, pdsch_olla_target_bler, pdsch_olla_max_cqi_offset,
+                     pdsch_dc_offset, pdsch_harq_la_cqi_drop_threshold, pdsch_harq_la_ri_drop_threshold,
+                     pdsch_dmrs_additional_position, pdsch_interleaving_bundle_size, pdsch_max_rank,
+                     pdsch_enable_csi_rs_pdsch_multiplexing]
+
+      - name: pusch
+        description: PUSCH parameters
+        parameters: [pusch_min_ue_mcs, pusch_max_ue_mcs, pusch_harq_mode_b, pusch_nof_harqs,
+                     pusch_max_nof_harq_retxs, pusch_harq_retx_timeout, pusch_max_consecutive_kos,
+                     pusch_rv_sequence, pusch_mcs_table, pusch_max_rank, pusch_msg3_delta_preamble,
+                     pusch_p0_nominal_with_grant, pusch_msg3_delta_power, pusch_max_puschs_per_slot,
+                     pusch_beta_offset_ack_idx_1, pusch_beta_offset_ack_idx_2, pusch_beta_offset_ack_idx_3,
+                     pusch_beta_offset_csi_p1_idx_1, pusch_beta_offset_csi_p1_idx_2,
+                     pusch_beta_offset_csi_p2_idx_1, pusch_beta_offset_csi_p2_idx_2,
+                     pusch_min_k2, pusch_dc_offset, pusch_olla_snr_inc_step, pusch_olla_target_bler,
+                     pusch_olla_max_snr_offset, pusch_dmrs_additional_position, pusch_min_rb_size,
+                     pusch_max_rb_size, pusch_start_rb, pusch_end_rb, pusch_enable_cl_loop_pw_control,
+                     pusch_enable_phr_bw_adaptation, pusch_target_sinr, pusch_ref_path_loss,
+                     pusch_pl_compensation_factor, pusch_enable_transform_precoding]
+
+      - name: pucch
+        description: PUCCH parameters
+        parameters: [pucch_p0_nominal, pucch_resource_common, pucch_sr_period_ms, pucch_formats,
+                     pucch_resource_set_size, pucch_nof_cell_res_set_configs, pucch_nof_cell_sr_res,
+                     pucch_nof_cell_csi_res, pucch_f0_intraslot_freq_hop, pucch_f1_enable_occ,
+                     pucch_f1_nof_cyclic_shifts, pucch_f1_intraslot_freq_hop, pucch_f2_max_nof_rbs,
+                     pucch_f2_max_payload, pucch_f2_max_code_rate, pucch_f2_intraslot_freq_hop,
+                     pucch_f3_max_nof_rbs, pucch_f3_max_payload, pucch_f3_max_code_rate,
+                     pucch_f3_intraslot_freq_hop, pucch_f3_additional_dmrs, pucch_f3_pi2_bpsk,
+                     pucch_f4_max_code_rate, pucch_f4_intraslot_freq_hop, pucch_f4_additional_dmrs,
+                     pucch_f4_pi2_bpsk, pucch_f4_occ_length, pucch_f4_enable_occ, pucch_min_k1,
+                     pucch_max_consecutive_kos, pucch_enable_cl_loop_pw_control, pucch_target_sinr_f0,
+                     pucch_target_sinr_f2, pucch_target_sinr_f3]
+
+      - name: srs
+        description: SRS parameters
+        parameters: [srs_type_enabled, srs_period_ms, srs_max_nof_sym_per_slot, srs_nof_sym_per_resource,
+                     srs_c_srs, srs_freq_domain_shift, srs_tx_comb, srs_cyclic_shift_reuse,
+                     srs_sequence_id_reuse, srs_p0]
+
+      - name: prach
+        description: PRACH parameters
+        parameters: [prach_config_index, prach_root_sequence_index, prach_zero_correlation_zone,
+                     prach_fixed_msg3_mcs, prach_max_msg3_harq_retx, prach_total_nof_ra_preambles,
+                     prach_cfra_enabled, prach_frequency_start, prach_preamble_rx_target_pw,
+                     prach_preamble_trans_max, prach_power_ramping_step_db, prach_ports,
+                     prach_nof_ssb_per_ro, prach_nof_cb_preambles_per_ssb, prach_ra_resp_window,
+                     prach_nof_prach_guardbands_rbs, prach_slice_based_ra_prioritization]
+        subcommands:
+          - name: two_step
+            description: Two-step RACH (MsgA/MsgB) configuration
+            configurable: true
+            parameters: [two_step_cb_preambles_per_ssb_per_shared_ro, two_step_msgA_rsrp_thres_dbm,
+                         two_step_msgB_response_window_slots, two_step_td_offset, two_step_pusch_td_res_index,
+                         two_step_mcs, two_step_nof_prbs_per_msgA_po, two_step_prb_start, two_step_po_fdm]
+
+      - name: tdd_ul_dl_cfg
+        description: TDD UL DL configuration parameters
+        configurable: true
+        parameters: [tdd_dl_ul_period_slots, tdd_nof_dl_slots, tdd_nof_dl_symbols,
+                     tdd_nof_ul_slots, tdd_nof_ul_symbols]
+        subcommands:
+          - name: pattern2
+            description: TDD UL DL pattern2 configuration parameters
+            configurable: true
+            parameters: [tdd_p2_dl_ul_period_slots, tdd_p2_nof_dl_slots, tdd_p2_nof_dl_symbols,
+                         tdd_p2_nof_ul_slots, tdd_p2_nof_ul_symbols]
+
+      - name: paging
+        description: Paging parameters
+        parameters: [paging_pg_search_space_id, paging_default_pg_cycle_in_rf,
+                     paging_nof_pf_per_paging_cycle, paging_pf_offset, paging_nof_po_per_pf,
+                     paging_edrx_enabled]
+
+      - name: csi
+        description: CSI-Meas parameters
+        parameters: [csi_csi_rs_enabled, csi_csi_rs_period, csi_report_type,
+                     csi_meas_csi_rs_slot_offset, csi_tracking_csi_rs_slot_offset,
+                     csi_zp_csi_rs_slot_offset, csi_pwr_ctrl_offset]
+
+      - name: scheduler
+        description: Scheduler parameters
+        parameters: [sched_nof_preselected_newtx_ues]
+        subcommands:
+          - name: policy
+            description: "Scheduler policy configuration. By default, time-domain QoS-aware policy is used"
+            configurable: true
+            subcommands:
+              - name: qos_sched
+                description: Time-domain QoS-aware policy configuration
+                configurable: true
+                parameters: [sched_qos_combine_function, sched_qos_pf_fairness_coeff,
+                             sched_qos_prio_enabled, sched_qos_pdb_enabled, sched_qos_gbr_enabled]
+              - name: rr_sched
+                description: Time-domain Round-robin policy configuration
+                configurable: true
+
+      - name: ta
+        description: Time Advance (TA) parameters
+        configurable: true
+        parameters: [ta_measurement_slot_period, ta_measurement_slot_prohibit_period,
+                     ta_cmd_offset_threshold, ta_target, ta_update_measurement_ul_sinr_threshold,
+                     ta_outlier_detection_zscore_threshold]
+
+      - name: drx
+        description: DRX parameters
+        parameters: [drx_on_duration_timer, drx_inactivity_timer, drx_retx_timer_dl,
+                     drx_retx_timer_ul, drx_long_cycle]
+
+      - name: rlm
+        description: Radio Link Monitoring parameters
+        parameters: [rlm_resource_type]
+
 cli11:
   function: configure_cli11_with_du_high_config_schema
   post_configure_raw: |
     app_helpers::configure_cli11_with_metrics_appconfig_schema(app, config.config.metrics.common_metrics_cfg);
-
-    // TODO: cell_cfg, cells, qos, srbs — requires complex static helper functions not yet expressed in the schema.
-    // See du_high_config_cli11_schema.cpp lines 2636–2809 for the hand-written implementation.
 
