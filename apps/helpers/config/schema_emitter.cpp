@@ -161,6 +161,12 @@ json emit_array(const schema_node& n, const array_node& arr, const json_schema_o
   }
   property["type"]  = "array";
   property["items"] = emit_group_body(*arr.items_shape, "", opts);
+  if (arr.min_items.has_value()) {
+    property["minItems"] = *arr.min_items;
+  }
+  if (arr.max_items.has_value()) {
+    property["maxItems"] = *arr.max_items;
+  }
   return property;
 }
 

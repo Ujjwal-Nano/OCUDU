@@ -106,6 +106,11 @@ struct leaf_node {
   /// True if the target is std::vector<scalar>. JSON Schema renders as
   /// {"type":"array","items":{"type":<type>}}.
   bool                              is_scalar_array = false;
+  /// C++-level integer width hint (8/16/32/64). Used by emitters that need
+  /// bit-precise types (e.g. YANG uint16 vs uint32). 0 if not applicable.
+  int                               integer_bits = 0;
+  /// C++-level integer signedness. Only meaningful when integer_bits > 0.
+  bool                              integer_signed = true;
   std::optional<std::string>        default_str;
   std::vector<constraint>           constraints;
   /// Free-text descriptive notes appended to the description.
@@ -126,6 +131,14 @@ struct array_node {
   /// Iterator that invokes its argument once per actual element with a freshly
   /// built group_node bound to that element's struct. Used by yaml_writer.
   std::function<void(std::function<void(group_node&)>)>  for_each_element;
+  /// Name of the leaf within items_shape that uniquely identifies an element.
+  /// Required by YANG (`list ... { key "..."; }`); empty for emitters that
+  /// don't care.
+  std::string                                            key_name;
+  /// Optional cardinality bounds. JSON Schema renders as minItems/maxItems;
+  /// YANG as min-elements/max-elements.
+  std::optional<std::size_t>                             min_items;
+  std::optional<std::size_t>                             max_items;
 };
 
 struct schema_node {
@@ -168,20 +181,26 @@ struct vector_value<std::vector<T, A>> {
   using type = T;
 };
 
+struct scalar_descriptor {
+  scalar_type type;
+  int         integer_bits   = 0;
+  bool        integer_signed = true;
+};
+
 template <typename T>
-constexpr scalar_type tag_for()
+constexpr scalar_descriptor describe_scalar()
 {
   if constexpr (std::is_same_v<T, bool>) {
-    return scalar_type::boolean;
+    return {scalar_type::boolean, 0, false};
   } else if constexpr (std::is_integral_v<T>) {
-    return scalar_type::integer;
+    return {scalar_type::integer, static_cast<int>(sizeof(T) * 8), std::is_signed_v<T>};
   } else if constexpr (std::is_floating_point_v<T>) {
-    return scalar_type::number;
+    return {scalar_type::number, 0, false};
   } else if constexpr (std::is_same_v<T, std::string>) {
-    return scalar_type::string;
+    return {scalar_type::string, 0, false};
   } else {
     static_assert(sizeof(T) == 0, "Unsupported scalar type for config_builder option");
-    return scalar_type::string;
+    return {scalar_type::string, 0, false};
   }
 }
 
@@ -209,6 +228,28 @@ std::string format_default(const T& v)
 // ===========================================================================
 
 class config_builder;
+
+/// Chainable handle for an array_of declaration. Adds array-level metadata
+/// that doesn't apply to scalar leaves (notably the YANG `key` requirement).
+class array_handle
+{
+public:
+  array_handle(CLI::Option* opt, schema_node* node);
+
+  /// Designates which leaf inside the items shape acts as the unique key for
+  /// each element. Required for YANG `list` emission; ignored by JSON Schema
+  /// / yaml-writer / docs emitters.
+  array_handle& key(std::string leaf_name);
+
+  array_handle& min_items(std::size_t n);
+  array_handle& max_items(std::size_t n);
+
+private:
+  array_node& arr();
+
+  CLI::Option* cli11_opt_;
+  schema_node* node_;
+};
 
 class option_handle
 {
@@ -276,10 +317,10 @@ public:
   ///   * once per element at value-emission time, on target[i].
   /// ElementType must be default-constructible.
   template <typename Container, typename ElementConfigurator>
-  void array_of(const std::string&        flag,
-                Container&                target,
-                const std::string&        description,
-                ElementConfigurator&&     element_configurator);
+  array_handle array_of(const std::string&        flag,
+                        Container&                target,
+                        const std::string&        description,
+                        ElementConfigurator&&     element_configurator);
 
 private:
   CLI::App*    app_;
@@ -307,12 +348,18 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
 
   leaf_node payload;
   if constexpr (detail::is_vector<T>::value) {
-    using element_t                = typename detail::vector_value<T>::type;
-    payload.type                   = detail::tag_for<element_t>();
-    payload.is_scalar_array        = true;
+    using element_t                  = typename detail::vector_value<T>::type;
+    constexpr auto d                 = detail::describe_scalar<element_t>();
+    payload.type                     = d.type;
+    payload.integer_bits             = d.integer_bits;
+    payload.integer_signed           = d.integer_signed;
+    payload.is_scalar_array          = true;
   } else {
-    payload.type                   = detail::tag_for<T>();
-    payload.is_scalar_array        = false;
+    constexpr auto d                 = detail::describe_scalar<T>();
+    payload.type                     = d.type;
+    payload.integer_bits             = d.integer_bits;
+    payload.integer_signed           = d.integer_signed;
+    payload.is_scalar_array          = false;
   }
   payload.default_str = detail::format_default(target);
   payload.emit_value  = [&target](YAML::Node& node) { node = target; };
@@ -352,10 +399,10 @@ void config_builder::group(const std::string& name, const std::string& descripti
 }
 
 template <typename Container, typename ElementConfigurator>
-void config_builder::array_of(const std::string&    flag,
-                              Container&            target,
-                              const std::string&    description,
-                              ElementConfigurator&& element_configurator)
+array_handle config_builder::array_of(const std::string&    flag,
+                                      Container&            target,
+                                      const std::string&    description,
+                                      ElementConfigurator&& element_configurator)
 {
   using element_t = typename Container::value_type;
   static_assert(std::is_default_constructible_v<element_t>,
@@ -389,7 +436,7 @@ void config_builder::array_of(const std::string&    flag,
       subapp.parse_from_stream(ss);
     }
   };
-  add_option_cell(*app_, flag, parse_lambda, description);
+  CLI::Option* opt = add_option_cell(*app_, flag, parse_lambda, description);
 
   // 3) Register the array node. for_each_element re-builds metadata per actual
   //    element at emission time, so renderers bind the live struct.
@@ -411,7 +458,8 @@ void config_builder::array_of(const std::string&    flag,
   };
   child.body = std::move(arr);
 
-  push_child(std::move(child));
+  schema_node& inserted = push_child(std::move(child));
+  return array_handle{opt, &inserted};
 }
 
 } // namespace config

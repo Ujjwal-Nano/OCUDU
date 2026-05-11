@@ -122,6 +122,41 @@ option_handle& option_handle::note(std::string extra)
 }
 
 // ---------------------------------------------------------------------------
+// array_handle
+// ---------------------------------------------------------------------------
+
+array_handle::array_handle(CLI::Option* opt, schema_node* node) : cli11_opt_(opt), node_(node) {}
+
+array_node& array_handle::arr()
+{
+  return std::get<array_node>(node_->body);
+}
+
+array_handle& array_handle::key(std::string leaf_name)
+{
+  arr().key_name = std::move(leaf_name);
+  return *this;
+}
+
+array_handle& array_handle::min_items(std::size_t n)
+{
+  if (cli11_opt_ != nullptr) {
+    cli11_opt_->expected(static_cast<int>(n), -1);
+  }
+  arr().min_items = n;
+  return *this;
+}
+
+array_handle& array_handle::max_items(std::size_t n)
+{
+  if (cli11_opt_ != nullptr) {
+    cli11_opt_->expected(1, static_cast<int>(n));
+  }
+  arr().max_items = n;
+  return *this;
+}
+
+// ---------------------------------------------------------------------------
 // config_builder
 // ---------------------------------------------------------------------------
 
@@ -137,10 +172,13 @@ option_handle config_builder::flag(const std::string& flag_name, bool& target, c
   leaf.description = description;
 
   leaf_node payload;
-  payload.type        = scalar_type::boolean;
-  payload.default_str = detail::format_default(target);
-  payload.emit_value  = [&target](YAML::Node& node) { node = target; };
-  leaf.body           = std::move(payload);
+  constexpr auto d       = detail::describe_scalar<bool>();
+  payload.type           = d.type;
+  payload.integer_bits   = d.integer_bits;
+  payload.integer_signed = d.integer_signed;
+  payload.default_str    = detail::format_default(target);
+  payload.emit_value     = [&target](YAML::Node& node) { node = target; };
+  leaf.body              = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
   return option_handle{opt, &inserted};
@@ -206,7 +244,10 @@ struct sanity_probe_struct {
              [](config_builder& el, sanity_probe_inner& entry) {
                el.option("--x", entry.x, "x value").range(0, 10);
                el.option("--s", entry.s, "s value");
-             });
+             })
+      .key("x")
+      .min_items(1)
+      .max_items(16);
 }
 
 } // namespace
