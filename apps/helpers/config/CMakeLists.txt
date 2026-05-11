@@ -4,6 +4,7 @@
 
 set(SOURCES
         config_builder.cpp
+        docs_emitter.cpp
         schema_emitter.cpp
         yaml_writer.cpp)
 
