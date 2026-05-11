@@ -139,7 +139,7 @@ public:
     ue_cfg.crnti              = rnti;
     ue_cfg.starts_in_fallback = true;
     ue_cfg.ul_ccch_slot_rx    = this->next_slot.without_hyper_sfn();
-    scheduler_test_simulator::add_ue(ue_cfg, true);
+    scheduler_test_simulator::add_ue(ue_cfg, false);
   }
 
   du_ue_index_t ue_index = to_du_ue_index(0);
@@ -153,9 +153,6 @@ class scheduler_conres_without_pdu_test : public base_single_ue_scheduler_conres
 
 TEST_F(scheduler_conres_without_pdu_test, when_conres_ce_is_enqueued_and_no_msg4_is_enqueued_then_pdsch_is_scheduled)
 {
-  // Enqueue ConRes CE.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
-
   // Ensure the ConRes CE is scheduled without a Msg4 SDU.
   ASSERT_TRUE(this->run_slot_until([this]() { return find_ue_pdsch(rnti, *this->last_sched_result()) != nullptr; }));
   const dl_msg_alloc* conres_alloc = find_ue_pdsch(rnti, *this->last_sched_result());
@@ -210,12 +207,6 @@ TEST_P(scheduler_con_res_msg4_test,
   // Enqueue several RACH indications, so that RARs that need to be scheduled may fight for RB space with the Msg4.
   enqueue_random_number_of_rach_indications();
 
-  // Run until all RARs are scheduled.
-  this->run_slot_until([this]() { return this->last_sched_result()->dl.rar_grants.empty(); });
-
-  // Enqueue ConRes CE for one UE.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
-
   // Enqueue Msg4 in SRB0/SRB1.
   this->push_dl_buffer_state(dl_buffer_state_indication_message{this->ue_index, params.msg4_lcid, msg4_size});
 
@@ -252,7 +243,6 @@ TEST_P(scheduler_con_res_msg4_test, while_ue_is_in_fallback_then_common_pucch_is
   static constexpr unsigned crnti_msg_size = 8;
 
   // Enqueue ConRes CE + Msg4.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
   this->push_dl_buffer_state(dl_buffer_state_indication_message{this->ue_index, params.msg4_lcid, msg4_size});
 
   ASSERT_TRUE(run_until_conres_msg4_scheduled(rnti, lcid_dl_sch_t::UE_CON_RES_ID)) << "ConRes not scheduled";
@@ -348,8 +338,7 @@ TEST_P(scheduler_con_res_msg4_test, while_ue_is_in_fallback_then_common_pucch_is
 
 TEST_P(scheduler_con_res_msg4_test, while_ue_is_in_fallback_then_common_ss_is_used)
 {
-  // Enqueue ConRes CE + Msg4.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
+  // Enqueue Msg4.
   this->push_dl_buffer_state(dl_buffer_state_indication_message{this->ue_index, params.msg4_lcid, msg4_size});
 
   // Wait for ConRes + Msg4 PDCCH to be scheduled.
@@ -375,8 +364,7 @@ TEST_P(scheduler_con_res_msg4_test, while_ue_is_in_fallback_then_common_ss_is_us
 
 TEST_P(scheduler_con_res_msg4_test, when_msg4_gets_retxed_then_tc_rnti_is_used_and_csi_rs_avoided)
 {
-  // Enqueue ConRes CE and Msg4.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
+  // Enqueue Msg4.
   this->push_dl_buffer_state(dl_buffer_state_indication_message{this->ue_index, params.msg4_lcid, msg4_size});
 
   // Wait for ConRes + Msg4 PDCCH, PDSCH and PUCCH to be scheduled.
@@ -443,21 +431,21 @@ protected:
       cell_cfg_req.ran.ntn_params->ntn_cfg.cell_specific_koffset = ntn_cs_koffset;
     }
     add_cell(cell_cfg_req);
+    nof_rtt_slots    = ntn_cs_koffset.count() * next_slot.nof_slots_per_subframe();
+    conres_win_slots = cell_cfg(cell_index).params.ul_cfg_common.init_ul_bwp.rach_cfg_common->ra_con_res_timer.count() *
+                       next_slot.nof_slots_per_subframe();
+  }
 
-    // Create a UE.
-    auto ue_cfg =
-        sched_config_helper::create_default_sched_ue_creation_request(cell_cfg(to_du_cell_index(0)).params, {});
-    ue_cfg.ue_index           = ue_index;
-    ue_cfg.crnti              = rnti;
+  void create_ue(unsigned ue_creation_delay_slots = 0)
+  {
+    auto ue_cfg     = sched_config_helper::create_default_sched_ue_creation_request(cell_cfg(cell_index).params, {});
+    ue_cfg.ue_index = ue_index;
+    ue_cfg.crnti    = rnti;
     ue_cfg.starts_in_fallback = true;
-    ue_cfg.ul_ccch_slot_rx    = next_slot.without_hyper_sfn();
-    scheduler_test_simulator::add_ue(ue_cfg, true);
-    nof_rtt_slots      = ntn_cs_koffset.count() * next_slot.nof_slots_per_subframe();
-    ul_ccch_slot_rx    = next_slot.without_hyper_sfn();
-    conres_expiry_slot = ul_ccch_slot_rx +
-                         cell_cfg_req.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common->ra_con_res_timer.count() *
-                             next_slot.nof_slots_per_subframe() +
-                         nof_rtt_slots;
+    ul_ccch_slot_rx           = next_slot.without_hyper_sfn() - ue_creation_delay_slots;
+    ue_cfg.ul_ccch_slot_rx    = ul_ccch_slot_rx;
+    scheduler_test_simulator::add_ue(ue_cfg, false);
+    conres_expiry_slot = ul_ccch_slot_rx + conres_win_slots + nof_rtt_slots;
   }
 
   cell_config_builder_params builder_params{cell_config_builder_profiles::create(duplex_mode::TDD)};
@@ -465,20 +453,16 @@ protected:
   const du_ue_index_t        ue_index   = to_du_ue_index(0);
   const rnti_t               rnti       = to_rnti(0x4601);
   unsigned                   nof_rtt_slots;
+  unsigned                   conres_win_slots;
   slot_point                 ul_ccch_slot_rx;
   slot_point                 conres_expiry_slot;
 };
 
 TEST_P(scheduler_conres_expiry_test, when_conres_ce_arrives_after_conres_timer_expires_then_no_pdsch_is_scheduled)
 {
-  // CE is enqueued after the ConRes timer expires.
-  auto ce_enqueue_slot = conres_expiry_slot + test_rng::uniform_int<unsigned>(0, 10);
-  while (next_slot.without_hyper_sfn() < ce_enqueue_slot) {
-    run_slot();
-    ASSERT_EQ(find_ue_pdsch(rnti, *last_sched_result(cell_index)), nullptr)
-        << "PDSCH scheduled but there is no pending data";
-  }
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
+  // Create UE with a delay large enough that the ConRes timer is already expired at creation time. The
+  // auto-injected ConRes CE should be immediately discarded by the scheduler.
+  create_ue(conres_win_slots + nof_rtt_slots + test_rng::uniform_int<unsigned>(0, 10));
 
   // Ensure the ConRes CE is not scheduled.
   ASSERT_FALSE(this->run_slot_until(
@@ -487,16 +471,17 @@ TEST_P(scheduler_conres_expiry_test, when_conres_ce_arrives_after_conres_timer_e
 
 TEST_P(scheduler_conres_expiry_test, when_conres_retx_goes_after_conres_timer_expiry_it_is_not_scheduled)
 {
+  // Create UE with a delay close to the ConRes window so the first newTx is scheduled near expiry.
+  create_ue(conres_win_slots + nof_rtt_slots - 10);
   auto pdsch_is_sched = [this]() { return find_ue_pdsch(rnti, *this->last_sched_result(cell_index)) != nullptr; };
 
-  // Get closer to the conRes expiry slot.
+  // Get closer to the conRes expiry slot (0 iterations with the chosen delay).
   while (next_slot.without_hyper_sfn() < conres_expiry_slot - 10) {
     run_slot();
     ASSERT_FALSE(pdsch_is_sched());
   }
 
-  // Wait for newTx with ConRes CE to be scheduled.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
+  // Wait for newTx with ConRes CE to be scheduled (auto-injected at UE creation).
   ASSERT_TRUE(this->run_slot_until(pdsch_is_sched, 100));
 
   // Wait for common PUCCH.
@@ -522,21 +507,14 @@ TEST_P(scheduler_conres_expiry_test, when_conres_retx_goes_after_conres_timer_ex
 
 TEST_P(scheduler_conres_expiry_test, when_ntn_cell_conres_timer_extended_with_rtt)
 {
+  // Create UE with a delay equal to conres_win_slots when NTN RTT extension is enabled.
+  create_ue(nof_rtt_slots > 0 ? conres_win_slots : 0);
   static constexpr unsigned msg4_size = 128;
   auto pdsch_is_sched = [this]() { return find_ue_pdsch(rnti, *this->last_sched_result(cell_index)) != nullptr; };
 
-  // Advance by link RTT.
-  while (next_slot.without_hyper_sfn() < ul_ccch_slot_rx + nof_rtt_slots) {
-    run_slot();
-    ASSERT_FALSE(pdsch_is_sched());
-  }
-
-  // Enqueue ConRes CE + Msg4.
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
   this->push_dl_buffer_state(dl_buffer_state_indication_message{this->ue_index, LCID_SRB1, msg4_size});
 
-  // Wait for ConRes + Msg4 PDCCH to be scheduled.
-  // PDSCH should be scheduled, as the ConRes timer is not expired.
+  // ConRes CE was auto-injected at UE creation; PDSCH should be scheduled within the remaining timer window.
   ASSERT_TRUE(this->run_slot_until(pdsch_is_sched, 100));
 }
 
@@ -561,7 +539,7 @@ protected:
     ue_cfg.crnti    = rnti;
     ue_cfg.starts_in_fallback = true;
     ue_cfg.ul_ccch_slot_rx    = next_slot.without_hyper_sfn();
-    scheduler_test_simulator::add_ue(ue_cfg, true);
+    scheduler_test_simulator::add_ue(ue_cfg, false);
   }
 
   const du_cell_index_t cell_index = to_du_cell_index(0);
@@ -572,7 +550,6 @@ protected:
 
 TEST_F(scheduler_ue_no_config_test, when_ue_has_no_serv_cell_cfg_then_msg4_and_conres_are_still_scheduled)
 {
-  this->sched->handle_dl_mac_ce_indication(dl_mac_ce_indication{ue_index, lcid_dl_sch_t::UE_CON_RES_ID});
   this->push_dl_buffer_state(dl_buffer_state_indication_message{this->ue_index, LCID_SRB0, msg4_size});
 
   // Wait for ConRes (and optionally Msg4) to be scheduled.
