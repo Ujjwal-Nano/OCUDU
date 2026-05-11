@@ -14,6 +14,7 @@ add_library(ocudu_worker_manager_app_service STATIC ${SOURCES})
 target_include_directories(ocudu_worker_manager_app_service PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(ocudu_worker_manager_app_service
         ocudu_cpu_affinities_helper
+        ocudu_config_app_helpers
         ocudu_cu_up      # TODO: Temp
         ocudu_du_high    # TODO: Temp
         ocudu_cu_cp      # TODO: Temp
