@@ -7,7 +7,6 @@ add_executable(ocuup
         cu_up.cpp
         cu_up_appconfig_cli11_schema.cpp
         cu_up_appconfig_validator.cpp
-        cu_up_appconfig_yaml_writer.cpp
 )
 
 install(TARGETS ocuup
@@ -15,6 +14,7 @@ install(TARGETS ocuup
 
 target_link_libraries(ocuup PRIVATE
         ocudu_app_helpers
+        ocudu_config_app_helpers
         ocudu_app_services
         ocudu_e1_gateway
         ocudu_e2

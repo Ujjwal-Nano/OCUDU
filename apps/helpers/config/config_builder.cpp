@@ -10,6 +10,44 @@ namespace ocudu {
 namespace config {
 
 // ---------------------------------------------------------------------------
+// schema merge helper
+// ---------------------------------------------------------------------------
+
+void merge_into(schema_node& dst, schema_node&& src)
+{
+  auto* dst_group = std::get_if<group_node>(&dst.body);
+  auto* src_group = std::get_if<group_node>(&src.body);
+  if (dst_group == nullptr || src_group == nullptr) {
+    return;
+  }
+  for (auto& src_child : src_group->children) {
+    schema_node* existing = nullptr;
+    for (auto& dst_child : dst_group->children) {
+      if (dst_child.name != src_child.name) {
+        continue;
+      }
+      if (std::holds_alternative<group_node>(dst_child.body) && std::holds_alternative<group_node>(src_child.body)) {
+        existing = &dst_child;
+        break;
+      }
+      if (std::holds_alternative<leaf_node>(dst_child.body) && std::holds_alternative<leaf_node>(src_child.body)) {
+        // Same-name leaf already present — keep dst's binding (first wins).
+        existing = &dst_child;
+        break;
+      }
+    }
+    if (existing != nullptr) {
+      if (std::holds_alternative<group_node>(existing->body) && std::holds_alternative<group_node>(src_child.body)) {
+        merge_into(*existing, std::move(src_child));
+      }
+      // Same-name leaves: do nothing — dst already has the option recorded.
+      continue;
+    }
+    dst_group->children.push_back(std::move(src_child));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // option_handle
 // ---------------------------------------------------------------------------
 

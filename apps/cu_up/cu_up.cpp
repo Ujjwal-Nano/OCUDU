@@ -4,6 +4,11 @@
 
 #include "apps/cu_up/cu_up_appconfig_cli11_schema.h"
 #include "apps/cu_up/cu_up_appconfig_validator.h"
+#include "apps/helpers/config/config_builder.h"
+#include "apps/helpers/config/docs_emitter.h"
+#include "apps/helpers/config/schema_emitter.h"
+#include "apps/helpers/config/yaml_writer.h"
+#include "apps/helpers/config/yang_emitter.h"
 #include "apps/helpers/e2/e2_config_translators.h"
 #include "apps/helpers/f1u/f1u_appconfig.h"
 #include "apps/helpers/metrics/metrics_helpers.h"
@@ -23,7 +28,6 @@
 #include "apps/units/o_cu_up/o_cu_up_unit_config.h"
 #include "apps/units/o_cu_up/pcap_factory.h"
 #include "cu_up_appconfig.h"
-#include "cu_up_appconfig_yaml_writer.h"
 #include "ocudu/adt/scope_exit.h"
 #include "ocudu/e1ap/gateways/e1_network_client_factory.h"
 #include "ocudu/f1u/cu_up/f1u_gateway.h"
@@ -188,8 +192,19 @@ int main(int argc, char** argv)
   populate_cli11_generic_args(app);
 
   // Configure CLI11 with the CU application configuration schema.
-  cu_up_appconfig cu_up_cfg;
-  configure_cli11_with_cu_appconfig_schema(app, cu_up_cfg);
+  cu_up_appconfig     cu_up_cfg;
+  config::schema_node cu_up_schema;
+  configure_cli11_with_cu_appconfig_schema(app, cu_up_cfg, cu_up_schema);
+
+  // Schema-dump flags. Cover the full cu_up + o_cu_up unit surface.
+  bool dump_schema = false;
+  bool dump_docs   = false;
+  bool dump_yang   = false;
+  bool dump_yaml   = false;
+  app.add_flag("--dump-schema", dump_schema, "Emit JSON Schema for the full config tree and exit");
+  app.add_flag("--dump-docs", dump_docs, "Emit Markdown reference for the full config tree and exit");
+  app.add_flag("--dump-yang", dump_yang, "Emit YANG 1.1 module for the full config tree and exit");
+  app.add_flag("--dump-yaml", dump_yaml, "Emit YAML config dump for the full config tree and exit");
 
   auto o_cu_up_app_unit = create_o_cu_up_application_unit("cu-up");
   o_cu_up_app_unit->on_parsing_configuration_registration(app);
@@ -203,6 +218,43 @@ int main(int argc, char** argv)
 
   // Parse arguments.
   CLI11_PARSE(app, argc, argv);
+
+  // Compose the full schema: appconfig tree + o_cu_up unit tree.
+  config::merge_into(cu_up_schema, config::schema_node{o_cu_up_app_unit->get_schema()});
+
+  if (dump_schema) {
+    config::json_schema_options sopts;
+    sopts.title = "OCUDU CU-UP configuration";
+    // Some log-level enums and CPU-affinity options are still wired through
+    // the legacy CLI11 path (string-to-enum capture functions). They are not
+    // visible to the schema yet, so we keep additionalProperties open to
+    // avoid false-positive rejections of valid configs.
+    sopts.strict_additional_properties = false;
+    fmt::println("{}", config::emit_json_schema(cu_up_schema, sopts));
+    return 0;
+  }
+  if (dump_docs) {
+    config::markdown_options dopts;
+    dopts.title = "CU-UP configuration reference";
+    fmt::println("{}", config::emit_markdown(cu_up_schema, dopts));
+    return 0;
+  }
+  if (dump_yang) {
+    config::yang_options yopts;
+    yopts.module_name   = "ocudu-cu-up";
+    yopts.namespace_uri = "urn:ocudu:cu-up";
+    yopts.prefix        = "cu-up";
+    yopts.revision      = "2026-05-11";
+    yopts.description   = "OCUDU CU-UP configuration model.";
+    fmt::println("{}", config::emit_yang(cu_up_schema, yopts));
+    return 0;
+  }
+  if (dump_yaml) {
+    YAML::Node node;
+    config::emit_yaml(node, cu_up_schema);
+    fmt::println("{}", YAML::Dump(node));
+    return 0;
+  }
 
   // Dry run mode, exit.
   if (cu_up_cfg.enable_dryrun) {
@@ -240,8 +292,7 @@ int main(int argc, char** argv)
   ocudulog::basic_logger& config_logger = ocudulog::fetch_basic_logger("CONFIG");
   if (config_logger.debug.enabled()) {
     YAML::Node node;
-    fill_cu_up_appconfig_in_yaml_schema(node, cu_up_cfg);
-    o_cu_up_app_unit->dump_config(node);
+    config::emit_yaml(node, cu_up_schema);
     config_logger.debug("Input configuration (all values): \n{}", YAML::Dump(node));
   } else {
     config_logger.info("Input configuration (only non-default values): \n{}", app.config_to_str(false, false));

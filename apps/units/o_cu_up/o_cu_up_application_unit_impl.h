@@ -43,8 +43,12 @@ public:
   // See interface for documentation.
   void fill_worker_manager_config(worker_manager_config& config) override;
 
+  // See interface for documentation.
+  const config::schema_node& get_schema() const override { return schema_root; }
+
 private:
   o_cu_up_unit_config unit_cfg;
+  config::schema_node schema_root;
 };
 
 } // namespace ocudu

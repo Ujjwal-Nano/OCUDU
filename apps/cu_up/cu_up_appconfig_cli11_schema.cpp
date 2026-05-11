@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "cu_up_appconfig_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/f1u/f1u_cli11_schema.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_schema.h"
 #include "apps/helpers/network/sctp_cli11_schema.h"
@@ -13,55 +14,39 @@
 #include "apps/services/remote_control/remote_control_appconfig_cli11_schema.h"
 #include "apps/services/worker_manager/worker_manager_cli11_schema.h"
 #include "cu_up_appconfig.h"
-#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 
-static void configure_cli11_e1ap_args(CLI::App& app, ocuup::e1ap_appconfig& e1ap_params)
+void ocudu::configure_cli11_with_cu_appconfig_schema(CLI::App&            app,
+                                                     cu_up_appconfig&     cu_up_cfg,
+                                                     config::schema_node& schema_out)
 {
-  app.add_option(
-         "--addrs,--cu_cp_addr", // TODO: old name kept for backward compatibility, should be removed in the future
-         e1ap_params.cu_cp_addresses,
-         "CU-CP addresses to be used for E1 interface. Multiple addresses can be specified for SCTP multi-homing")
-      ->capture_default_str();
-  app.add_option(
-         "--bind_addrs,--bind_addr", // TODO: old name kept for backward compatibility, should be removed in the future
-         e1ap_params.bind_addresses,
-         "CU-UP bind addresses to be used for E1 interface. Multiple addresses can be specified for SCTP "
-         "multi-homing. If left empty, implicit bind is performed")
-      ->capture_default_str();
-  configure_cli11_sctp_socket_args(app, e1ap_params.sctp);
-}
+  schema_out.body = config::group_node{};
+  config::config_builder root(app, schema_out);
 
-void ocudu::configure_cli11_with_cu_appconfig_schema(CLI::App& app, cu_up_appconfig& cu_up_cfg)
-{
-  app.add_flag("--dryrun", cu_up_cfg.enable_dryrun, "Enable application dry run mode")->capture_default_str();
+  root.flag("--dryrun", cu_up_cfg.enable_dryrun, "Enable application dry run mode");
 
-  // Logging section.
-  configure_cli11_with_logger_appconfig_schema(app, cu_up_cfg.log_cfg);
+  configure_cli11_with_logger_appconfig_schema(root, cu_up_cfg.log_cfg);
+  configure_cli11_with_tracer_appconfig_schema(root, cu_up_cfg.trace_cfg);
+  app_services::configure_cli11_with_buffer_pool_appconfig_schema(root, cu_up_cfg.buffer_pool_config);
+  configure_cli11_with_worker_manager_appconfig_schema(root, cu_up_cfg.expert_execution_cfg);
+  configure_cli11_with_remote_control_appconfig_schema(root, cu_up_cfg.remote_control_config);
+  app_services::configure_cli11_with_app_resource_usage_config_schema(root, cu_up_cfg.metrics_cfg.rusage_config);
+  app_services::configure_cli11_with_metrics_appconfig_schema(root, cu_up_cfg.metrics_cfg.metrics_service_cfg);
 
-  // Tracers section.
-  configure_cli11_with_tracer_appconfig_schema(app, cu_up_cfg.trace_cfg);
-
-  // Buffer pool section.
-  configure_cli11_with_buffer_pool_appconfig_schema(app, cu_up_cfg.buffer_pool_config);
-
-  // Expert execution section.
-  configure_cli11_with_worker_manager_appconfig_schema(app, cu_up_cfg.expert_execution_cfg);
-
-  // Remote control section.
-  configure_cli11_with_remote_control_appconfig_schema(app, cu_up_cfg.remote_control_config);
-
-  // Metrics section.
-  app_services::configure_cli11_with_app_resource_usage_config_schema(app, cu_up_cfg.metrics_cfg.rusage_config);
-  app_services::configure_cli11_with_metrics_appconfig_schema(app, cu_up_cfg.metrics_cfg.metrics_service_cfg);
-
-  CLI::App* cu_up_subcmd = add_subcommand(app, "cu_up", "CU-UP parameters")->configurable();
-
-  // E1AP section.
-  CLI::App* e1ap_subcmd = add_subcommand(*cu_up_subcmd, "e1ap", "E1AP parameters")->configurable();
-  configure_cli11_e1ap_args(*e1ap_subcmd, cu_up_cfg.e1ap_cfg);
-  // NR-U section.
-  CLI::App* f1u_subcmd = add_subcommand(*cu_up_subcmd, "f1u", "F1-U parameters")->configurable();
-  configure_cli11_f1u_sockets_args(*f1u_subcmd, cu_up_cfg.f1u_cfg);
+  root.group("cu_up", "CU-UP parameters", [&](config::config_builder& cu_up_b) {
+    cu_up_b.group("e1ap", "E1AP parameters", [&](config::config_builder& e1ap_b) {
+      e1ap_b.option("--addrs,--cu_cp_addr",
+                    cu_up_cfg.e1ap_cfg.cu_cp_addresses,
+                    "CU-CP addresses to be used for E1 interface. Multiple addresses can be specified for SCTP multi-homing");
+      e1ap_b.option(
+          "--bind_addrs,--bind_addr",
+          cu_up_cfg.e1ap_cfg.bind_addresses,
+          "CU-UP bind addresses to be used for E1 interface. Multiple addresses can be specified for SCTP multi-homing. "
+          "If left empty, implicit bind is performed");
+      configure_cli11_sctp_socket_args(e1ap_b, cu_up_cfg.e1ap_cfg.sctp);
+    });
+    cu_up_b.group("f1u", "F1-U parameters",
+                  [&](config::config_builder& f1u_b) { configure_cli11_f1u_sockets_args(f1u_b, cu_up_cfg.f1u_cfg); });
+  });
 }

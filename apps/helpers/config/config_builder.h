@@ -127,8 +127,10 @@ struct group_node {
 struct array_node {
   /// Shape of one element, extracted once from an exemplar. The leaf renderers
   /// in this tree bind the discarded exemplar — do NOT call them. Used only
-  /// for schema and docs emission.
-  std::unique_ptr<group_node>                            items_shape;
+  /// for schema and docs emission. shared_ptr (rather than unique_ptr) so the
+  /// containing schema_node remains copyable, which lets host applications
+  /// compose schemas from independent units via config::merge_into.
+  std::shared_ptr<group_node>                            items_shape;
   /// Iterator that invokes its argument once per actual element with a freshly
   /// built group_node bound to that element's struct. Used by yaml_writer.
   std::function<void(std::function<void(group_node&)>)>  for_each_element;
@@ -330,6 +332,13 @@ private:
 // config_builder. The single entry point for declaring options.
 // ===========================================================================
 
+/// Merge \p src into \p dst at the group level. Both must hold group_nodes.
+/// Children with the same name are merged recursively when both sides are
+/// groups; otherwise src's children are appended. Used when an application
+/// composes its schema from multiple independently-built trees (e.g. main
+/// appconfig + an application_unit's contribution).
+void merge_into(schema_node& dst, schema_node&& src);
+
 class config_builder
 {
 public:
@@ -394,8 +403,20 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
   CLI::Option* opt = add_option(*app_, flag, target, description);
   opt->capture_default_str();
 
+  // Deduplicate against existing leaves with the same canonical name. CLI11's
+  // add_option (via ocudu/support/cli11_utils.h) chains callbacks so multiple
+  // registrations of the same name update both targets — for the schema we
+  // only want one entry. Keep the first registration's emit_value as
+  // authoritative.
+  const std::string canonical = detail::canonical_name(flag);
+  for (auto& existing : std::get<group_node>(root_->body).children) {
+    if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
+      return option_handle{opt, &existing};
+    }
+  }
+
   schema_node leaf;
-  leaf.name        = detail::canonical_name(flag);
+  leaf.name        = canonical;
   leaf.description = description;
 
   leaf_node payload;
@@ -425,6 +446,8 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
         node = static_cast<std::underlying_type_t<inner>>(*target);
       } else if constexpr (detail::is_chrono_duration<inner>::value) {
         node = target->count();
+      } else if constexpr (std::is_integral_v<inner> && sizeof(inner) == 1 && !std::is_same_v<inner, bool>) {
+        node = static_cast<int>(*target);
       } else {
         node = *target;
       }
@@ -435,6 +458,9 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
     };
   } else if constexpr (detail::is_chrono_duration<T>::value) {
     payload.emit_value = [&target](YAML::Node& node) { node = target.count(); };
+  } else if constexpr (std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, bool>) {
+    // yaml-cpp renders uint8_t / int8_t as characters by default; cast to int.
+    payload.emit_value = [&target](YAML::Node& node) { node = static_cast<int>(target); };
   } else {
     payload.emit_value = [&target](YAML::Node& node) { node = target; };
   }
@@ -497,7 +523,7 @@ array_handle config_builder::array_of(const std::string&    flag,
                 "array_of element type must be default-constructible (used to extract items shape).");
 
   // 1) Build the items shape once from an exemplar.
-  auto items_shape = std::make_unique<group_node>();
+  auto items_shape = std::make_shared<group_node>();
   {
     element_t   exemplar{};
     CLI::App    throwaway_app("array_of shape probe");

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/helpers/config/config_builder.h"
 #include "apps/units/application_unit.h"
 #include "apps/units/o_cu_up/o_cu_up_builder.h"
 #include <yaml-cpp/node/node.h>
@@ -28,6 +29,11 @@ public:
   /// Returns the O-RAN CU-UP unit configuration of this O-RAN CU-UP application unit.
   virtual o_cu_up_unit_config&       get_o_cu_up_unit_config()       = 0;
   virtual const o_cu_up_unit_config& get_o_cu_up_unit_config() const = 0;
+
+  /// Returns the metadata tree describing the options this unit registered
+  /// during on_parsing_configuration_registration(). Used by the host
+  /// application to compose its full --dump-schema / --dump-docs output.
+  virtual const config::schema_node& get_schema() const = 0;
 };
 
 /// Creates an O-RAN CU-UP application unit.
