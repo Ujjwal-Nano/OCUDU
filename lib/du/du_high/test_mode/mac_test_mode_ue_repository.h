@@ -41,15 +41,13 @@ public:
 
   const sched_ue_config_request* find_sched_ue_cfg_request(rnti_t rnti) const;
 
-  bool is_msg4_rxed(rnti_t rnti) const;
+  bool is_msg4_scheduled(rnti_t rnti) const;
 
-  bool msg4_rxed(rnti_t rnti, bool msg4_rx_flag_);
+  /// Marks Msg4 as scheduled for the UE.
+  void on_msg4_scheduled(rnti_t rnti);
 
   /// Returns true if the RRC Setup Complete for the given RNTI is pending injection, and atomically clears the flag.
   bool consume_rrc_setup_complete_pending(rnti_t rnti);
-
-  /// Marks that the RRC Setup Complete PDU for the given RNTI should be injected on the next HARQ ACK.
-  void set_rrc_setup_complete_pending(rnti_t rnti);
 
   void add_ue(rnti_t rnti, du_ue_index_t ue_idx_, const sched_ue_config_request& sched_ue_cfg_req_);
 
@@ -61,12 +59,16 @@ private:
   using cell_event_queue =
       concurrent_queue<unique_task, concurrent_queue_policy::lockfree_mpmc, concurrent_queue_wait_policy::non_blocking>;
 
+  enum class msg4_state {
+    not_scheduled, ///< Msg4 has not been scheduled yet.
+    scheduled,     ///< Msg4 has been scheduled; waiting for the HARQ ACK to inject the RRC Setup Complete.
+    acked          ///< Msg4 HARQ ACK received and RRC Setup Complete injected.
+  };
+
   struct test_ue_info {
     du_ue_index_t                            ue_idx;
     std::unique_ptr<sched_ue_config_request> sched_ue_cfg_req;
-    bool                                     msg4_rx_flag;
-    /// True when the RRC Setup Complete PDU should be injected on the next HARQ ACK from this UE.
-    bool rrc_setup_complete_pending = false;
+    msg4_state                               msg4_st = msg4_state::not_scheduled;
   };
 
   struct cell_info {

@@ -53,45 +53,31 @@ const sched_ue_config_request* mac_test_mode_ue_repository::find_sched_ue_cfg_re
   return it != cells[cell_idx]->rnti_to_ue_info_lookup.end() ? it->second.sched_ue_cfg_req.get() : nullptr;
 }
 
-bool mac_test_mode_ue_repository::is_msg4_rxed(rnti_t rnti) const
+bool mac_test_mode_ue_repository::is_msg4_scheduled(rnti_t rnti) const
 {
   unsigned cell_idx = get_cell_index(rnti);
-  if (cells[cell_idx]->rnti_to_ue_info_lookup.contains(rnti)) {
-    return cells[cell_idx]->rnti_to_ue_info_lookup.at(rnti).msg4_rx_flag;
-  }
-  return false;
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  return it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and it->second.msg4_st != msg4_state::not_scheduled;
 }
 
-bool mac_test_mode_ue_repository::msg4_rxed(rnti_t rnti, bool msg4_rx_flag_)
+void mac_test_mode_ue_repository::on_msg4_scheduled(rnti_t rnti)
 {
   unsigned cell_idx = get_cell_index(rnti);
-  if (cells[cell_idx]->rnti_to_ue_info_lookup.contains(rnti)) {
-    auto prev = std::exchange(cells[cell_idx]->rnti_to_ue_info_lookup.at(rnti).msg4_rx_flag, msg4_rx_flag_);
-    if (msg4_rx_flag_ and not prev) {
-      return true;
-    }
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and it->second.msg4_st == msg4_state::not_scheduled) {
+    it->second.msg4_st = msg4_state::scheduled;
   }
-  return false;
 }
 
 bool mac_test_mode_ue_repository::consume_rrc_setup_complete_pending(rnti_t rnti)
 {
   unsigned cell_idx = get_cell_index(rnti);
   auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
-  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and it->second.rrc_setup_complete_pending) {
-    it->second.rrc_setup_complete_pending = false;
+  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and it->second.msg4_st == msg4_state::scheduled) {
+    it->second.msg4_st = msg4_state::acked;
     return true;
   }
   return false;
-}
-
-void mac_test_mode_ue_repository::set_rrc_setup_complete_pending(rnti_t rnti)
-{
-  unsigned cell_idx = get_cell_index(rnti);
-  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
-  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end()) {
-    it->second.rrc_setup_complete_pending = true;
-  }
 }
 
 void mac_test_mode_ue_repository::add_ue(rnti_t                         rnti,
@@ -109,7 +95,7 @@ void mac_test_mode_ue_repository::add_ue(rnti_t                         rnti,
       pcell_index, [this, rnti, ue_idx, cfg = std::make_unique<sched_ue_config_request>(sched_ue_cfg_req)]() mutable {
         const du_cell_index_t cellidx = cfg->cells.value()[0].serv_cell_cfg.cell_index;
         cells[cellidx]->rnti_to_ue_info_lookup.emplace(
-            rnti, test_ue_info{.ue_idx = ue_idx, .sched_ue_cfg_req = std::move(cfg), .msg4_rx_flag = false});
+            rnti, test_ue_info{.ue_idx = ue_idx, .sched_ue_cfg_req = std::move(cfg)});
       })) {
     ocudulog::fetch_basic_logger("MAC").warning("Failed to add test mode UE. Retrying...");
   }

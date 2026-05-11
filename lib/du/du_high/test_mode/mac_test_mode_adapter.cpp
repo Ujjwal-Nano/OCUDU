@@ -315,6 +315,11 @@ void mac_test_mode_cell_adapter::forward_uci_ind_to_mac(const mac_uci_indication
     if (not ue_info_mgr.consume_rrc_setup_complete_pending(uci.rnti)) {
       continue;
     }
+
+    // Notify test mode controller that connection resolution is complete now that Msg4 is ACKed.
+    ev_notifier.on_con_res_completed(cell_index, uci.rnti);
+
+    // Inject RRC Setup Complete.
     auto rx_pdu = create_test_pdu_with_rrc_setup_complete(cell_index, uci_msg.sl_rx, uci.rnti, to_harq_id(0));
     if (not rx_pdu.has_value()) {
       logger.warning("TEST_MODE c-rnti={}: Unable to create RRC Setup Complete test PDU", uci.rnti);
@@ -425,8 +430,8 @@ void mac_test_mode_cell_adapter::on_new_downlink_scheduler_results(const mac_dl_
 
   for (auto& grant : dl_res.dl_res->ue_grants) {
     rnti_t crnti = grant.pdsch_cfg.rnti;
-    if (not ue_info_mgr.is_cell_test_ue(cell_index, crnti) or ue_info_mgr.is_msg4_rxed(crnti)) {
-      // UE is not test mode or it has already received Msg4.
+    if (not ue_info_mgr.is_cell_test_ue(cell_index, crnti) or ue_info_mgr.is_msg4_scheduled(crnti)) {
+      // UE is not test mode or it has already scheduled Msg4.
       continue;
     }
 
@@ -450,15 +455,8 @@ void mac_test_mode_cell_adapter::on_new_downlink_scheduler_results(const mac_dl_
         pdu_handler.handle_rx_data_indication(std::move(rx_pdu.value()));
       }
 
-      // Mark Msg4 received for the UE.
-      if (ue_info_mgr.msg4_rxed(crnti, true)) {
-        // Notify test mode controller about the UE establishment.
-        ev_notifier.on_con_res_completed(cell_index, crnti);
-      }
-
-      // Defer the RRC Setup Complete injection until the HARQ ACK for Msg4 is received (see
-      // forward_uci_ind_to_mac).
-      ue_info_mgr.set_rrc_setup_complete_pending(crnti);
+      // Mark Msg4 as scheduled.
+      ue_info_mgr.on_msg4_scheduled(crnti);
     }
   }
 
