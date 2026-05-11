@@ -4,6 +4,7 @@
 
 
 
+add_subdirectory(config)
 add_subdirectory(e2)
 add_subdirectory(f1u)
 add_subdirectory(hal)
@@ -13,7 +14,8 @@ add_subdirectory(network)
 add_subdirectory(tracing)
 
 add_library(ocudu_app_helpers INTERFACE)
-target_link_libraries(ocudu_app_helpers INTERFACE  ocudu_e2_app_helpers
+target_link_libraries(ocudu_app_helpers INTERFACE  ocudu_config_app_helpers
+                                                    ocudu_e2_app_helpers
                                                     ocudu_f1u_app_helpers
                                                     ocudu_hal_app_helpers
                                                     ocudu_logger_app_helpers
