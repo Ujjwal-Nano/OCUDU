@@ -11,6 +11,7 @@
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/rnti.h"
 #include "ocudu/scheduler/scheduler_configurator.h"
+#include <atomic>
 
 namespace ocudu {
 
@@ -59,16 +60,18 @@ private:
   using cell_event_queue =
       concurrent_queue<unique_task, concurrent_queue_policy::lockfree_mpmc, concurrent_queue_wait_policy::non_blocking>;
 
-  enum class msg4_state {
-    not_scheduled, ///< Msg4 has not been scheduled yet.
-    scheduled,     ///< Msg4 has been scheduled; waiting for the HARQ ACK to inject the RRC Setup Complete.
-    acked          ///< Msg4 HARQ ACK received and RRC Setup Complete injected.
-  };
-
   struct test_ue_info {
+    test_ue_info(du_ue_index_t ue_idx_, std::unique_ptr<sched_ue_config_request> cfg) :
+      ue_idx(ue_idx_), sched_ue_cfg_req(std::move(cfg))
+    {
+    }
+
     du_ue_index_t                            ue_idx;
     std::unique_ptr<sched_ue_config_request> sched_ue_cfg_req;
-    msg4_state                               msg4_st = msg4_state::not_scheduled;
+    /// Set by the MAC DL thread when Msg4 is scheduled. Read by the same thread only.
+    bool msg4_sched_flag = false;
+    /// Set by the MAC DL thread when Msg4 is scheduled; consumed by the PHY UCI thread on HARQ ACK.
+    std::atomic<bool> msg4_pending_ack_flag{false};
   };
 
   struct cell_info {
