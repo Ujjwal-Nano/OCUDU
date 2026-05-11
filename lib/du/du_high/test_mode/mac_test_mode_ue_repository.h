@@ -11,6 +11,7 @@
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/rnti.h"
 #include "ocudu/scheduler/scheduler_configurator.h"
+#include <atomic>
 
 namespace ocudu {
 
@@ -41,9 +42,13 @@ public:
 
   const sched_ue_config_request* find_sched_ue_cfg_request(rnti_t rnti) const;
 
-  bool is_msg4_rxed(rnti_t rnti) const;
+  bool is_msg4_scheduled(rnti_t rnti) const;
 
-  bool msg4_rxed(rnti_t rnti, bool msg4_rx_flag_);
+  /// Marks Msg4 as scheduled for the UE.
+  void on_msg4_scheduled(rnti_t rnti);
+
+  /// Returns true if the RRC Setup Complete for the given RNTI is pending injection, and atomically clears the flag.
+  bool consume_rrc_setup_complete_pending(rnti_t rnti);
 
   void add_ue(rnti_t rnti, du_ue_index_t ue_idx_, const sched_ue_config_request& sched_ue_cfg_req_);
 
@@ -56,9 +61,17 @@ private:
       concurrent_queue<unique_task, concurrent_queue_policy::lockfree_mpmc, concurrent_queue_wait_policy::non_blocking>;
 
   struct test_ue_info {
+    test_ue_info(du_ue_index_t ue_idx_, std::unique_ptr<sched_ue_config_request> cfg) :
+      ue_idx(ue_idx_), sched_ue_cfg_req(std::move(cfg))
+    {
+    }
+
     du_ue_index_t                            ue_idx;
     std::unique_ptr<sched_ue_config_request> sched_ue_cfg_req;
-    bool                                     msg4_rx_flag;
+    /// Set by the MAC DL thread when Msg4 is scheduled. Read by the same thread only.
+    bool msg4_sched_flag = false;
+    /// Set by the MAC DL thread when Msg4 is scheduled; consumed by the PHY UCI thread on HARQ ACK.
+    std::atomic<bool> msg4_pending_ack_flag{false};
   };
 
   struct cell_info {

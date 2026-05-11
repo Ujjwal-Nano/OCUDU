@@ -384,11 +384,10 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
 void ue_cell_event_manager::handle_ue_config_applied(du_cell_index_t pcell_idx, du_ue_index_t ue_idx)
 {
   auto handle_ue_config_applied_impl = [this, ue_idx]() {
-    // Confirm that UE applied new config.
-    ue_db.ue_config_applied(ue_idx);
-
-    // Add UE to slice scheduler, once it leaves fallback mode.
-    slice_sched.config_applied(ue_idx);
+    // Add UE to slice scheduler only when it actually leaves fallback mode.
+    if (ue_db.ue_config_applied(ue_idx)) {
+      slice_sched.config_applied(ue_idx);
+    }
 
     // Log UE config applied event.
     ev_logger.enqueue(scheduler_event_logger::ue_cfg_applied_event{ue_idx, ue_db[ue_idx].crnti});

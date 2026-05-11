@@ -53,23 +53,29 @@ const sched_ue_config_request* mac_test_mode_ue_repository::find_sched_ue_cfg_re
   return it != cells[cell_idx]->rnti_to_ue_info_lookup.end() ? it->second.sched_ue_cfg_req.get() : nullptr;
 }
 
-bool mac_test_mode_ue_repository::is_msg4_rxed(rnti_t rnti) const
+bool mac_test_mode_ue_repository::is_msg4_scheduled(rnti_t rnti) const
 {
   unsigned cell_idx = get_cell_index(rnti);
-  if (cells[cell_idx]->rnti_to_ue_info_lookup.contains(rnti)) {
-    return cells[cell_idx]->rnti_to_ue_info_lookup.at(rnti).msg4_rx_flag;
-  }
-  return false;
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  return it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and it->second.msg4_sched_flag;
 }
 
-bool mac_test_mode_ue_repository::msg4_rxed(rnti_t rnti, bool msg4_rx_flag_)
+void mac_test_mode_ue_repository::on_msg4_scheduled(rnti_t rnti)
 {
   unsigned cell_idx = get_cell_index(rnti);
-  if (cells[cell_idx]->rnti_to_ue_info_lookup.contains(rnti)) {
-    auto prev = std::exchange(cells[cell_idx]->rnti_to_ue_info_lookup.at(rnti).msg4_rx_flag, msg4_rx_flag_);
-    if (msg4_rx_flag_ and not prev) {
-      return true;
-    }
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and not it->second.msg4_sched_flag) {
+    it->second.msg4_sched_flag = true;
+    it->second.msg4_pending_ack_flag.store(true, std::memory_order_release);
+  }
+}
+
+bool mac_test_mode_ue_repository::consume_rrc_setup_complete_pending(rnti_t rnti)
+{
+  unsigned cell_idx = get_cell_index(rnti);
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end()) {
+    return it->second.msg4_pending_ack_flag.exchange(false, std::memory_order_acq_rel);
   }
   return false;
 }
@@ -88,8 +94,7 @@ void mac_test_mode_ue_repository::add_ue(rnti_t                         rnti,
   while (not event_handler.schedule(
       pcell_index, [this, rnti, ue_idx, cfg = std::make_unique<sched_ue_config_request>(sched_ue_cfg_req)]() mutable {
         const du_cell_index_t cellidx = cfg->cells.value()[0].serv_cell_cfg.cell_index;
-        cells[cellidx]->rnti_to_ue_info_lookup.emplace(
-            rnti, test_ue_info{.ue_idx = ue_idx, .sched_ue_cfg_req = std::move(cfg), .msg4_rx_flag = false});
+        cells[cellidx]->rnti_to_ue_info_lookup.emplace(rnti, test_ue_info{ue_idx, std::move(cfg)});
       })) {
     ocudulog::fetch_basic_logger("MAC").warning("Failed to add test mode UE. Retrying...");
   }
