@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct logger_appconfig;
 
-/// Configures the given CLI11 application with the logger application configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_logger_appconfig_schema(config::config_builder& b, logger_appconfig& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_logger_appconfig_schema(CLI::App& app, logger_appconfig& config);
 
 } // namespace ocudu
