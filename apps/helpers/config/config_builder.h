@@ -395,13 +395,26 @@ void config_builder::group(const std::string& name, const std::string& descripti
 {
   CLI::App* subcmd = add_subcommand(*app_, name, description);
 
-  schema_node child;
-  child.name        = name;
-  child.description = description;
-  child.body        = group_node{};
+  // Multiple callers may contribute to the same group (e.g. several helpers
+  // all extending the "metrics" subcommand). Reuse an existing child when
+  // present so the schema mirrors the CLI11 subcommand structure.
+  auto&        children = std::get<group_node>(root_->body).children;
+  schema_node* target   = nullptr;
+  for (auto& c : children) {
+    if (c.name == name && std::holds_alternative<group_node>(c.body)) {
+      target = &c;
+      break;
+    }
+  }
+  if (target == nullptr) {
+    schema_node child;
+    child.name        = name;
+    child.description = description;
+    child.body        = group_node{};
+    target            = &push_child(std::move(child));
+  }
 
-  schema_node&    inserted = push_child(std::move(child));
-  config_builder  sub(*subcmd, inserted);
+  config_builder sub(*subcmd, *target);
   configurator(sub);
 }
 
