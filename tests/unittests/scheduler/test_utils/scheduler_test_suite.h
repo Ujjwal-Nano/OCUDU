@@ -129,6 +129,12 @@ public:
   unsigned nof_success_rars() const { return success_rar_counter; }
   unsigned nof_fallback_rars() const { return fallback_rar_counter; }
 
+  /// Returns the PUSCH RNTI (2*RA-RNTI) of the first pending MsgA preamble, or INVALID_RNTI if none.
+  rnti_t first_pending_msga_pusch_rnti() const
+  {
+    return pending_msga_preambles.empty() ? rnti_t::INVALID_RNTI : pending_msga_preambles.front().msga_rnti;
+  }
+
   bool has_pending_ra() const
   {
     return not pending_rars.empty() or not pending_preambles.empty() or not pending_msg3_retxs.empty() or
@@ -159,6 +165,7 @@ private:
   };
   /// Tracks a 2-step RACH preamble from PRACH detection through MsgA PUSCH and MsgB scheduling.
   struct msga_preamble_context {
+    rnti_t msga_rnti;
     rnti_t msgb_rnti;
     rnti_t tc_rnti;
     /// Expected MsgA PUSCH slot (prach_slot + td_offset).

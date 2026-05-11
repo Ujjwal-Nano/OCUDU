@@ -870,6 +870,8 @@ void test_helper::ra_scheduler_tracker::on_new_rach_ind(const rach_indication_me
       if (is_msga_preamble(preamb.preamble_id)) {
         const rach_config_common_two_step& two_step_cfg = *rach_cfg.two_step_rach_cfg;
         msga_preamble_context              ctxt;
+        ctxt.msga_rnti =
+            to_rnti(to_value(ra_helper::get_ra_rnti(slot_idx, occ.start_symbol, occ.frequency_index)) * 2U);
         ctxt.msgb_rnti        = ra_helper::get_msgb_rnti(slot_idx, occ.start_symbol, occ.frequency_index);
         ctxt.tc_rnti          = preamb.tc_rnti;
         ctxt.pusch_slot       = ind.slot_rx + two_step_cfg.pusch.td_offset;
@@ -1033,10 +1035,13 @@ void test_helper::ra_scheduler_tracker::on_new_result(slot_point sl_tx, const sc
     }
 
     if (not pusch.context.msg3_delay.has_value() and pusch.context.nof_retxs == 0) {
-      // MsgA PUSCH (2-step RACH): find in pending_msga_preambles.
-      auto it = std::find_if(pending_msga_preambles.begin(),
-                             pending_msga_preambles.end(),
-                             [&pusch](const msga_preamble_context& p) { return p.tc_rnti == pusch.pusch_cfg.rnti; });
+      // MsgA PUSCH (2-step RACH): find in pending_msga_preambles by msga_rnti.
+      // When multiple preambles share the same PRACH occasion, match the first
+      // one whose MsgA PUSCH has not yet been seen.
+      auto it = std::find_if(
+          pending_msga_preambles.begin(), pending_msga_preambles.end(), [&pusch](const msga_preamble_context& p) {
+            return p.msga_rnti == pusch.pusch_cfg.rnti and not p.pusch_sched;
+          });
       ASSERT_NE(it, pending_msga_preambles.end()) << "MsgA PUSCH has no associated MsgA preamble";
       ASSERT_EQ(it->pusch_slot, sl_tx) << "MsgA PUSCH scheduled in slot not matching the TD offset";
       it->pusch_sched = true;

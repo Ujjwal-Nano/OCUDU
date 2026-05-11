@@ -100,6 +100,7 @@ private:
       preamble_ctx(const rach_indication_message::preamble& info_) : info(info_) {}
     };
 
+    rnti_t        msga_rnti = rnti_t::INVALID_RNTI;
     rnti_t        msgb_rnti = rnti_t::INVALID_RNTI;
     slot_point    prach_slot_rx;
     slot_interval msgb_window;

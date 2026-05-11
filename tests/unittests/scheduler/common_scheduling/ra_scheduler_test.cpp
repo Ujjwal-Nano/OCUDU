@@ -515,14 +515,27 @@ public:
     return test_helper::create_rach_indication(next_slot_rx(), {preambles.begin(), preambles.end()});
   }
 
-  /// Inject a CRC result for a MsgA PUSCH by TC-RNTI.
-  void send_msga_crc(rnti_t tc_rnti, bool success)
+  /// Inject a CRC result for a MsgA PUSCH. The MsgA RNTI (2×RA-RNTI) is derived from the scheduled
+  /// PUSCH grant if still in the current slot result, or from the tracker's pending MsgA preamble list.
+  void send_msga_crc(bool success)
   {
+    rnti_t msga_rnti = rnti_t::INVALID_RNTI;
+    for (const auto& pusch : res_grid[0].result.ul.puschs) {
+      if (pusch.context.ue_index == INVALID_DU_UE_INDEX and not pusch.context.msg3_delay.has_value() and
+          pusch.context.nof_retxs == 0) {
+        msga_rnti = pusch.pusch_cfg.rnti;
+        break;
+      }
+    }
+    if (msga_rnti == rnti_t::INVALID_RNTI) {
+      msga_rnti = tracker.first_pending_msga_pusch_rnti();
+    }
+    ASSERT_NE(msga_rnti, rnti_t::INVALID_RNTI) << "No MsgA PUSCH found to derive PUSCH RNTI for CRC";
     ul_crc_indication crc_ind;
     crc_ind.cell_index = cell_cfg.cell_index;
     crc_ind.sl_rx      = res_grid[0].slot;
     auto& pdu          = crc_ind.crcs.emplace_back();
-    pdu.rnti           = tc_rnti;
+    pdu.rnti           = msga_rnti;
     pdu.ue_index       = INVALID_DU_UE_INDEX;
     pdu.harq_id        = to_harq_id(0);
     pdu.tb_crc_success = success;
@@ -603,7 +616,7 @@ TEST_P(ra_scheduler_two_step_rach_test, when_msga_crc_ok_then_msgb_with_success_
 
   // Event: MsgA PUSCH scheduled and forward CRC=OK.
   ASSERT_TRUE(run_slot_until([this]() { return not res_grid[0].result.ul.puschs.empty(); }));
-  send_msga_crc(tc_rnti, true);
+  send_msga_crc(true);
 
   // Test: MsgB with SuccessRAR scheduled.
   ASSERT_TRUE(run_slot_until([this]() { return tracker.nof_success_rars() > 0; }));
@@ -625,7 +638,7 @@ TEST_P(ra_scheduler_two_step_rach_test, when_msga_crc_ko_then_fallback_rar_and_m
 
   // Event: MsgA PUSCH scheduled and forward CRC=KO.
   ASSERT_TRUE(run_slot_until([this]() { return not res_grid[0].result.ul.puschs.empty(); }));
-  send_msga_crc(tc_rnti, false);
+  send_msga_crc(false);
 
   ASSERT_TRUE(run_slot_until([this]() { return tracker.nof_fallback_rars() > 0; }));
   ASSERT_EQ(tracker.nof_fallback_rars(), 1);
@@ -646,7 +659,7 @@ TEST_P(ra_scheduler_two_step_rach_test, when_crc_pending_then_msgb_scheduling_is
   ASSERT_FALSE(run_slot_until([this]() { return not res_grid[0].result.dl.rar_grants.empty(); }, 5));
 
   // CRC=OK arrives; MsgB must now be scheduled.
-  send_msga_crc(tc_rnti, true);
+  send_msga_crc(true);
   ASSERT_TRUE(run_slot_until([this]() { return tracker.nof_success_rars() > 0; }));
   ASSERT_EQ(tracker.nof_success_rars(), 1);
 }
@@ -662,8 +675,8 @@ TEST_P(ra_scheduler_two_step_rach_test, when_mixed_crc_outcomes_both_rar_types_s
       create_msga_rach_indication({make_msga_preamble(0, tc_rnti_ok), make_msga_preamble(1, tc_rnti_ko)}));
 
   ASSERT_TRUE(run_slot_until([this]() { return not res_grid[0].result.ul.puschs.empty(); }));
-  send_msga_crc(tc_rnti_ok, true);
-  send_msga_crc(tc_rnti_ko, false);
+  send_msga_crc(true);
+  send_msga_crc(false);
 
   ASSERT_TRUE(run_slot_until([this]() { return tracker.nof_success_rars() > 0 and tracker.nof_fallback_rars() > 0; }));
   ASSERT_EQ(tracker.nof_success_rars(), 1);

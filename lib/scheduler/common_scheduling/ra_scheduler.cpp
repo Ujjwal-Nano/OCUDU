@@ -511,8 +511,9 @@ void ra_scheduler::handle_msga_occasion(const rach_indication_message::occasion&
   const bwp_uplink_common&                              ul_bwp         = cell_cfg.params.ul_cfg_common.init_ul_bwp;
   const rach_config_common_two_step::msgA_pusch_config& msga_pusch_cfg = two_step_cfg.pusch;
 
-  // Derive MsgB-RNTI.
+  // Derive RA-RNTI and MsgB-RNTI.
   const unsigned slot_idx  = prach_format_is_long ? prach_slot_rx.subframe_index() : prach_slot_rx.slot_index();
+  const rnti_t   ra_rnti   = ra_helper::get_ra_rnti(slot_idx, occ.start_symbol, occ.frequency_index);
   const rnti_t   msgb_rnti = ra_helper::get_msgb_rnti(slot_idx, occ.start_symbol, occ.frequency_index);
 
   // Search for a pending MsgB entry matching in MsgB-RNTI and PRACH slot.
@@ -530,6 +531,7 @@ void ra_scheduler::handle_msga_occasion(const rach_indication_message::occasion&
     }
     msgb_req                = &pending_msgbs.emplace_back();
     msgb_it                 = pending_msgbs.end() - 1;
+    msgb_req->msga_rnti     = to_rnti(to_value(ra_rnti) * 2U);
     msgb_req->msgb_rnti     = msgb_rnti;
     msgb_req->prach_slot_rx = prach_slot_rx;
 
@@ -656,7 +658,7 @@ void ra_scheduler::handle_msga_occasion(const rach_indication_message::occasion&
     ul_info.context.nof_oh_prb = 0;
 
     pusch_information& pusch      = ul_info.pusch_cfg;
-    pusch.rnti                    = preamble.tc_rnti;
+    pusch.rnti                    = msgb_it->msga_rnti;
     pusch.bwp_cfg                 = &ul_bwp.generic_params;
     pusch.rbs                     = ul_crb_to_vrb(cell_cfg, preamble_crbs);
     pusch.symbols                 = td_alloc.symbols;
@@ -694,11 +696,14 @@ void ra_scheduler::handle_crc_indication(const ul_crc_indication& crc_ind)
 
 void ra_scheduler::handle_pending_crc_indications_impl(cell_resource_allocator& res_alloc)
 {
-  // Helper to mark MsgA PUSCH CRC outcome in pending_msgbs.
-  auto mark_msga_crc = [this](rnti_t tc_rnti, bool success) {
+  // Helper to mark MsgA PUSCH CRC outcome in pending_msgbs, keyed by msga_rnti (=2*ra_rnti).
+  auto mark_msga_crc = [this](rnti_t msga_rnti, bool success) {
     for (auto& msgb : pending_msgbs) {
+      if (msgb.msga_rnti != msga_rnti) {
+        continue;
+      }
       for (auto& p : msgb.preambles) {
-        if (p.info.tc_rnti == tc_rnti) {
+        if (!p.crc_result.has_value()) {
           p.crc_result = success;
           return true;
         }
@@ -712,13 +717,22 @@ void ra_scheduler::handle_pending_crc_indications_impl(cell_resource_allocator& 
   while (pending_crcs.try_pop(crc_ind)) {
     for (const ul_crc_pdu_indication& crc : crc_ind.crcs) {
       ocudu_assert(crc.ue_index == INVALID_DU_UE_INDEX, "Msg3 HARQ CRCs cannot have a ue index assigned yet");
-      auto crc_it = pending_msg3s.find(get_msg3_ring_key(crc.rnti));
-      if (crc_it == pending_msg3s.end()) {
-        if (not mark_msga_crc(crc.rnti, crc.tb_crc_success)) {
-          logger.warning("pci={} rnti={}: Invalid UL CRC PDU indication. Cause: Nonexistent tc-rnti",
+      // MsgA PUSCHs use 2*RA-RNTI as their PUSCH RNTI.
+      auto msga_it = std::find_if(
+          pending_msgbs.begin(), pending_msgbs.end(), [&crc](const auto& m) { return m.msga_rnti == crc.rnti; });
+      if (msga_it != pending_msgbs.end()) {
+        if (not mark_msga_crc(msga_it->msga_rnti, crc.tb_crc_success)) {
+          logger.warning("pci={} msga-rnti={}: Invalid UL CRC PDU indication. Cause: No pending MsgA PUSCH found",
                          cell_cfg.params.pci,
                          crc.rnti);
         }
+        continue;
+      }
+      auto crc_it = pending_msg3s.find(get_msg3_ring_key(crc.rnti));
+      if (crc_it == pending_msg3s.end()) {
+        logger.warning("pci={} tc-rnti={}: Invalid UL CRC PDU indication. Cause: Nonexistent tc-rnti",
+                       cell_cfg.params.pci,
+                       crc.rnti);
         continue;
       }
       auto& pending_msg3 = crc_it->second;
