@@ -3,28 +3,30 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "apps/services/remote_control/remote_control_appconfig_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/services/remote_control/remote_control_appconfig.h"
-#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 
-static void configure_cli11_remote_control_args(CLI::App& app, remote_control_appconfig& config)
+void ocudu::configure_cli11_with_remote_control_appconfig_schema(config::config_builder&   b,
+                                                                 remote_control_appconfig& config)
 {
-  app.add_option("--enabled", config.enabled, "Enables the Remote Control Server")->always_capture_default();
-  app.add_option("--bind_addr", config.bind_addr, "Remote Control Server bind address")->capture_default_str();
-  app.add_option("--port", config.port, "Port where the remote control server listens for incoming connections")
-      ->capture_default_str()
-      ->check(CLI::Range(0, 65535));
+  b.group("remote_control", "Remote control configuration", [&](config::config_builder& rc) {
+    rc.option("--enabled", config.enabled, "Enables the Remote Control Server");
+    rc.option("--bind_addr", config.bind_addr, "Remote Control Server bind address");
+    rc.option("--port", config.port, "Port where the remote control server listens for incoming connections")
+        .range(0, 65535);
+  });
+
+  b.group("metrics", "Metrics configuration", [&](config::config_builder& m) {
+    m.option("--enable_json", config.enable_metrics_subscription, "Enable JSON metrics reporting");
+  });
 }
 
 void ocudu::configure_cli11_with_remote_control_appconfig_schema(CLI::App& app, remote_control_appconfig& config)
 {
-  // Remote control section.
-  CLI::App* remote_control_subcmd =
-      app.add_subcommand("remote_control", "Remote control configuration")->configurable();
-  configure_cli11_remote_control_args(*remote_control_subcmd, config);
-  // Metrics section.
-  CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  add_option(*metrics_subcmd, "--enable_json", config.enable_metrics_subscription, "Enable JSON metrics reporting")
-      ->always_capture_default();
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_remote_control_appconfig_schema(b, config);
 }

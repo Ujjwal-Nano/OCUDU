@@ -7,11 +7,19 @@
 #include "CLI/CLI11.hpp"
 
 namespace ocudu {
+
+namespace config {
+class config_builder;
+}
+
 namespace app_services {
 
 struct buffer_pool_appconfig;
 
-/// Configures the given CLI11 application with the buffer pool application configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_buffer_pool_appconfig_schema(config::config_builder& b, buffer_pool_appconfig& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_buffer_pool_appconfig_schema(CLI::App& app, buffer_pool_appconfig& config);
 
 } // namespace app_services

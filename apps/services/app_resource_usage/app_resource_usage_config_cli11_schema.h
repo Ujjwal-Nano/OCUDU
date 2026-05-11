@@ -7,11 +7,19 @@
 #include "CLI/CLI11.hpp"
 
 namespace ocudu {
+
+namespace config {
+class config_builder;
+}
+
 namespace app_services {
 
 struct app_resource_usage_config;
 
-/// Configures the given CLI11 application with the application resource usage configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_app_resource_usage_config_schema(config::config_builder& b, app_resource_usage_config& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_app_resource_usage_config_schema(CLI::App& app, app_resource_usage_config& config);
 
 } // namespace app_services

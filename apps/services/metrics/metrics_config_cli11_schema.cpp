@@ -3,24 +3,28 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "metrics_config_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "metrics_appconfig.h"
-#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 using namespace app_services;
 
-static void configure_cli11_metrics_args(CLI::App& app, metrics_appconfig& metrics_params)
+void ocudu::app_services::configure_cli11_with_metrics_appconfig_schema(config::config_builder& b,
+                                                                        metrics_appconfig&      config)
 {
-  auto* periodicity_subcmd = add_subcommand(app, "periodicity", "Metrics periodicity configuration")->configurable();
-  add_option(*periodicity_subcmd,
-             "--app_usage_report_period",
-             metrics_params.app_usage_report_period,
-             "Application resource usage metrics report period (in milliseconds)")
-      ->capture_default_str();
+  b.group("metrics", "Metrics configuration", [&](config::config_builder& m) {
+    m.group("periodicity", "Metrics periodicity configuration", [&](config::config_builder& p) {
+      p.option("--app_usage_report_period",
+               config.app_usage_report_period,
+               "Application resource usage metrics report period (in milliseconds)");
+    });
+  });
 }
 
 void ocudu::app_services::configure_cli11_with_metrics_appconfig_schema(CLI::App& app, metrics_appconfig& config)
 {
-  CLI::App* metircs_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metircs_subcmd, config);
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_metrics_appconfig_schema(b, config);
 }

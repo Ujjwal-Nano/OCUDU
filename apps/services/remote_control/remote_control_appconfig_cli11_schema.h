@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct remote_control_appconfig;
 
-/// Configures the given CLI11 application with the remote control application configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_remote_control_appconfig_schema(config::config_builder& b, remote_control_appconfig& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_remote_control_appconfig_schema(CLI::App& app, remote_control_appconfig& config);
 
 } // namespace ocudu

@@ -10,4 +10,4 @@ set(SOURCES
 
 add_library(ocudu_buffer_pool_app_service STATIC ${SOURCES})
 target_include_directories(ocudu_buffer_pool_app_service PRIVATE ${CMAKE_SOURCE_DIR})
-target_link_libraries(ocudu_buffer_pool_app_service PRIVATE ocudu::yaml-cpp)
+target_link_libraries(ocudu_buffer_pool_app_service PRIVATE ocudu::yaml-cpp ocudu_config_app_helpers ocudu_metrics_app_helpers)

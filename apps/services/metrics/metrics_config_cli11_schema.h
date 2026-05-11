@@ -7,11 +7,20 @@
 #include "CLI/CLI11.hpp"
 
 namespace ocudu {
+
+namespace config {
+class config_builder;
+}
+
 namespace app_services {
 
 struct metrics_appconfig;
 
-/// Configures the given CLI11 application with the metrics logger application configuration schema.
+/// Builder-based primary entry point. Records the metrics options in the
+/// metadata tree.
+void configure_cli11_with_metrics_appconfig_schema(config::config_builder& b, metrics_appconfig& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_metrics_appconfig_schema(CLI::App& app, metrics_appconfig& config);
 
 } // namespace app_services

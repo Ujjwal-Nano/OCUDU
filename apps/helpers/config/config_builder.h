@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <yaml-cpp/yaml.h>
+#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -181,6 +182,22 @@ struct vector_value<std::vector<T, A>> {
   using type = T;
 };
 
+template <typename T>
+struct is_chrono_duration : std::false_type {};
+
+template <typename Rep, typename Period>
+struct is_chrono_duration<std::chrono::duration<Rep, Period>> : std::true_type {};
+
+template <typename T>
+struct chrono_rep {
+  using type = T;
+};
+
+template <typename Rep, typename Period>
+struct chrono_rep<std::chrono::duration<Rep, Period>> {
+  using type = Rep;
+};
+
 struct scalar_descriptor {
   scalar_type type;
   int         integer_bits   = 0;
@@ -190,7 +207,9 @@ struct scalar_descriptor {
 template <typename T>
 constexpr scalar_descriptor describe_scalar()
 {
-  if constexpr (std::is_same_v<T, bool>) {
+  if constexpr (is_chrono_duration<T>::value) {
+    return describe_scalar<typename chrono_rep<T>::type>();
+  } else if constexpr (std::is_same_v<T, bool>) {
     return {scalar_type::boolean, 0, false};
   } else if constexpr (std::is_integral_v<T>) {
     return {scalar_type::integer, static_cast<int>(sizeof(T) * 8), std::is_signed_v<T>};
@@ -207,7 +226,9 @@ constexpr scalar_descriptor describe_scalar()
 template <typename T>
 std::string format_default(const T& v)
 {
-  if constexpr (std::is_same_v<T, bool>) {
+  if constexpr (is_chrono_duration<T>::value) {
+    return fmt::format("{}", v.count());
+  } else if constexpr (std::is_same_v<T, bool>) {
     return v ? "true" : "false";
   } else if constexpr (std::is_same_v<T, std::string>) {
     return v;
@@ -343,9 +364,6 @@ private:
 template <typename T>
 option_handle config_builder::option(const std::string& flag, T& target, const std::string& description)
 {
-  static_assert(!std::is_same_v<T, bool>,
-                "Use config_builder::flag() for bool targets (CLI11 has separate semantics).");
-
   CLI::Option* opt = add_option(*app_, flag, target, description);
   opt->capture_default_str();
 
@@ -369,8 +387,12 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
     payload.is_scalar_array          = false;
   }
   payload.default_str = detail::format_default(target);
-  payload.emit_value  = [&target](YAML::Node& node) { node = target; };
-  leaf.body           = std::move(payload);
+  if constexpr (detail::is_chrono_duration<T>::value) {
+    payload.emit_value = [&target](YAML::Node& node) { node = target.count(); };
+  } else {
+    payload.emit_value = [&target](YAML::Node& node) { node = target; };
+  }
+  leaf.body = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
   return option_handle{opt, &inserted};
