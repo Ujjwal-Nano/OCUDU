@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct cu_up_unit_config;
 
-/// Configures the given CLI11 application with the CU-UP application unit configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_cu_up_unit_config_schema(config::config_builder& b, cu_up_unit_config& unit_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_cu_up_unit_config_schema(CLI::App& app, cu_up_unit_config& unit_cfg);
 
 } // namespace ocudu

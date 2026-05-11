@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "cu_up_unit_config_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_utils.h"
 #include "apps/helpers/metrics/metrics_config_cli11_schema.h"
 #include "apps/helpers/network/udp_cli11_schema.h"
@@ -10,272 +11,188 @@
 #include "apps/units/o_cu_up/cu_up/cu_up_unit_pcap_config.h"
 #include "ocudu/ran/cu_up_constants.h"
 #include "ocudu/support/cli11_utils.h"
-#include "ocudu/support/config_parsers.h"
 
 using namespace ocudu;
 
-static void configure_cli11_ngu_socket_args(CLI::App& app, cu_up_unit_ngu_socket_config& ngu_sock_params)
+static void declare_ngu_socket_args(config::config_builder& b, cu_up_unit_ngu_socket_config& cfg)
 {
-  add_option(app, "--bind_addr", ngu_sock_params.bind_addr, "Local IP address to bind for N3 interface")
-      ->check(CLI::ValidIPV4 | CLI::IsMember({"auto"}));
-  add_option(app, "--bind_interface", ngu_sock_params.bind_interface, "Network device to bind for N3 interface")
-      ->capture_default_str();
-  add_option(app,
-             "--ext_addr",
-             ngu_sock_params.ext_addr,
-             "External IP address that is advertised to receive GTP-U packets from UPF via N3 interface")
-      ->check(CLI::ValidIPV4 | CLI::IsMember({"auto"}));
-
-  configure_cli11_with_udp_config_schema(app, ngu_sock_params.udp_config);
+  b.option("--bind_addr", cfg.bind_addr, "Local IP address to bind for N3 interface")
+      .note("must be a valid IPv4 address or \"auto\"");
+  b.option("--bind_interface", cfg.bind_interface, "Network device to bind for N3 interface");
+  b.option("--ext_addr",
+           cfg.ext_addr,
+           "External IP address that is advertised to receive GTP-U packets from UPF via N3 interface")
+      .note("must be a valid IPv4 address or \"auto\"");
+  configure_cli11_with_udp_config_schema(b, cfg.udp_config);
 }
 
-static void configure_cli11_ngu_gtpu_args(CLI::App& app, cu_up_unit_ngu_gtpu_config& gtpu_cfg)
+static void declare_ngu_gtpu_args(config::config_builder& b, cu_up_unit_ngu_gtpu_config& cfg)
 {
-  add_option(app, "--queue_size", gtpu_cfg.gtpu_queue_size, "GTP-U queue size, in PDUs")->capture_default_str();
-  add_option(app, "--batch_size", gtpu_cfg.gtpu_batch_size, "Maximum number of GTP-U PDUs processed in a batch")
-      ->capture_default_str();
-  add_option(
-      app, "--reordering_timer", gtpu_cfg.gtpu_reordering_timer_ms, "GTP-U RX reordering timer (in milliseconds)")
-      ->capture_default_str();
-  add_option(
-      app, "--rate_limiter_period", gtpu_cfg.rate_limiter_period, "GTP-U RX rate limiter period (in milliseconds)")
-      ->capture_default_str();
-  add_option(app,
-             "--teid_release_linger_time",
-             gtpu_cfg.gtpu_teid_release_linger_time,
-             "Error indication suppression time for released TEIDs (in milliseconds)")
-      ->capture_default_str();
-  add_option(app, "--ignore_ue_ambr", gtpu_cfg.ignore_ue_ambr, "Ignore GTP-U DL UE-AMBR rate limiter")
-      ->capture_default_str();
+  b.option("--queue_size", cfg.gtpu_queue_size, "GTP-U queue size, in PDUs");
+  b.option("--batch_size", cfg.gtpu_batch_size, "Maximum number of GTP-U PDUs processed in a batch");
+  b.option("--reordering_timer", cfg.gtpu_reordering_timer_ms, "GTP-U RX reordering timer (in milliseconds)");
+  b.option("--rate_limiter_period", cfg.rate_limiter_period, "GTP-U RX rate limiter period (in milliseconds)");
+  b.option("--teid_release_linger_time",
+           cfg.gtpu_teid_release_linger_time,
+           "Error indication suppression time for released TEIDs (in milliseconds)");
+  b.option("--ignore_ue_ambr", cfg.ignore_ue_ambr, "Ignore GTP-U DL UE-AMBR rate limiter");
 }
 
-static void configure_cli11_execution_args(CLI::App& app, cu_up_unit_execution_config& exec_cfg)
+static void declare_execution_args(config::config_builder& b, cu_up_unit_execution_config& cfg)
 {
-  CLI::App* queues_subcmd = add_subcommand(app, "queues", "Task executor queue parameters")->configurable();
-  add_option(*queues_subcmd,
-             "--cu_up_dl_ue_executor_queue_size",
-             exec_cfg.dl_ue_executor_queue_size,
-             "CU-UP's DL UE executor queue size")
-      ->capture_default_str();
-  add_option(*queues_subcmd,
-             "--cu_up_ul_ue_executor_queue_size",
-             exec_cfg.ul_ue_executor_queue_size,
-             "CU-UP's UL UE executor queue size")
-      ->capture_default_str();
-  add_option(*queues_subcmd,
-             "--cu_up_ctrl_ue_executor_queue_size",
-             exec_cfg.ctrl_ue_executor_queue_size,
-             "CU-UP's CTRL UE executor queue size")
-      ->capture_default_str();
-  add_option(*queues_subcmd, "--cu_up_strand_batch_size", exec_cfg.strand_batch_size, "CU-UP's strands batch size")
-      ->capture_default_str();
+  b.group("queues", "Task executor queue parameters", [&](config::config_builder& q) {
+    q.option("--cu_up_dl_ue_executor_queue_size", cfg.dl_ue_executor_queue_size, "CU-UP's DL UE executor queue size");
+    q.option("--cu_up_ul_ue_executor_queue_size", cfg.ul_ue_executor_queue_size, "CU-UP's UL UE executor queue size");
+    q.option("--cu_up_ctrl_ue_executor_queue_size",
+             cfg.ctrl_ue_executor_queue_size,
+             "CU-UP's CTRL UE executor queue size");
+    q.option("--cu_up_strand_batch_size", cfg.strand_batch_size, "CU-UP's strands batch size");
+  });
 }
 
-static void configure_cli11_ngu_args(CLI::App& app, cu_up_unit_ngu_config& ngu_params)
+static void declare_ngu_args(config::config_builder& b, cu_up_unit_ngu_config& cfg)
 {
-  add_option(app, "--no_core", ngu_params.no_core, "Allow gNB to run without a core");
+  b.option("--no_core", cfg.no_core, "Allow gNB to run without a core");
 
-  // Add GTP-U options
-  CLI::App* gtpu_subcmd = add_subcommand(app, "gtpu", "CU-UP NG-U GTP-U parameters")->configurable();
-  configure_cli11_ngu_gtpu_args(*gtpu_subcmd, ngu_params.gtpu_cfg);
+  b.group("gtpu", "CU-UP NG-U GTP-U parameters", [&](config::config_builder& g) { declare_ngu_gtpu_args(g, cfg.gtpu_cfg); });
 
-  // Add option for multiple sockets, for usage with different slices, 5QIs or parallization.
-  auto sock_lambda = [&ngu_params](const std::vector<std::string>& values) {
-    // Prepare the radio bearers
-    ngu_params.ngu_socket_cfg.resize(values.size());
-
-    // Format every QoS setting.
-    for (unsigned i = 0, e = values.size(); i != e; ++i) {
-      CLI::App subapp("NG-U socket parameters", "NG-U socket config, item #" + std::to_string(i));
-      subapp.config_formatter(create_yaml_config_parser());
-      subapp.allow_config_extras(CLI::config_extras_mode::capture);
-      configure_cli11_ngu_socket_args(subapp, ngu_params.ngu_socket_cfg[i]);
-      std::istringstream ss(values[i]);
-      subapp.parse_from_stream(ss);
-    }
-  };
-  add_option_cell(app, "--socket", sock_lambda, "Configures UDP/IP socket parameters of the N3 interface");
+  b.array_of("--socket",
+             cfg.ngu_socket_cfg,
+             "Configures UDP/IP socket parameters of the N3 interface",
+             [](config::config_builder& el, cu_up_unit_ngu_socket_config& sock) { declare_ngu_socket_args(el, sock); });
 }
 
-static void configure_cli11_test_mode_args(CLI::App& app, cu_up_unit_test_mode_config& test_mode_params)
+static void declare_test_mode_args(config::config_builder& b, cu_up_unit_test_mode_config& cfg)
 {
-  add_option(app, "--enable", test_mode_params.enabled, "Enable or disable CU-UP test mode");
-  add_option(app, "--integrity_enable", test_mode_params.integrity_enabled, "Enable or disable PDCP integrity testing");
-  add_option(app, "--ciphering_enable", test_mode_params.ciphering_enabled, "Enable or disable PDCP ciphering testing");
-  add_option(app, "--nea_algo", test_mode_params.nea_algo, "NEA algo to use for testing. Valid values {0, 1, 2, 3}.")
-      ->capture_default_str()
-      ->check(CLI::Range(0, 3));
-  add_option(app, "--nia_algo", test_mode_params.nea_algo, "NIA algo to use for testing. Valid values {1, 2, 3}.")
-      ->capture_default_str()
-      ->check(CLI::Range(1, 3));
-  add_option(app, "--ue_ambr", test_mode_params.ue_ambr, "DL UE-AMBR used for testing in bps");
-  add_option(app,
-             "--attach_detach_period",
-             test_mode_params.attach_detach_period,
-             "Attach/detach period for test mode. 0 means always attached")
-      ->capture_default_str();
-  add_option(app,
-             "--reestablish_period",
-             test_mode_params.reestablish_period,
-             "Reestablish period for test mode. 0 means always attached")
-      ->capture_default_str();
-  add_option(app, "--f1u_peer_address", test_mode_params.f1u_peer_address, "Address for DL F1-U packets for test mode")
-      ->capture_default_str();
-  add_option(app, "--nof_ues", test_mode_params.nof_ues, "Number of UEs used for test mode")->capture_default_str();
+  b.option("--enable", cfg.enabled, "Enable or disable CU-UP test mode");
+  b.option("--integrity_enable", cfg.integrity_enabled, "Enable or disable PDCP integrity testing");
+  b.option("--ciphering_enable", cfg.ciphering_enabled, "Enable or disable PDCP ciphering testing");
+  b.option("--nea_algo", cfg.nea_algo, "NEA algo to use for testing. Valid values {0, 1, 2, 3}.").range(0, 3);
+  b.option("--nia_algo", cfg.nea_algo, "NIA algo to use for testing. Valid values {1, 2, 3}.").range(1, 3);
+  b.option("--ue_ambr", cfg.ue_ambr, "DL UE-AMBR used for testing in bps");
+  b.option("--attach_detach_period",
+           cfg.attach_detach_period,
+           "Attach/detach period for test mode. 0 means always attached");
+  b.option("--reestablish_period", cfg.reestablish_period, "Reestablish period for test mode. 0 means always attached");
+  b.option("--f1u_peer_address", cfg.f1u_peer_address, "Address for DL F1-U packets for test mode");
+  b.option("--nof_ues", cfg.nof_ues, "Number of UEs used for test mode");
 }
 
-static void configure_cli11_cu_up_args(CLI::App& app, cu_up_unit_config& cu_up_params)
+static void declare_cu_up_args(config::config_builder& b, cu_up_unit_config& cfg)
 {
-  // NG-U section.
-  CLI::App* ngu_subcmd = add_subcommand(app, "ngu", "NG-U parameters")->configurable();
-  configure_cli11_ngu_args(*ngu_subcmd, cu_up_params.ngu_cfg);
-
-  // Test mode section.
-  CLI::App* test_mode_subcmd = add_subcommand(app, "test_mode", "CU-UP test mode parameters")->configurable();
-  configure_cli11_test_mode_args(*test_mode_subcmd, cu_up_params.test_mode_cfg);
-
-  add_option(app,
-             "--warn_on_drop",
-             cu_up_params.warn_on_drop,
-             "Log a warning for dropped packets in GTP-U, SDAP, PDCP and F1-U due to full queues")
-      ->capture_default_str();
-
-  add_option(app, "--max_nof_ues", cu_up_params.max_nof_ues, "Maximum number of Bearer Contexts allowed by the CU-UP")
-      ->capture_default_str()
-      ->check(CLI::Range(static_cast<uint32_t>(1), MAX_NOF_CU_UP_UES));
+  b.group("ngu", "NG-U parameters", [&](config::config_builder& ngu) { declare_ngu_args(ngu, cfg.ngu_cfg); });
+  b.group("test_mode", "CU-UP test mode parameters",
+          [&](config::config_builder& tm) { declare_test_mode_args(tm, cfg.test_mode_cfg); });
+  b.option("--warn_on_drop",
+           cfg.warn_on_drop,
+           "Log a warning for dropped packets in GTP-U, SDAP, PDCP and F1-U due to full queues");
+  b.option("--max_nof_ues", cfg.max_nof_ues, "Maximum number of Bearer Contexts allowed by the CU-UP")
+      .range(1, static_cast<int>(MAX_NOF_CU_UP_UES));
 }
 
-static void configure_cli11_log_args(CLI::App& app, cu_up_unit_logger_config& log_params)
+static void declare_log_args(config::config_builder& b, cu_up_unit_logger_config& cfg)
 {
-  app_helpers::add_log_option(app, log_params.pdcp_level, "--pdcp_level", "PDCP log level");
-  app_helpers::add_log_option(app, log_params.sdap_level, "--sdap_level", "SDAP log level");
-  app_helpers::add_log_option(app, log_params.gtpu_level, "--gtpu_level", "GTPU log level");
-  app_helpers::add_log_option(app, log_params.e1ap_level, "--e1ap_level", "E1AP log level");
-  app_helpers::add_log_option(app, log_params.f1u_level, "--f1u_level", "F1-U log level");
-  app_helpers::add_log_option(app, log_params.cu_level, "--cu_level", "Log level for the CU");
-  app_helpers::add_log_option(app, log_params.sec_level, "--sec_level", "Security functions log level");
-  app_helpers::add_log_option(app, log_params.rohc_level, "--rohc_level", "ROHC log level");
+  // Same enum-via-string-function pattern as the top-level logger helper —
+  // log levels remain on the cli11_app() path.
+  CLI::App& app = b.cli11_app();
+  app_helpers::add_log_option(app, cfg.pdcp_level, "--pdcp_level", "PDCP log level");
+  app_helpers::add_log_option(app, cfg.sdap_level, "--sdap_level", "SDAP log level");
+  app_helpers::add_log_option(app, cfg.gtpu_level, "--gtpu_level", "GTPU log level");
+  app_helpers::add_log_option(app, cfg.e1ap_level, "--e1ap_level", "E1AP log level");
+  app_helpers::add_log_option(app, cfg.f1u_level, "--f1u_level", "F1-U log level");
+  app_helpers::add_log_option(app, cfg.cu_level, "--cu_level", "Log level for the CU");
+  app_helpers::add_log_option(app, cfg.sec_level, "--sec_level", "Security functions log level");
+  app_helpers::add_log_option(app, cfg.rohc_level, "--rohc_level", "ROHC log level");
 
-  add_option(app,
-             "--hex_max_size",
-             log_params.hex_max_size,
-             "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)")
-      ->capture_default_str()
-      ->check(CLI::Range(-1, 1024));
-  add_option(app, "--e1ap_json_enabled", log_params.e1ap_json_enabled, "Enable JSON logging of E1AP PDUs")
-      ->always_capture_default();
+  b.option("--hex_max_size",
+           cfg.hex_max_size,
+           "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)")
+      .range(-1, 1024);
+  b.option("--e1ap_json_enabled", cfg.e1ap_json_enabled, "Enable JSON logging of E1AP PDUs");
 }
 
-static void configure_cli11_pcap_args(CLI::App& app, cu_up_unit_pcap_config& pcap_params)
+static void declare_pcap_args(config::config_builder& b, cu_up_unit_pcap_config& cfg)
 {
-  add_option(app, "--n3_filename", pcap_params.n3.filename, "N3 GTP-U PCAP file output path")->capture_default_str();
-  add_option(app, "--n3_enable", pcap_params.n3.enabled, "Enable N3 GTP-U packet capture")->always_capture_default();
-  add_option(app, "--f1u_filename", pcap_params.f1u.filename, "F1-U GTP-U PCAP file output path")
-      ->capture_default_str();
-  add_option(app, "--f1u_enable", pcap_params.f1u.enabled, "F1-U GTP-U PCAP")->always_capture_default();
-  add_option(app, "--e1ap_filename", pcap_params.e1ap.filename, "E1AP PCAP file output path")->capture_default_str();
-  add_option(app, "--e1ap_enable", pcap_params.e1ap.enabled, "E1AP PCAP")->always_capture_default();
+  b.option("--n3_filename", cfg.n3.filename, "N3 GTP-U PCAP file output path");
+  b.option("--n3_enable", cfg.n3.enabled, "Enable N3 GTP-U packet capture");
+  b.option("--f1u_filename", cfg.f1u.filename, "F1-U GTP-U PCAP file output path");
+  b.option("--f1u_enable", cfg.f1u.enabled, "F1-U GTP-U PCAP");
+  b.option("--e1ap_filename", cfg.e1ap.filename, "E1AP PCAP file output path");
+  b.option("--e1ap_enable", cfg.e1ap.enabled, "E1AP PCAP");
 }
 
-static void configure_cli11_metrics_layers_args(CLI::App& app, cu_up_unit_metrics_layer_config& metrics_params)
+static void declare_metrics_layers_args(config::config_builder& b, cu_up_unit_metrics_layer_config& cfg)
 {
-  add_option(app, "--enable_e1ap", metrics_params.enable_e1ap, "Enable E1AP metrics")->capture_default_str();
-  add_option(app, "--enable_pdcp", metrics_params.enable_pdcp, "Enable PDCP metrics")->capture_default_str();
-  add_option(app, "--enable_nrup_cu", metrics_params.enable_nrup, "Enable NRUP metrics (CU side)")
-      ->capture_default_str();
-  add_option(app,
-             "--skip_cu_up_executor",
-             metrics_params.skip_cu_up_executor,
-             "Whether to skip logging CU-UP executor metrics when executor logging is enabled application wide")
-      ->capture_default_str();
+  b.option("--enable_e1ap", cfg.enable_e1ap, "Enable E1AP metrics");
+  b.option("--enable_pdcp", cfg.enable_pdcp, "Enable PDCP metrics");
+  b.option("--enable_nrup_cu", cfg.enable_nrup, "Enable NRUP metrics (CU side)");
+  b.option("--skip_cu_up_executor",
+           cfg.skip_cu_up_executor,
+           "Whether to skip logging CU-UP executor metrics when executor logging is enabled application wide");
 }
 
-static void configure_cli11_metrics_args(CLI::App& app, cu_up_unit_metrics_config& metrics_params)
+static void declare_metrics_args(config::config_builder& b, cu_up_unit_metrics_config& cfg)
 {
-  auto* periodicity_subcmd = add_subcommand(app, "periodicity", "Metrics periodicity configuration")->configurable();
-  add_option(*periodicity_subcmd,
-             "--cu_up_report_period",
-             metrics_params.cu_up_report_period,
-             "CU-UP metrics report period in milliseconds")
-      ->capture_default_str();
-
-  auto* layers_subcmd = add_subcommand(app, "layers", "Layer basis metrics configuration")->configurable();
-  configure_cli11_metrics_layers_args(*layers_subcmd, metrics_params.layers_cfg);
+  b.group("periodicity", "Metrics periodicity configuration", [&](config::config_builder& p) {
+    p.option("--cu_up_report_period", cfg.cu_up_report_period, "CU-UP metrics report period in milliseconds");
+  });
+  b.group("layers", "Layer basis metrics configuration",
+          [&](config::config_builder& l) { declare_metrics_layers_args(l, cfg.layers_cfg); });
 }
 
-static void configure_cli11_trace(CLI::App& app, cu_up_unit_trace_config& trace_params)
+static void declare_trace_args(config::config_builder& b, cu_up_unit_trace_config& cfg)
 {
-  CLI::App* layers_subcmd = add_subcommand(app, "layers", "Metrics configuration")->configurable();
-  add_option(*layers_subcmd, "--cu_up_enable", trace_params.cu_up_enable, "Enable tracing for CU-UP executors")
-      ->capture_default_str();
+  b.group("layers", "Metrics configuration", [&](config::config_builder& l) {
+    l.option("--cu_up_enable", cfg.cu_up_enable, "Enable tracing for CU-UP executors");
+  });
 }
 
-static void configure_cli11_f1u_cu_up_args(CLI::App& app, cu_cp_unit_f1u_config& f1u_cu_up_params)
+static void declare_f1u_cu_up_args(config::config_builder& b, cu_cp_unit_f1u_config& cfg)
 {
-  app.add_option("--backoff_timer", f1u_cu_up_params.t_notify, "F1-U backoff timer (ms)")->capture_default_str();
-  app.add_option("--queue_size", f1u_cu_up_params.queue_size, "F1-U backoff timer (ms)")->capture_default_str();
-  app.add_option("--batch_size", f1u_cu_up_params.batch_size, "F1-U backoff timer (ms)")->capture_default_str();
+  b.option("--backoff_timer", cfg.t_notify, "F1-U backoff timer (ms)");
+  b.option("--queue_size", cfg.queue_size, "F1-U backoff timer (ms)");
+  b.option("--batch_size", cfg.batch_size, "F1-U backoff timer (ms)");
 }
 
-static void configure_cli11_qos_args(CLI::App& app, cu_up_unit_qos_config& qos_params)
+static void declare_qos_args(config::config_builder& b, cu_up_unit_qos_config& cfg)
 {
-  add_option(app, "--five_qi", qos_params.five_qi, "5QI")->capture_default_str()->check(CLI::Range(0, 255));
+  b.option("--five_qi", cfg.five_qi, "5QI").range(0, 255);
+  b.group("f1u_cu_up", "F1-U parameters at CU_UP side",
+          [&](config::config_builder& f1u) { declare_f1u_cu_up_args(f1u, cfg.f1u_cu_up); });
+}
 
-  CLI::App* f1u_cu_up_subcmd = app.add_subcommand("f1u_cu_up", "F1-U parameters at CU_UP side");
-  configure_cli11_f1u_cu_up_args(*f1u_cu_up_subcmd, qos_params.f1u_cu_up);
+void ocudu::configure_cli11_with_cu_up_unit_config_schema(config::config_builder& b, cu_up_unit_config& unit_cfg)
+{
+  b.option("--gnb_id", unit_cfg.gnb_id.id, "gNodeB identifier");
+  b.option("--gnb_id_bit_length", unit_cfg.gnb_id.bit_length, "gNodeB identifier length in bits").range(22, 32);
+  b.option("--gnb_cu_up_id", unit_cfg.gnb_cu_up_id, "gNB-CU-UP Id")
+      .range(0.0, static_cast<double>((uint64_t(1) << 36) - 1));
+
+  b.group("cu_up", "CU-UP parameters", [&](config::config_builder& cu_up) { declare_cu_up_args(cu_up, unit_cfg); });
+  b.group("expert_execution", "Execution parameters",
+          [&](config::config_builder& exec) { declare_execution_args(exec, unit_cfg.exec_cfg); });
+  b.group("log", "Logging configuration",
+          [&](config::config_builder& log) { declare_log_args(log, unit_cfg.loggers); });
+  b.group("pcap", "Logging configuration",
+          [&](config::config_builder& pcap) { declare_pcap_args(pcap, unit_cfg.pcap_cfg); });
+  b.group("metrics", "Metrics configuration",
+          [&](config::config_builder& m) { declare_metrics_args(m, unit_cfg.metrics); });
+  // Common metrics options (enable_json/log/verbose) also live under "metrics".
+  app_helpers::configure_cli11_with_metrics_appconfig_schema(b, unit_cfg.metrics.common_metrics_cfg);
+  b.group("trace", "General tracer configuration",
+          [&](config::config_builder& tr) { declare_trace_args(tr, unit_cfg.trace_cfg); });
+
+  b.array_of("--qos",
+             unit_cfg.qos_cfg,
+             "Configures RLC and PDCP radio bearers on a per 5QI basis.",
+             [](config::config_builder& el, cu_up_unit_qos_config& qos) { declare_qos_args(el, qos); })
+      .key("five_qi");
 }
 
 void ocudu::configure_cli11_with_cu_up_unit_config_schema(CLI::App& app, cu_up_unit_config& unit_cfg)
 {
-  add_option(app, "--gnb_id", unit_cfg.gnb_id.id, "gNodeB identifier")->capture_default_str();
-  // Adding a default function to display correctly the uint8_t type.
-  add_option(app, "--gnb_id_bit_length", unit_cfg.gnb_id.bit_length, "gNodeB identifier length in bits")
-      ->default_function([&value = unit_cfg.gnb_id.bit_length]() { return std::to_string(value); })
-      ->capture_default_str()
-      ->check(CLI::Range(22, 32));
-  add_option(app, "--gnb_cu_up_id", unit_cfg.gnb_cu_up_id, "gNB-CU-UP Id")
-      ->capture_default_str()
-      ->check(CLI::Range(static_cast<uint64_t>(0U), static_cast<uint64_t>((uint64_t(1) << 36) - 1)));
-
-  // CU-UP section.
-  CLI::App* cu_up_subcmd = add_subcommand(app, "cu_up", "CU-UP parameters")->configurable();
-  configure_cli11_cu_up_args(*cu_up_subcmd, unit_cfg);
-
-  // Execution section.
-  CLI::App* exec_subcmd = add_subcommand(app, "expert_execution", "Execution parameters")->configurable();
-  configure_cli11_execution_args(*exec_subcmd, unit_cfg.exec_cfg);
-
-  // Loggers section.
-  CLI::App* log_subcmd = add_subcommand(app, "log", "Logging configuration")->configurable();
-  configure_cli11_log_args(*log_subcmd, unit_cfg.loggers);
-
-  // PCAP section.
-  CLI::App* pcap_subcmd = add_subcommand(app, "pcap", "Logging configuration")->configurable();
-  configure_cli11_pcap_args(*pcap_subcmd, unit_cfg.pcap_cfg);
-
-  // Metrics section.
-  CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, unit_cfg.metrics);
-  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, unit_cfg.metrics.common_metrics_cfg);
-
-  // Trace section.
-  CLI::App* tracing_subcmd = add_subcommand(app, "trace", "General tracer configuration")->configurable();
-  configure_cli11_trace(*tracing_subcmd, unit_cfg.trace_cfg);
-
-  // QoS section.
-  auto qos_lambda = [&unit_cfg](const std::vector<std::string>& values) {
-    // Prepare the radio bearers
-    unit_cfg.qos_cfg.resize(values.size());
-
-    // Format every QoS setting.
-    for (unsigned i = 0, e = values.size(); i != e; ++i) {
-      CLI::App subapp("QoS parameters", "QoS config, item #" + std::to_string(i));
-      subapp.config_formatter(create_yaml_config_parser());
-      subapp.allow_config_extras(CLI::config_extras_mode::capture);
-      configure_cli11_qos_args(subapp, unit_cfg.qos_cfg[i]);
-      std::istringstream ss(values[i]);
-      subapp.parse_from_stream(ss);
-    }
-  };
-  add_option_cell(app, "--qos", qos_lambda, "Configures RLC and PDCP radio bearers on a per 5QI basis.");
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_cu_up_unit_config_schema(b, unit_cfg);
 }

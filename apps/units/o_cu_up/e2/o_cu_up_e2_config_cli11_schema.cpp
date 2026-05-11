@@ -3,30 +3,31 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "o_cu_up_e2_config_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/e2/e2_cli11_schema.h"
 #include "o_cu_up_e2_config.h"
-#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 
-static void configure_cli11_pcap_args(CLI::App& app, o_cu_up_e2_pcap_config& pcap_params)
+void ocudu::configure_cli11_with_o_cu_up_e2_config_schema(config::config_builder& b, o_cu_up_e2_config& unit_cfg)
 {
-  add_option(app, "--e2ap_cu_up_filename", pcap_params.filename, "E2AP PCAP file output path")->capture_default_str();
-  add_option(app, "--e2ap_enable", pcap_params.enabled, "Enable E2AP packet capture")->always_capture_default();
+  configure_cli11_with_e2_config_schema(b, unit_cfg.base_config, "--enable_cu_up_e2", "Enable CU-UP E2 agent");
+
+  b.group("pcap", "Logging configuration", [&](config::config_builder& pcap) {
+    pcap.option("--e2ap_cu_up_filename", unit_cfg.pcaps.filename, "E2AP PCAP file output path");
+    pcap.option("--e2ap_enable", unit_cfg.pcaps.enabled, "Enable E2AP packet capture");
+  });
 }
 
 void ocudu::configure_cli11_with_o_cu_up_e2_config_schema(CLI::App& app, o_cu_up_e2_config& unit_cfg)
 {
-  // E2 section.
-  configure_cli11_with_e2_config_schema(app, unit_cfg.base_config, "--enable_cu_up_e2", "Enable CU-UP E2 agent");
-
-  // PCAP section.
-  CLI::App* pcap_subcmd = add_subcommand(app, "pcap", "Logging configuration")->configurable();
-  configure_cli11_pcap_args(*pcap_subcmd, unit_cfg.pcaps);
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_o_cu_up_e2_config_schema(b, unit_cfg);
 }
 
 void ocudu::autoderive_o_cu_up_e2_parameters_after_parsing(o_cu_up_e2_config& unit_cfg)
 {
-  // If CU UP E2 agent is disabled do not enable e2ap pcap for it.
   unit_cfg.pcaps.enabled = unit_cfg.base_config.enable_unit_e2 && unit_cfg.pcaps.enabled;
 }
