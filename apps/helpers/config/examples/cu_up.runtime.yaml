@@ -1,0 +1,139 @@
+dryrun: false
+log:
+  filename: /tmp/cu_up.log
+  hex_max_size: 0
+  e1ap_json_enabled: false
+trace:
+  filename: ""
+  max_tracing_events_per_file: 1000000
+  nof_tracing_events_after_severe: 0
+  layers:
+    cu_up_enable: false
+buffer_pool:
+  nof_segments: 1048576
+  segment_size: 2048
+metrics:
+  layers:
+    enable_app_usage: false
+    enable_e1ap: false
+    enable_pdcp: false
+    enable_nrup_cu: false
+    skip_cu_up_executor: true
+  enable_json: false
+  enable_log: false
+  enable_verbose: false
+  periodicity:
+    app_usage_report_period: 1000
+    cu_up_report_period: 1000
+expert_execution:
+  threads:
+    main_pool:
+      nof_threads: ~
+      task_queue_size: 2048
+      backoff_period: 50
+  queues:
+    cu_up_dl_ue_executor_queue_size: 8192
+    cu_up_ul_ue_executor_queue_size: 8192
+    cu_up_ctrl_ue_executor_queue_size: 8192
+    cu_up_strand_batch_size: 256
+remote_control:
+  enabled: false
+  bind_addr: 127.0.0.1
+  port: 8001
+cu_up:
+  e1ap:
+    addrs:
+      - 127.0.20.1
+    bind_addrs:
+      - 127.0.20.2
+    sctp_rto_initial: 120
+    sctp_rto_min: 120
+    sctp_rto_max: 500
+    sctp_init_max_attempts: 3
+    sctp_max_init_timeo: 500
+    sctp_hb_interval: 30000
+    sctp_assoc_max_retx: 10
+    sctp_nodelay: false
+  f1u:
+    bind_port: 2152
+    peer_port: 2152
+    socket:
+      - bind_addr: 127.0.10.1
+        sst: ~
+        sd: ~
+        five_qi: ~
+        ext_addr: auto
+        udp:
+          max_rx_msgs: 256
+          tx_qsize: 4096
+          max_tx_msgs: 256
+          max_tx_segments: 256
+          pool_threshold: 0.899999976
+          reuse_addr: false
+          dscp: ~
+  ngu:
+    no_core: false
+    gtpu:
+      queue_size: 2046
+      batch_size: 256
+      reordering_timer: 0
+      rate_limiter_period: 100
+      teid_release_linger_time: 100
+      ignore_ue_ambr: true
+    socket:
+      - bind_addr: 127.0.0.1
+        bind_interface: auto
+        ext_addr: auto
+        udp:
+          max_rx_msgs: 256
+          tx_qsize: 4096
+          max_tx_msgs: 256
+          max_tx_segments: 256
+          pool_threshold: 0.899999976
+          reuse_addr: false
+          dscp: ~
+  test_mode:
+    enable: false
+    integrity_enable: true
+    ciphering_enable: true
+    nea_algo: 2
+    nia_algo: 2
+    ue_ambr: 40000000000
+    attach_detach_period: 0
+    reestablish_period: 0
+    f1u_peer_address: 127.0.10.2
+    nof_ues: 1
+  warn_on_drop: false
+  max_nof_ues: 16384
+gnb_id: 411
+gnb_id_bit_length: 22
+gnb_cu_up_id: 0
+pcap:
+  n3_filename: /tmp/cu-up_n3.pcap
+  n3_enable: false
+  f1u_filename: /tmp/cu-up_f1u.pcap
+  f1u_enable: false
+  e1ap_filename: /tmp/cu-up_e1ap.pcap
+  e1ap_enable: false
+  e2ap_cu_up_filename: /tmp/cu_up_e2ap.pcap
+  e2ap_enable: false
+qos:
+  []
+e2:
+  enable_cu_up_e2: false
+  addrs:
+    - 127.0.0.1
+  port: 36421
+  bind_addrs:
+    - 127.0.0.1
+  sctp_rto_initial: 120
+  sctp_rto_min: 120
+  sctp_rto_max: 500
+  sctp_init_max_attempts: 3
+  sctp_max_init_timeo: 500
+  sctp_hb_interval: 30000
+  sctp_assoc_max_retx: 10
+  sctp_nodelay: false
+  e2sm_kpm_enabled: false
+  e2sm_rc_enabled: false
+  e2sm_ccc_enabled: false
