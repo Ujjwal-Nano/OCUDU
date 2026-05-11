@@ -6,7 +6,8 @@ set(SOURCES
         config_builder.cpp
         docs_emitter.cpp
         schema_emitter.cpp
-        yaml_writer.cpp)
+        yaml_writer.cpp
+        yang_emitter.cpp)
 
 add_library(ocudu_config_app_helpers STATIC ${SOURCES})
 target_include_directories(ocudu_config_app_helpers PUBLIC ${CMAKE_SOURCE_DIR})
