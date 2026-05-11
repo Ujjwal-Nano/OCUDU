@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "apps/cu_up/cu_up_appconfig_cli11_schema.h"
+#include "apps/cu_up/cu_up_appconfig_schema.h"
 #include "apps/cu_up/cu_up_appconfig_validator.h"
 #include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/config/docs_emitter.h"
@@ -191,10 +191,13 @@ int main(int argc, char** argv)
   // Fill the generic application arguments to parse.
   populate_cli11_generic_args(app);
 
-  // Configure CLI11 with the CU application configuration schema.
-  cu_up_appconfig     cu_up_cfg;
-  config::schema_node cu_up_schema;
-  configure_cli11_with_cu_appconfig_schema(app, cu_up_cfg, cu_up_schema);
+  // Declare the CU-UP configuration schema. The builder wires CLI11 under the
+  // hood and accumulates the metadata tree consumed by the --dump-* flags.
+  cu_up_appconfig        cu_up_cfg;
+  config::schema_node    cu_up_schema;
+  cu_up_schema.body = config::group_node{};
+  config::config_builder root_builder(app, cu_up_schema);
+  declare_cu_up_appconfig_schema(root_builder, cu_up_cfg);
 
   // Schema-dump flags. Cover the full cu_up + o_cu_up unit surface.
   bool dump_schema = false;

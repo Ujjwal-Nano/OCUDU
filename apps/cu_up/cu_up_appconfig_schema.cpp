@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "cu_up_appconfig_cli11_schema.h"
-#include "apps/helpers/config/config_builder.h"
+#include "cu_up_appconfig_schema.h"
 #include "apps/helpers/f1u/f1u_cli11_schema.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_schema.h"
 #include "apps/helpers/network/sctp_cli11_schema.h"
@@ -17,13 +16,8 @@
 
 using namespace ocudu;
 
-void ocudu::configure_cli11_with_cu_appconfig_schema(CLI::App&            app,
-                                                     cu_up_appconfig&     cu_up_cfg,
-                                                     config::schema_node& schema_out)
+void ocudu::declare_cu_up_appconfig_schema(config::config_builder& root, cu_up_appconfig& cu_up_cfg)
 {
-  schema_out.body = config::group_node{};
-  config::config_builder root(app, schema_out);
-
   root.flag("--dryrun", cu_up_cfg.enable_dryrun, "Enable application dry run mode");
 
   configure_cli11_with_logger_appconfig_schema(root, cu_up_cfg.log_cfg);
