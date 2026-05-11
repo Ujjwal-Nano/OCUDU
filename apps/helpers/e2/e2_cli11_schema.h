@@ -5,17 +5,23 @@
 #pragma once
 
 #include "CLI/CLI11.hpp"
+#include <string>
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct e2_config;
 
-/// \brief Configures the given CLI11 application with the E2 application configuration schema.
-///
-/// \param[out] app CLI11 application to configure.
-/// \param[out] config E2 configuration that stores the parameters.
-/// \param[in] option_name Option name for the E2 unit property.
-/// \param[out] option_description Option description for the E2 unit property.
+/// Builder-based primary entry point.
+void configure_cli11_with_e2_config_schema(config::config_builder& b,
+                                           e2_config&              config,
+                                           const std::string&      option_name,
+                                           const std::string&      option_description);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_e2_config_schema(CLI::App&          app,
                                            e2_config&         config,
                                            const std::string& option_name,

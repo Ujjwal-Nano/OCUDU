@@ -8,14 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct sctp_appconfig;
 
-/// \brief Adds SCTP socket option CLI11 parameters to the given application.
-///
-/// Options are added flat (no subcommand), so they appear at the same level as the caller's other options.
-///
-/// \param[out] app CLI11 application to configure.
-/// \param[out] config SCTP configuration that stores the parameters.
+/// Adds SCTP socket options flat (no subcommand) into the builder's current group.
+void configure_cli11_sctp_socket_args(config::config_builder& b, sctp_appconfig& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_sctp_socket_args(CLI::App& app, sctp_appconfig& config);
 
 } // namespace ocudu

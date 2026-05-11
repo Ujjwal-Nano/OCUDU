@@ -198,6 +198,22 @@ struct chrono_rep<std::chrono::duration<Rep, Period>> {
   using type = Rep;
 };
 
+template <typename T>
+struct is_optional : std::false_type {};
+
+template <typename T>
+struct is_optional<std::optional<T>> : std::true_type {};
+
+template <typename T>
+struct optional_value {
+  using type = T;
+};
+
+template <typename T>
+struct optional_value<std::optional<T>> {
+  using type = T;
+};
+
 struct scalar_descriptor {
   scalar_type type;
   int         integer_bits   = 0;
@@ -207,8 +223,12 @@ struct scalar_descriptor {
 template <typename T>
 constexpr scalar_descriptor describe_scalar()
 {
-  if constexpr (is_chrono_duration<T>::value) {
+  if constexpr (is_optional<T>::value) {
+    return describe_scalar<typename optional_value<T>::type>();
+  } else if constexpr (is_chrono_duration<T>::value) {
     return describe_scalar<typename chrono_rep<T>::type>();
+  } else if constexpr (std::is_enum_v<T>) {
+    return describe_scalar<std::underlying_type_t<T>>();
   } else if constexpr (std::is_same_v<T, bool>) {
     return {scalar_type::boolean, 0, false};
   } else if constexpr (std::is_integral_v<T>) {
@@ -224,12 +244,19 @@ constexpr scalar_descriptor describe_scalar()
 }
 
 template <typename T>
-std::string format_default(const T& v)
+std::optional<std::string> format_default(const T& v)
 {
-  if constexpr (is_chrono_duration<T>::value) {
+  if constexpr (is_optional<T>::value) {
+    if (!v.has_value()) {
+      return std::nullopt;
+    }
+    return format_default(*v);
+  } else if constexpr (is_chrono_duration<T>::value) {
     return fmt::format("{}", v.count());
+  } else if constexpr (std::is_enum_v<T>) {
+    return fmt::format("{}", static_cast<std::underlying_type_t<T>>(v));
   } else if constexpr (std::is_same_v<T, bool>) {
-    return v ? "true" : "false";
+    return v ? std::string("true") : std::string("false");
   } else if constexpr (std::is_same_v<T, std::string>) {
     return v;
   } else if constexpr (is_vector<T>::value) {
@@ -387,7 +414,26 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
     payload.is_scalar_array          = false;
   }
   payload.default_str = detail::format_default(target);
-  if constexpr (detail::is_chrono_duration<T>::value) {
+  if constexpr (detail::is_optional<T>::value) {
+    using inner = typename detail::optional_value<T>::type;
+    payload.emit_value = [&target](YAML::Node& node) {
+      if (!target.has_value()) {
+        node = YAML::Node(YAML::NodeType::Null);
+        return;
+      }
+      if constexpr (std::is_enum_v<inner>) {
+        node = static_cast<std::underlying_type_t<inner>>(*target);
+      } else if constexpr (detail::is_chrono_duration<inner>::value) {
+        node = target->count();
+      } else {
+        node = *target;
+      }
+    };
+  } else if constexpr (std::is_enum_v<T>) {
+    payload.emit_value = [&target](YAML::Node& node) {
+      node = static_cast<std::underlying_type_t<T>>(target);
+    };
+  } else if constexpr (detail::is_chrono_duration<T>::value) {
     payload.emit_value = [&target](YAML::Node& node) { node = target.count(); };
   } else {
     payload.emit_value = [&target](YAML::Node& node) { node = target; };

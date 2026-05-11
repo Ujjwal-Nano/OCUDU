@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct f1u_sockets_appconfig;
 
-/// Configures the given CLI11 application with the F1U sockets application configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_f1u_sockets_args(config::config_builder& b, f1u_sockets_appconfig& f1u_params);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_f1u_sockets_args(CLI::App& app, f1u_sockets_appconfig& f1u_params);
 
 } // namespace ocudu

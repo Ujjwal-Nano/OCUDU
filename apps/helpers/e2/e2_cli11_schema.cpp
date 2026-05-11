@@ -3,35 +3,34 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "e2_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/e2/e2_appconfig.h"
 #include "apps/helpers/network/sctp_cli11_schema.h"
-#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 
-static void configure_cli11_e2_args(CLI::App&          app,
-                                    e2_config&         e2_params,
-                                    const std::string& option_name,
-                                    const std::string& option_description)
+void ocudu::configure_cli11_with_e2_config_schema(config::config_builder& b,
+                                                  e2_config&              config,
+                                                  const std::string&      option_name,
+                                                  const std::string&      option_description)
 {
-  add_option(app, option_name, e2_params.enable_unit_e2, option_description)->capture_default_str();
-  add_option(app,
-             "--addrs,--addr", // TODO: old name kept for backward compatibility, should be removed in the future
-             e2_params.ip_addrs,
-             "RIC addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing")
-      ->capture_default_str();
-  add_option(app, "--port", e2_params.port, "RIC port")->check(CLI::Range(20000, 40000))->capture_default_str();
-  add_option(
-      app,
-      "--bind_addrs,--bind_addr", // TODO: old name kept for backward compatibility, should be removed in the future
-      e2_params.bind_addrs,
-      "Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP "
-      "multi-homing. If left empty, implicit bind is performed")
-      ->capture_default_str();
-  configure_cli11_sctp_socket_args(app, e2_params.sctp);
-  add_option(app, "--e2sm_kpm_enabled", e2_params.e2sm_kpm_enabled, "Enable KPM service module")->capture_default_str();
-  add_option(app, "--e2sm_rc_enabled", e2_params.e2sm_rc_enabled, "Enable RC service module")->capture_default_str();
-  add_option(app, "--e2sm_ccc_enabled", e2_params.e2sm_ccc_enabled, "Enable CCC service module")->capture_default_str();
+  b.group("e2", "E2 parameters", [&](config::config_builder& e2) {
+    e2.option(option_name, config.enable_unit_e2, option_description);
+    e2.option(
+        "--addrs,--addr",
+        config.ip_addrs,
+        "RIC addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing");
+    e2.option("--port", config.port, "RIC port").range(20000, 40000);
+    e2.option(
+        "--bind_addrs,--bind_addr",
+        config.bind_addrs,
+        "Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing. "
+        "If left empty, implicit bind is performed");
+    configure_cli11_sctp_socket_args(e2, config.sctp);
+    e2.option("--e2sm_kpm_enabled", config.e2sm_kpm_enabled, "Enable KPM service module");
+    e2.option("--e2sm_rc_enabled", config.e2sm_rc_enabled, "Enable RC service module");
+    e2.option("--e2sm_ccc_enabled", config.e2sm_ccc_enabled, "Enable CCC service module");
+  });
 }
 
 void ocudu::configure_cli11_with_e2_config_schema(CLI::App&          app,
@@ -39,6 +38,8 @@ void ocudu::configure_cli11_with_e2_config_schema(CLI::App&          app,
                                                   const std::string& option_name,
                                                   const std::string& option_description)
 {
-  CLI::App* e2_subcmd = add_subcommand(app, "e2", "E2 parameters")->configurable();
-  configure_cli11_e2_args(*e2_subcmd, config, option_name, option_description);
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_e2_config_schema(b, config, option_name, option_description);
 }
