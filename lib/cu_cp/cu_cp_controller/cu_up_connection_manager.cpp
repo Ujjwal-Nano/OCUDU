@@ -118,6 +118,10 @@ cu_up_connection_manager::cu_up_connection_manager(unsigned                    m
 {
 }
 
+// GCC 16 false positive: deep inlining of make_shared + shared_ptr dtor + disconnect() causes the bounds checker
+// to incorrectly attribute a mutex destruction inside the shared_cu_up_connection_context allocation.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
 std::unique_ptr<e1ap_message_notifier>
 cu_up_connection_manager::handle_new_cu_up_connection(std::unique_ptr<e1ap_message_notifier> e1ap_tx_pdu_notifier)
 {
@@ -163,6 +167,7 @@ cu_up_connection_manager::handle_new_cu_up_connection(std::unique_ptr<e1ap_messa
 
   return rx_pdu_notifier;
 }
+#pragma GCC diagnostic pop
 
 void cu_up_connection_manager::handle_e1_gw_connection_closed(cu_up_index_t cu_up_idx)
 {
