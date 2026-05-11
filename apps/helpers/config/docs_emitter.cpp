@@ -159,7 +159,9 @@ void emit_options_table(std::string& out,
 
 void emit_group(std::string& out, const schema_node& n, const group_node& group, int level, const markdown_options& opts)
 {
-  out += fmt::format("\n{} {}\n\n", heading_prefix(level), n.name);
+  if (!n.name.empty()) {
+    out += fmt::format("\n{} {}\n\n", heading_prefix(level), n.name);
+  }
   if (!n.description.empty()) {
     out += n.description;
     out += "\n\n";

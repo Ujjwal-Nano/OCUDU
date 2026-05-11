@@ -289,6 +289,13 @@ public:
   /// group_node (the root or a group child).
   config_builder(CLI::App& app, schema_node& root);
 
+  /// Transitional accessor for the underlying CLI11 subcommand. Lets a partly
+  /// migrated app delegate sub-sections to legacy `configure_cli11_*` helpers
+  /// while the surrounding code is already builder-driven. Options registered
+  /// through this handle are NOT visible to the schema/docs/YANG emitters —
+  /// callers should migrate them to the builder API before deleting it.
+  CLI::App& cli11_app() { return *app_; }
+
   // -- Leaves --
 
   template <typename T>
