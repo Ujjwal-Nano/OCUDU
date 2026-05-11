@@ -4,6 +4,7 @@
 
 set(SOURCES
         config_builder.cpp
+        schema_emitter.cpp
         yaml_writer.cpp)
 
 add_library(ocudu_config_app_helpers STATIC ${SOURCES})
