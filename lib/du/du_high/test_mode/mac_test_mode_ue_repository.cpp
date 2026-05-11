@@ -74,6 +74,26 @@ bool mac_test_mode_ue_repository::msg4_rxed(rnti_t rnti, bool msg4_rx_flag_)
   return false;
 }
 
+bool mac_test_mode_ue_repository::consume_rrc_setup_complete_pending(rnti_t rnti)
+{
+  unsigned cell_idx = get_cell_index(rnti);
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end() and it->second.rrc_setup_complete_pending) {
+    it->second.rrc_setup_complete_pending = false;
+    return true;
+  }
+  return false;
+}
+
+void mac_test_mode_ue_repository::set_rrc_setup_complete_pending(rnti_t rnti)
+{
+  unsigned cell_idx = get_cell_index(rnti);
+  auto     it       = cells[cell_idx]->rnti_to_ue_info_lookup.find(rnti);
+  if (it != cells[cell_idx]->rnti_to_ue_info_lookup.end()) {
+    it->second.rrc_setup_complete_pending = true;
+  }
+}
+
 void mac_test_mode_ue_repository::add_ue(rnti_t                         rnti,
                                          du_ue_index_t                  ue_idx,
                                          const sched_ue_config_request& sched_ue_cfg_req)

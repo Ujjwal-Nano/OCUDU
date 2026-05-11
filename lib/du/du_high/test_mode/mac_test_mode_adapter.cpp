@@ -303,7 +303,32 @@ void mac_test_mode_cell_adapter::forward_uci_ind_to_mac(const mac_uci_indication
   }
 
   // Forward UCI indication to real MAC.
+  // Note: for UEs awaiting Msg4 HARQ ACK, this call triggers the scheduler's conres_ce_acked event,
+  // transitioning the UE FSM out of pending_conres_ce before any subsequent config_applied.
   adapted.handle_uci(uci_msg);
+
+  // After the HARQ ACK for Msg4 has been forwarded to the MAC, inject any pending RRC Setup Complete
+  // PDUs. Doing it here (rather than at Msg4 scheduling time) ensures the scheduler's ConRes CE
+  // acknowledgement is enqueued before the config_applied event that follows the RRC Setup Complete.
+  for (const mac_uci_pdu& uci : uci_msg.ucis) {
+    if (not ue_info_mgr.is_cell_test_ue(cell_index, uci.rnti)) {
+      continue;
+    }
+    // Only PUCCH F0/F1 is used for the Msg4 HARQ ACK during initial access.
+    const auto* f0f1 = std::get_if<mac_uci_pdu::pucch_f0_or_f1_type>(&uci.pdu);
+    if (f0f1 == nullptr or not f0f1->harq_info.has_value()) {
+      continue;
+    }
+    if (not ue_info_mgr.consume_rrc_setup_complete_pending(uci.rnti)) {
+      continue;
+    }
+    auto rx_pdu = create_test_pdu_with_rrc_setup_complete(cell_index, uci_msg.sl_rx, uci.rnti, to_harq_id(0));
+    if (not rx_pdu.has_value()) {
+      logger.warning("TEST_MODE c-rnti={}: Unable to create RRC Setup Complete test PDU", uci.rnti);
+      continue;
+    }
+    pdu_handler.handle_rx_data_indication(std::move(rx_pdu.value()));
+  }
 }
 
 void mac_test_mode_cell_adapter::forward_crc_ind_to_mac(const mac_crc_indication_message& crc_msg)
@@ -438,9 +463,10 @@ void mac_test_mode_cell_adapter::on_new_downlink_scheduler_results(const mac_dl_
         ev_notifier.on_con_res_completed(cell_index, crnti);
       }
 
-      // Push an UL PDU that will serve as rrcSetupComplete and get the UE out of fallback mode.
-      auto rx_pdu = create_test_pdu_with_rrc_setup_complete(cell_index, dl_res.slot, crnti, to_harq_id(0));
-      pdu_handler.handle_rx_data_indication(std::move(rx_pdu.value()));
+      // Defer the RRC Setup Complete injection until the HARQ ACK for Msg4 is received (see
+      // forward_uci_ind_to_mac). This ensures the scheduler's ConRes CE acknowledgement
+      // (conres_ce_acked) is processed before config_applied, avoiding a spurious FSM warning.
+      ue_info_mgr.set_rrc_setup_complete_pending(crnti);
     }
   }
 

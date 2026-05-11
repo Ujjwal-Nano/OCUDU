@@ -45,6 +45,12 @@ public:
 
   bool msg4_rxed(rnti_t rnti, bool msg4_rx_flag_);
 
+  /// Returns true if the RRC Setup Complete for the given RNTI is pending injection, and atomically clears the flag.
+  bool consume_rrc_setup_complete_pending(rnti_t rnti);
+
+  /// Marks that the RRC Setup Complete PDU for the given RNTI should be injected on the next HARQ ACK.
+  void set_rrc_setup_complete_pending(rnti_t rnti);
+
   void add_ue(rnti_t rnti, du_ue_index_t ue_idx_, const sched_ue_config_request& sched_ue_cfg_req_);
 
   void remove_ue(rnti_t rnti);
@@ -59,6 +65,8 @@ private:
     du_ue_index_t                            ue_idx;
     std::unique_ptr<sched_ue_config_request> sched_ue_cfg_req;
     bool                                     msg4_rx_flag;
+    /// True when the RRC Setup Complete PDU should be injected on the next HARQ ACK from this UE.
+    bool rrc_setup_complete_pending = false;
   };
 
   struct cell_info {
