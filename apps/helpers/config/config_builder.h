@@ -400,6 +400,22 @@ public:
   template <typename E>
   option_handle auto_enum_option(const std::string& flag, std::optional<E>& target, const std::string& description);
 
+  /// Generic "string with caller-supplied parser" option. Use ONLY when the
+  /// option's parse logic can't be expressed via option / enum_option /
+  /// auto_enum_option / array_of (e.g. sentinel-or-value strings, affinity
+  /// bitmask parsers, units::bytes wrappers, numeric->enum mappings).
+  ///
+  /// setter is invoked at parse time with the raw string. getter is invoked
+  /// at YAML emission time to render the current value as a string.
+  /// constraint_note documents the accepted-input shape in the schema's
+  /// description; the schema layer sees the option as a plain string leaf
+  /// because the parser's value space can be arbitrary.
+  option_handle string_action(const std::string&                          flag,
+                              std::function<void(const std::string&)>     setter,
+                              std::function<std::string()>                getter,
+                              const std::string&                          description,
+                              std::string                                 constraint_note = {});
+
   // -- Groups (CLI11 subcommands) --
 
   template <typename Configurator>

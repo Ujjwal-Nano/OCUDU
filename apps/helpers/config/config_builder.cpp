@@ -324,6 +324,41 @@ schema_node& config_builder::push_child(schema_node child)
   return children.back();
 }
 
+option_handle config_builder::string_action(const std::string&                      flag,
+                                            std::function<void(const std::string&)> setter,
+                                            std::function<std::string()>            getter,
+                                            const std::string&                      description,
+                                            std::string                             constraint_note)
+{
+  CLI::Option* opt =
+      ocudu::add_option_function<std::string>(*app_, flag, std::function<void(const std::string&)>{setter}, description);
+  opt->default_str(getter());
+
+  const std::string canonical = detail::canonical_name(flag);
+  for (auto& existing : std::get<group_node>(root_->body).children) {
+    if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
+      return option_handle{opt, &existing, root_app_};
+    }
+  }
+
+  schema_node leaf;
+  leaf.name        = canonical;
+  leaf.description = description;
+
+  leaf_node payload;
+  payload.type        = scalar_type::string;
+  payload.default_str = getter();
+  if (!constraint_note.empty()) {
+    payload.notes.push_back(std::move(constraint_note));
+  }
+  // Capture getter by copy so the renderer outlives the registration call.
+  payload.emit_value = [getter](YAML::Node& node) { node = getter(); };
+  leaf.body          = std::move(payload);
+
+  schema_node& inserted = push_child(std::move(leaf));
+  return option_handle{opt, &inserted, root_app_};
+}
+
 } // namespace config
 } // namespace ocudu
 
