@@ -5,6 +5,7 @@
 #include "config_builder.h"
 #include <limits>
 #include <regex>
+#include <unordered_map>
 
 namespace ocudu {
 namespace config {
@@ -51,7 +52,81 @@ void merge_into(schema_node& dst, schema_node&& src)
 // option_handle
 // ---------------------------------------------------------------------------
 
-option_handle::option_handle(CLI::Option* opt, schema_node* node) : cli11_opt_(opt), node_(node) {}
+// ---------------------------------------------------------------------------
+// Fallback cascade registry. One entry per root CLI::App, holding the list
+// of (source_option_name, dst_option) edges declared via
+// option_handle::fallback_from(). A single final_callback per root app
+// processes the entire list once parse completes.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct fallback_edge {
+  std::string  source_name;
+  CLI::Option* dst_opt;
+};
+
+struct fallback_registry {
+  std::vector<fallback_edge> edges;
+  bool                       callback_installed = false;
+};
+
+std::unordered_map<CLI::App*, fallback_registry>& fallback_registries()
+{
+  static std::unordered_map<CLI::App*, fallback_registry> map;
+  return map;
+}
+
+CLI::Option* find_option_recursive(CLI::App* app, const std::string& name)
+{
+  if (auto* o = app->get_option_no_throw(name)) {
+    return o;
+  }
+  for (auto* sub : app->get_subcommands({})) {
+    if (auto* o = find_option_recursive(sub, name)) {
+      return o;
+    }
+  }
+  return nullptr;
+}
+
+void install_fallback_cascade(CLI::App* root_app)
+{
+  auto& reg = fallback_registries()[root_app];
+  if (reg.callback_installed) {
+    return;
+  }
+  reg.callback_installed = true;
+
+  // Use final_callback rather than callback() so we don't collide with any
+  // user-registered parse_complete_callback (e.g. cu_up.cpp's autoderivation).
+  root_app->final_callback([root_app]() {
+    auto it = fallback_registries().find(root_app);
+    if (it == fallback_registries().end()) {
+      return;
+    }
+    for (const auto& edge : it->second.edges) {
+      auto* src = find_option_recursive(root_app, edge.source_name);
+      if (src == nullptr || src->count() == 0) {
+        continue;
+      }
+      if (edge.dst_opt->count() > 0) {
+        continue; // user set the destination explicitly — don't override
+      }
+      const auto& results = src->results();
+      if (results.empty()) {
+        continue;
+      }
+      edge.dst_opt->default_val<std::string>(results.front());
+    }
+  });
+}
+
+} // namespace
+
+option_handle::option_handle(CLI::Option* opt, schema_node* node, CLI::App* root_app)
+  : cli11_opt_(opt), node_(node), root_app_(root_app)
+{}
 
 leaf_node& option_handle::leaf()
 {
@@ -159,6 +234,16 @@ option_handle& option_handle::note(std::string extra)
   return *this;
 }
 
+option_handle& option_handle::fallback_from(std::string source_name)
+{
+  leaf().fallback_source = source_name;
+  if (root_app_ != nullptr) {
+    fallback_registries()[root_app_].edges.push_back({std::move(source_name), cli11_opt_});
+    install_fallback_cascade(root_app_);
+  }
+  return *this;
+}
+
 // ---------------------------------------------------------------------------
 // array_handle
 // ---------------------------------------------------------------------------
@@ -198,7 +283,13 @@ array_handle& array_handle::max_items(std::size_t n)
 // config_builder
 // ---------------------------------------------------------------------------
 
-config_builder::config_builder(CLI::App& app, schema_node& root) : app_(&app), root_(&root) {}
+config_builder::config_builder(CLI::App& app, schema_node& root)
+  : app_(&app), root_(&root), root_app_(&app)
+{}
+
+config_builder::config_builder(CLI::App& app, schema_node& root, CLI::App* root_app)
+  : app_(&app), root_(&root), root_app_(root_app)
+{}
 
 option_handle config_builder::flag(const std::string& flag_name, bool& target, const std::string& description)
 {
@@ -219,7 +310,7 @@ option_handle config_builder::flag(const std::string& flag_name, bool& target, c
   leaf.body              = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
-  return option_handle{opt, &inserted};
+  return option_handle{opt, &inserted, root_app_};
 }
 
 schema_node& config_builder::push_child(schema_node child)

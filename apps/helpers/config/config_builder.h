@@ -116,6 +116,11 @@ struct leaf_node {
   std::vector<constraint>           constraints;
   /// Free-text descriptive notes appended to the description.
   std::vector<std::string>          notes;
+  /// Name of another option whose parsed value is used as this leaf's
+  /// default when this leaf wasn't set by the user. Empty if no fallback.
+  /// The post-parse cascade enforces this at runtime; the schema/docs/YANG
+  /// emitters surface it in the rendered description.
+  std::string                       fallback_source;
   /// Type-erased value renderer. Assigns the leaf's target to the yaml node.
   std::function<void(YAML::Node&)>  emit_value;
 };
@@ -304,7 +309,7 @@ private:
 class option_handle
 {
 public:
-  option_handle(CLI::Option* opt, schema_node* node);
+  option_handle(CLI::Option* opt, schema_node* node, CLI::App* root_app);
 
   option_handle& required();
   option_handle& range(double min, double max);
@@ -317,6 +322,12 @@ public:
   option_handle& min_items(std::size_t n);
   option_handle& max_items(std::size_t n);
 
+  /// Declares that this option's default is the parsed value of another
+  /// option (\p source_name, e.g. "--all_level") when the user hasn't set
+  /// this option explicitly. Cascaded at runtime by a builder-owned post-
+  /// parse hook — no CLI11 visibility at the call site.
+  option_handle& fallback_from(std::string source_name);
+
   /// Free-text constraint note appended to the description. Use for things
   /// outside the JSON Schema-aligned taxonomy (e.g. cross-field rules).
   option_handle& note(std::string extra);
@@ -326,6 +337,7 @@ private:
 
   CLI::Option* cli11_opt_;
   schema_node* node_;
+  CLI::App*    root_app_;
 };
 
 // ===========================================================================
@@ -409,8 +421,13 @@ public:
                         ElementConfigurator&&     element_configurator);
 
 private:
+  // Internal constructor used by group(): preserves the original root_app
+  // pointer when descending into a nested CLI11 subcommand.
+  config_builder(CLI::App& app, schema_node& root, CLI::App* root_app);
+
   CLI::App*    app_;
   schema_node* root_;
+  CLI::App*    root_app_;
 
   schema_node& push_child(schema_node child);
 };
@@ -433,7 +450,7 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
   const std::string canonical = detail::canonical_name(flag);
   for (auto& existing : std::get<group_node>(root_->body).children) {
     if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
-      return option_handle{opt, &existing};
+      return option_handle{opt, &existing, root_app_};
     }
   }
 
@@ -489,7 +506,7 @@ option_handle config_builder::option(const std::string& flag, T& target, const s
   leaf.body = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
-  return option_handle{opt, &inserted};
+  return option_handle{opt, &inserted, root_app_};
 }
 
 template <typename T>
@@ -545,7 +562,7 @@ option_handle config_builder::enum_option(const std::string&                    
   // the first registration as authoritative.
   for (auto& existing : std::get<group_node>(root_->body).children) {
     if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
-      return option_handle{opt, &existing};
+      return option_handle{opt, &existing, root_app_};
     }
   }
 
@@ -561,7 +578,7 @@ option_handle config_builder::enum_option(const std::string&                    
   leaf.body          = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
-  return option_handle{opt, &inserted};
+  return option_handle{opt, &inserted, root_app_};
 }
 
 template <typename E>
@@ -595,7 +612,7 @@ option_handle config_builder::auto_enum_option(const std::string& flag,
   const std::string canonical = detail::canonical_name(flag);
   for (auto& existing : std::get<group_node>(root_->body).children) {
     if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
-      return option_handle{opt, &existing};
+      return option_handle{opt, &existing, root_app_};
     }
   }
 
@@ -619,7 +636,7 @@ option_handle config_builder::auto_enum_option(const std::string& flag,
   leaf.body = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
-  return option_handle{opt, &inserted};
+  return option_handle{opt, &inserted, root_app_};
 }
 
 template <typename Configurator>
@@ -646,7 +663,7 @@ void config_builder::group(const std::string& name, const std::string& descripti
     target            = &push_child(std::move(child));
   }
 
-  config_builder sub(*subcmd, *target);
+  config_builder sub(*subcmd, *target, root_app_);
   configurator(sub);
 }
 

@@ -81,6 +81,9 @@ std::string render_constraints(const leaf_node& leaf)
   for (const auto& n : leaf.notes) {
     parts.push_back(n);
   }
+  if (!leaf.fallback_source.empty()) {
+    parts.push_back(fmt::format("falls back to {} if unset", leaf.fallback_source));
+  }
   return fmt::format("{}", fmt::join(parts, "; "));
 }
 

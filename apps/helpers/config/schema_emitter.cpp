@@ -88,19 +88,27 @@ void apply_constraints(json& property, const std::vector<constraint>& constraint
   }
 }
 
-std::string compose_description(const std::string& description, const std::vector<std::string>& notes)
+std::string compose_description(const std::string&              description,
+                                const std::vector<std::string>& notes,
+                                const std::string&              fallback_source)
 {
-  if (notes.empty()) {
+  if (notes.empty() && fallback_source.empty()) {
     return description;
   }
   std::string out = description;
-  for (const auto& n : notes) {
+  auto        append = [&](const std::string& s) {
     if (!out.empty()) {
       out += ' ';
     }
     out += '(';
-    out += n;
+    out += s;
     out += ')';
+  };
+  for (const auto& n : notes) {
+    append(n);
+  }
+  if (!fallback_source.empty()) {
+    append("falls back to " + fallback_source + " if unset");
   }
   return out;
 }
@@ -110,8 +118,8 @@ json emit_node(const schema_node& n, const json_schema_options& opts);
 json emit_leaf(const schema_node& n, const leaf_node& leaf)
 {
   json property;
-  if (!n.description.empty() || !leaf.notes.empty()) {
-    property["description"] = compose_description(n.description, leaf.notes);
+  if (!n.description.empty() || !leaf.notes.empty() || !leaf.fallback_source.empty()) {
+    property["description"] = compose_description(n.description, leaf.notes, leaf.fallback_source);
   }
   if (leaf.is_scalar_array) {
     property["type"]  = "array";

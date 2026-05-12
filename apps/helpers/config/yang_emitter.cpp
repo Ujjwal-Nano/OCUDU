@@ -140,16 +140,25 @@ std::string yang_default_literal(const leaf_node& leaf)
   return quote(*leaf.default_str);
 }
 
-std::string emit_description_stmt(const std::string& desc, const std::vector<std::string>& notes, int level)
+std::string emit_description_stmt(const std::string&              desc,
+                                  const std::vector<std::string>& notes,
+                                  const std::string&              fallback_source,
+                                  int                             level)
 {
   std::string composed = desc;
-  for (const auto& n : notes) {
+  auto        append   = [&](const std::string& s) {
     if (!composed.empty()) {
       composed += ' ';
     }
     composed += '(';
-    composed += n;
+    composed += s;
     composed += ')';
+  };
+  for (const auto& n : notes) {
+    append(n);
+  }
+  if (!fallback_source.empty()) {
+    append("falls back to " + fallback_source + " if unset");
   }
   if (composed.empty()) {
     return {};
@@ -174,14 +183,14 @@ void emit_leaf(std::string& out, const schema_node& n, const leaf_node& leaf, in
   if (auto def = yang_default_literal(leaf); !def.empty() && !leaf.is_scalar_array) {
     out += fmt::format("{}default {};\n", indent(level + 1), def);
   }
-  out += emit_description_stmt(n.description, leaf.notes, level + 1);
+  out += emit_description_stmt(n.description, leaf.notes, leaf.fallback_source, level + 1);
   out += fmt::format("{}}}\n", indent(level));
 }
 
 void emit_container(std::string& out, const schema_node& n, const group_node& group, int level, const yang_options& opts)
 {
   out += fmt::format("{}container {} {{\n", indent(level), yang_name(n.name, opts));
-  out += emit_description_stmt(n.description, {}, level + 1);
+  out += emit_description_stmt(n.description, {}, std::string{}, level + 1);
   emit_group_children(out, group, level + 1, opts);
   out += fmt::format("{}}}\n", indent(level));
 }
@@ -201,7 +210,7 @@ void emit_list(std::string& out, const schema_node& n, const array_node& arr, in
   if (arr.max_items.has_value()) {
     out += fmt::format("{}max-elements {};\n", indent(level + 1), *arr.max_items);
   }
-  out += emit_description_stmt(n.description, {}, level + 1);
+  out += emit_description_stmt(n.description, {}, std::string{}, level + 1);
   emit_group_children(out, *arr.items_shape, level + 1, opts);
   out += fmt::format("{}}}\n", indent(level));
 }
