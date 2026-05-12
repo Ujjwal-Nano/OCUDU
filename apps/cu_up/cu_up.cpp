@@ -163,6 +163,9 @@ static void autoderive_cu_up_parameters_after_parsing(cu_up_appconfig& cu_up_con
     f1u_socket_appconfig sock_cfg;
     cu_up_config.f1u_cfg.f1u_socket_cfg.push_back(sock_cfg);
   }
+
+  // If no E1AP socket configuration is derived, we set a default configuration.
+  // TODO
 }
 
 int main(int argc, char** argv)
@@ -358,7 +361,9 @@ int main(int argc, char** argv)
   std::unique_ptr<f1u_cu_up_udp_gateway> cu_f1u_conn =
       ocuup::create_split_f1u_gw({f1u_gw_maps, *cu_f1u_gtpu_demux, *cu_up_dlt_pcaps.f1u, cu_up_cfg.f1u_cfg.peer_port});
 
-  // Instantiate E1 client gateway.
+  // Instantiate E1 client gateway(s).
+  std::vector<std::unique_ptr<ocuup::e1_connection_client>> e1_gws;
+  // TODO: use loop to create multiple E1s based on configuration.
   // > Create E1 config
   sctp_network_connector_config e1_sctp{};
   e1_sctp.if_name           = "E1";
@@ -368,9 +373,11 @@ int main(int argc, char** argv)
   e1_sctp.ppid              = E1AP_PPID;
   e1_sctp.bind_addresses    = cu_up_cfg.e1ap_cfg.bind_addresses;
   fill_sctp_network_gateway_config_socket_params(e1_sctp, cu_up_cfg.e1ap_cfg.sctp);
+
   // > Create E1 gateway
   std::unique_ptr<ocuup::e1_connection_client> e1_gw = create_e1_gateway_client(e1_cu_up_sctp_gateway_config{
       e1_sctp, *epoll_broker, workers.get_cu_up_executor_mapper().e1_rx_executor(), *cu_up_dlt_pcaps.e1ap});
+  e1_gws.push_back(std::move(e1_gw));
 
   // Instantiate E2AP client gateway.
   std::unique_ptr<e2_connection_client> e2_gw_cu_up = create_e2_gateway_client(
@@ -396,7 +403,10 @@ int main(int argc, char** argv)
   // Create and start O-CU-UP
   o_cu_up_unit_dependencies o_cuup_unit_deps;
   o_cuup_unit_deps.workers = &workers;
-  o_cuup_unit_deps.e1ap_conn_client.push_back(e1_gw.get()); // TODO pass all GWs.
+
+  // TODO: use for loop to apply GWs
+  o_cuup_unit_deps.e1ap_conn_client.push_back(e1_gw.get());
+
   o_cuup_unit_deps.f1u_teid_allocator     = cu_f1u_teid_allocator.get();
   o_cuup_unit_deps.f1u_gateway            = cu_f1u_conn.get();
   o_cuup_unit_deps.gtpu_pcap              = cu_up_dlt_pcaps.n3.get();
