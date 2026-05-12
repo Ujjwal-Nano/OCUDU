@@ -3,26 +3,34 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "o_du_high_e2_config_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/e2/e2_cli11_schema.h"
 #include "o_du_high_e2_config.h"
-#include "ocudu/support/cli11_utils.h"
 
 using namespace ocudu;
 
-static void configure_cli11_pcap_args(CLI::App& app, o_du_high_e2_pcap_config& pcap_params)
+static void declare_pcap_args(config::config_builder& b, o_du_high_e2_pcap_config& pcap_params)
 {
-  add_option(app, "--e2ap_du_filename", pcap_params.filename, "E2AP PCAP file output path")->capture_default_str();
-  add_option(app, "--e2ap_enable", pcap_params.enabled, "Enable E2AP packet capture")->always_capture_default();
+  b.option("--e2ap_du_filename", pcap_params.filename, "E2AP PCAP file output path");
+  b.option("--e2ap_enable", pcap_params.enabled, "Enable E2AP packet capture");
+}
+
+void ocudu::configure_cli11_with_o_du_high_e2_config_schema(config::config_builder& b, o_du_high_e2_config& config)
+{
+  // PCAP section.
+  b.group("pcap", "PCAP configuration",
+          [&](config::config_builder& p) { declare_pcap_args(p, config.pcaps); });
+
+  // E2 section.
+  configure_cli11_with_e2_config_schema(b, config.base_cfg, "--enable_du_e2", "Enable DU E2 agent");
 }
 
 void ocudu::configure_cli11_with_o_du_high_e2_config_schema(CLI::App& app, o_du_high_e2_config& config)
 {
-  // PCAP section.
-  CLI::App* pcap_subcmd = add_subcommand(app, "pcap", "PCAP configuration")->configurable();
-  configure_cli11_pcap_args(*pcap_subcmd, config.pcaps);
-
-  // E2 section.
-  configure_cli11_with_e2_config_schema(app, config.base_cfg, "--enable_du_e2", "Enable DU E2 agent");
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_o_du_high_e2_config_schema(b, config);
 }
 
 void ocudu::autoderive_o_du_high_e2_parameters_after_parsing(o_du_high_e2_config& unit_cfg)

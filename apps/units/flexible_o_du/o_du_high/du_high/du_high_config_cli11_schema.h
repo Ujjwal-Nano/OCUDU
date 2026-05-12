@@ -8,10 +8,17 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct du_high_parsed_config;
 struct du_high_unit_config;
 
-/// Configures the given CLI11 application with the DU high configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_du_high_config_schema(config::config_builder& b, du_high_parsed_config& parsed_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_du_high_config_schema(CLI::App& app, du_high_parsed_config& parsed_cfg);
 
 /// Auto derive DU high parameters after the parsing.
