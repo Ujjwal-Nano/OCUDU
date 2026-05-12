@@ -9,9 +9,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct o_cu_cp_e2_config;
 
-/// Configures the given CLI11 application with the O-RAN CU-CP E2 configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_o_cu_cp_e2_config_schema(config::config_builder& b, o_cu_cp_e2_config& unit_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_o_cu_cp_e2_config_schema(CLI::App& app, o_cu_cp_e2_config& unit_cfg);
 
 /// Auto derive O-RAN CU-CP E2 parameters after the parsing.

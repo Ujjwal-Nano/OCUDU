@@ -9,10 +9,17 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct cu_cp_unit_config;
 struct cu_cp_unit_supported_ta_item;
 
-/// Configures the given CLI11 application with the CU-CP application unit configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_cu_cp_unit_config_schema(config::config_builder& b, cu_cp_unit_config& unit_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_cu_cp_unit_config_schema(CLI::App& app, cu_cp_unit_config& unit_cfg);
 
 /// Auto derive CU-CP parameters after the parsing.
