@@ -60,13 +60,18 @@ class smallbuffer_table_t final : public oper_table_t<R, Args...>
 {
 public:
   constexpr smallbuffer_table_t() = default;
-  R    call(void* src, Args... args) const override { return (*static_cast<FunT*>(src))(std::forward<Args>(args)...); }
+  R call(void* src, Args... args) const override { return (*static_cast<FunT*>(src))(std::forward<Args>(args)...); }
+  // GCC 16 false positive: devirtualization considers these for oversized FunTs, but the if constexpr guard
+  // in unique_function's constructors ensures smallbuffer_table_t is only registered when sizeof(FunT) <= Capacity.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
   void move(void* src, void* dest) const override
   {
     ::new (dest) FunT(std::move(*static_cast<FunT*>(src)));
     static_cast<FunT*>(src)->~FunT();
   }
   void dtor(void* src) const override { static_cast<FunT*>(src)->~FunT(); }
+#pragma GCC diagnostic pop
   bool is_in_small_buffer() const override { return true; }
 };
 
