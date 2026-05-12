@@ -366,6 +366,18 @@ public:
                             const std::string&        description,
                             std::vector<std::string>  values);
 
+  /// String-backed enum option. The mapping defines the legal names ↔ enum
+  /// values; CLI11 accepts the names, the typed enum target is updated through
+  /// a capture lambda, and the schema layer sees the option as a string leaf
+  /// with an enum_constraint populated from the mapping. emit_value renders
+  /// the current enum value through the inverse mapping. Replaces every site
+  /// that used add_option_function<string> + a manual string→enum converter.
+  template <typename E>
+  option_handle enum_option(const std::string&                     flag,
+                            E&                                     target,
+                            const std::string&                     description,
+                            std::vector<std::pair<std::string, E>> mapping);
+
   // -- Groups (CLI11 subcommands) --
 
   template <typename Configurator>
@@ -482,6 +494,64 @@ option_handle config_builder::enumeration(const std::string&       flag,
   option_handle h = option(flag, target, description);
   h.enum_values(std::move(values));
   return h;
+}
+
+template <typename E>
+option_handle config_builder::enum_option(const std::string&                     flag,
+                                          E&                                     target,
+                                          const std::string&                     description,
+                                          std::vector<std::pair<std::string, E>> mapping)
+{
+  // Extract legal names + provide an inverse mapping closure.
+  std::vector<std::string> names;
+  names.reserve(mapping.size());
+  for (const auto& p : mapping) {
+    names.push_back(p.first);
+  }
+  auto to_name = [mapping](const E& v) -> std::string {
+    for (const auto& p : mapping) {
+      if (p.second == v) {
+        return p.first;
+      }
+    }
+    return {};
+  };
+  auto setter = [&target, mapping](const std::string& s) {
+    for (const auto& p : mapping) {
+      if (p.first == s) {
+        target = p.second;
+        return;
+      }
+    }
+  };
+
+  CLI::Option* opt =
+      ocudu::add_option_function<std::string>(*app_, flag, std::function<void(const std::string&)>{setter}, description);
+  opt->default_str(to_name(target));
+  opt->check(CLI::IsMember(names));
+
+  const std::string canonical = detail::canonical_name(flag);
+  // Same dedup behaviour as option(): CLI11 chains callbacks, schema keeps
+  // the first registration as authoritative.
+  for (auto& existing : std::get<group_node>(root_->body).children) {
+    if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
+      return option_handle{opt, &existing};
+    }
+  }
+
+  schema_node leaf;
+  leaf.name        = canonical;
+  leaf.description = description;
+
+  leaf_node payload;
+  payload.type        = scalar_type::string;
+  payload.default_str = to_name(target);
+  payload.constraints.emplace_back(enum_constraint{names});
+  payload.emit_value = [&target, to_name](YAML::Node& node) { node = to_name(target); };
+  leaf.body          = std::move(payload);
+
+  schema_node& inserted = push_child(std::move(leaf));
+  return option_handle{opt, &inserted};
 }
 
 template <typename Configurator>

@@ -245,6 +245,8 @@ struct sanity_probe_inner {
   std::string s;
 };
 
+enum class sanity_probe_enum { a, b, c };
+
 struct sanity_probe_struct {
   int                       int_field   = 42;
   double                    float_field = 3.14;
@@ -253,6 +255,7 @@ struct sanity_probe_struct {
   std::vector<std::string>  str_list;
   std::vector<int>          int_list;
   std::vector<sanity_probe_inner> entries;
+  sanity_probe_enum         enum_field  = sanity_probe_enum::a;
 };
 
 [[maybe_unused]] void config_builder_instantiation_probe()
@@ -286,6 +289,11 @@ struct sanity_probe_struct {
       .key("x")
       .min_items(1)
       .max_items(16);
+
+  b.enum_option("--enum_field",
+                cfg.enum_field,
+                "An enum-valued option",
+                {{"a", sanity_probe_enum::a}, {"b", sanity_probe_enum::b}, {"c", sanity_probe_enum::c}});
 }
 
 } // namespace
