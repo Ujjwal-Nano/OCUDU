@@ -103,19 +103,26 @@ static void configure_cli11_log_args(config::config_builder& b, ru_sdr_unit_logg
 
 static void configure_cli11_cell_affinity_args(config::config_builder& b, ru_sdr_unit_cpu_affinities_cell_config& config)
 {
-  // TODO: legacy CLI11 binding parsed CPU affinity masks via parse_affinity_mask() (accepting forms like "0-3",
-  // "0,2,4", etc.). The builder API does not expose CPU-mask scalars yet. The option below is bound to a throwaway
-  // string buffer so the schema records the existence of the option, but the value is currently not applied to the
-  // affinity config — this must be re-wired through a runtime parser once the builder gains support.
-  static thread_local std::string ru_cpus_buffer;
-  b.option("--ru_cpus", ru_cpus_buffer, "Number of CPUs used for the Radio Unit tasks")
-      .note("legal value: a CPU mask string (e.g. \"0-3\", \"0,2\"); not yet parsed into the affinity bitmask by the "
-            "builder API");
+  b.string_action(
+      "--ru_cpus",
+      [&config](const std::string& value) { parse_affinity_mask(config.ru_cpu_cfg.mask, value, "ru_cpus"); },
+      [&config]() -> std::string {
+        return fmt::format("{:,}", span<const size_t>(config.ru_cpu_cfg.mask.get_cpu_ids()));
+      },
+      "CPU cores used for the Radio Unit tasks",
+      "comma-separated CPU ids or ranges, e.g. \"0-3,5\"");
 
-  static thread_local std::string ru_pinning_buffer;
-  b.option("--ru_pinning", ru_pinning_buffer, "Policy used for assigning CPU cores to the Radio Unit tasks")
-      .note("legal value: a pinning-policy string; not yet applied to the affinity config by the builder API");
-  (void)config;
+  b.string_action(
+      "--ru_pinning",
+      [&config](const std::string& value) {
+        config.ru_cpu_cfg.pinning_policy = to_affinity_mask_policy(value);
+        if (config.ru_cpu_cfg.pinning_policy == sched_affinity_mask_policy::last) {
+          report_error("Incorrect value={} used in {} property", value, "ru_pinning");
+        }
+      },
+      [&config]() -> std::string { return to_string(config.ru_cpu_cfg.pinning_policy); },
+      "Policy used for assigning CPU cores to the Radio Unit tasks",
+      "one of: mask, round-robin");
 }
 
 static void configure_cli11_lower_phy_threads_args(config::config_builder& b, lower_phy_thread_profile& execution_profile)
