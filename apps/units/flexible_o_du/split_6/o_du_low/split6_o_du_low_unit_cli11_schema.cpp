@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "split6_o_du_low_unit_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_utils.h"
 #include "apps/units/flexible_o_du/o_du_low/du_low_config_cli11_schema.h"
 #include "apps/units/flexible_o_du/split_7_2/helpers/ru_ofh_config_cli11_schema.h"
@@ -18,30 +19,39 @@ using namespace ocudu;
 static ru_ofh_unit_parsed_config ofh_cfg;
 static ru_sdr_unit_config        sdr_cfg;
 
-void ocudu::configure_cli11_with_split6_o_du_low_unit_config_schema(CLI::App& app, split6_o_du_low_unit_config& config)
+void ocudu::configure_cli11_with_split6_o_du_low_unit_config_schema(config::config_builder&      b,
+                                                                    split6_o_du_low_unit_config& config)
 {
-  configure_cli11_with_du_low_config_schema(app, config.du_low_cfg);
-  configure_cli11_with_ru_ofh_config_schema(app, ofh_cfg);
-  configure_cli11_with_ru_sdr_config_schema(app, sdr_cfg);
+  configure_cli11_with_du_low_config_schema(b, config.du_low_cfg);
+  configure_cli11_with_ru_ofh_config_schema(b, ofh_cfg);
+  configure_cli11_with_ru_sdr_config_schema(b, sdr_cfg);
 
-  add_option(app,
-             "--start_time_jitter",
-             config.start_time_jitter_ms,
-             "Start time jitter in milliseconds. A value of 0 disables the start time calculation and the session "
-             "starts it as soon as possible")
-      ->capture_default_str()
-      ->check(CLI::Range(0, 600));
+  b.option("--start_time_jitter",
+           config.start_time_jitter_ms,
+           "Start time jitter in milliseconds. A value of 0 disables the start time calculation and the session "
+           "starts it as soon as possible")
+      .range(0, 600);
 
-  CLI::App* logger_subcmd = add_subcommand(app, "log", "Logger configuration")->configurable();
-  app_helpers::add_log_option(*logger_subcmd, config.fapi_level, "--fapi_level", "FAPI log level");
+  b.group("log", "Logger configuration", [&](config::config_builder& log_b) {
+    app_helpers::add_log_option(log_b, config.fapi_level, "--fapi_level", "FAPI log level").fallback_from("--all_level");
+  });
 
-  CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  auto*     periodicity_subcmd =
-      add_subcommand(*metrics_subcmd, "periodicity", "Metrics periodicity configuration")->configurable();
-  add_option(
-      *periodicity_subcmd, "--du_report_period", config.du_report_period, "DU statistics report period in milliseconds")
-      ->capture_default_str()
-      ->check(CLI::Range(0U, static_cast<unsigned>(NOF_SUBFRAMES_PER_FRAME * NOF_SFNS * NOF_HYPER_SFNS)));
+  b.group("metrics", "Metrics configuration", [&](config::config_builder& m) {
+    m.group("periodicity", "Metrics periodicity configuration", [&](config::config_builder& p) {
+      p.option(
+           "--du_report_period", config.du_report_period, "DU statistics report period in milliseconds")
+          .range(0U, static_cast<unsigned>(NOF_SUBFRAMES_PER_FRAME * NOF_SFNS * NOF_HYPER_SFNS));
+    });
+  });
+}
+
+void ocudu::configure_cli11_with_split6_o_du_low_unit_config_schema(CLI::App&                    app,
+                                                                    split6_o_du_low_unit_config& config)
+{
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_split6_o_du_low_unit_config_schema(b, config);
 }
 
 static void manage_ru(const CLI::App& app, split6_o_du_low_unit_config& config)

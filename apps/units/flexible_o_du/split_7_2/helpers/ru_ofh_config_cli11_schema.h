@@ -8,10 +8,17 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct ru_ofh_unit_config;
 struct ru_ofh_unit_parsed_config;
 
-/// Configures the given CLI11 application with the Open Fronthaul Radio Unit configuration schema.
+/// Configures the given builder with the Open Fronthaul Radio Unit configuration schema.
+void configure_cli11_with_ru_ofh_config_schema(config::config_builder& b, ru_ofh_unit_parsed_config& parsed_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_ru_ofh_config_schema(CLI::App& app, ru_ofh_unit_parsed_config& parsed_cfg);
 
 /// Auto derive OFH Radio Unit parameters after the parsing.

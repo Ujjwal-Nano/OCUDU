@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct ru_sdr_unit_config;
 
-/// Configures the given CLI11 application with the SDR RU configuration schema.
+/// Configures the given builder with the SDR RU configuration schema.
+void configure_cli11_with_ru_sdr_config_schema(config::config_builder& b, ru_sdr_unit_config& parsed_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_ru_sdr_config_schema(CLI::App& app, ru_sdr_unit_config& parsed_cfg);
 
 /// Auto derive SDR Radio Unit parameters after the parsing.

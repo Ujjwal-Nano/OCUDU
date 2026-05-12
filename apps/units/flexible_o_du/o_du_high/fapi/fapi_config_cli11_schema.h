@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct fapi_unit_config;
 
-/// Configures the given CLI11 application with the FAPI configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_fapi_config_schema(config::config_builder& b, fapi_unit_config& parsed_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_fapi_config_schema(CLI::App& app, fapi_unit_config& parsed_cfg);
 
 } // namespace ocudu

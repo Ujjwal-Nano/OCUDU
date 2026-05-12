@@ -9,3 +9,4 @@ set(SOURCES
 
 add_library(ocudu_fapi_app_unit STATIC ${SOURCES})
 target_include_directories(ocudu_fapi_app_unit PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(ocudu_fapi_app_unit PRIVATE ocudu_config_app_helpers)

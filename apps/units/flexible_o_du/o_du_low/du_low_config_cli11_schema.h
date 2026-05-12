@@ -9,9 +9,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct du_low_unit_config;
 
-/// Configures the given CLI11 application with the DU low configuration schema.
+/// Configures the given builder with the DU low configuration schema.
+void configure_cli11_with_du_low_config_schema(config::config_builder& b, du_low_unit_config& parsed_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_du_low_config_schema(CLI::App& app, du_low_unit_config& parsed_cfg);
 
 /// Auto derive DU low parameters after the parsing.

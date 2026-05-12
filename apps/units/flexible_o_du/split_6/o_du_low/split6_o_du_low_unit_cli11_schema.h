@@ -8,9 +8,17 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct split6_o_du_low_unit_config;
 
-/// Configures the given CLI11 application with the O-RAN DU low Split 6 unit configuration schema.
+/// Configures the given builder with the O-RAN DU low Split 6 unit configuration schema.
+void configure_cli11_with_split6_o_du_low_unit_config_schema(config::config_builder&      b,
+                                                             split6_o_du_low_unit_config& config);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_split6_o_du_low_unit_config_schema(CLI::App& app, split6_o_du_low_unit_config& config);
 
 /// Auto derive O-RAN DU low Split 6 parameters after the parsing.
