@@ -294,6 +294,9 @@ struct sanity_probe_struct {
                 cfg.enum_field,
                 "An enum-valued option",
                 {{"a", sanity_probe_enum::a}, {"b", sanity_probe_enum::b}, {"c", sanity_probe_enum::c}});
+
+  std::optional<sanity_probe_enum> opt_enum;
+  b.auto_enum_option("--auto_enum", opt_enum, "Integer or \"auto\"");
 }
 
 } // namespace

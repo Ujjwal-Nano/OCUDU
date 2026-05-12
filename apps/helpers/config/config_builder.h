@@ -378,6 +378,16 @@ public:
                             const std::string&                     description,
                             std::vector<std::pair<std::string, E>> mapping);
 
+  /// Integer-or-"auto" option backed by std::optional<E>, where E is an enum
+  /// class whose underlying type is integral. Parses "auto" (or empty) as
+  /// std::nullopt and any other input as an integer cast to E. Mirrors the
+  /// existing add_auto_enum_option helper. The schema describes the leaf as
+  /// type=integer with a free-text note about the "auto" sentinel — JSON
+  /// Schema's anyOf would express this more precisely but is not yet in the
+  /// taxonomy.
+  template <typename E>
+  option_handle auto_enum_option(const std::string& flag, std::optional<E>& target, const std::string& description);
+
   // -- Groups (CLI11 subcommands) --
 
   template <typename Configurator>
@@ -549,6 +559,64 @@ option_handle config_builder::enum_option(const std::string&                    
   payload.constraints.emplace_back(enum_constraint{names});
   payload.emit_value = [&target, to_name](YAML::Node& node) { node = to_name(target); };
   leaf.body          = std::move(payload);
+
+  schema_node& inserted = push_child(std::move(leaf));
+  return option_handle{opt, &inserted};
+}
+
+template <typename E>
+option_handle config_builder::auto_enum_option(const std::string& flag,
+                                               std::optional<E>&  target,
+                                               const std::string& description)
+{
+  static_assert(std::is_enum_v<E>, "auto_enum_option target must be std::optional<enum>");
+  using underlying = std::underlying_type_t<E>;
+
+  auto setter = [&target](const std::string& in) {
+    if (in.empty() || in == "auto") {
+      return;
+    }
+    std::stringstream ss(in);
+    underlying        v;
+    ss >> v;
+    target = static_cast<E>(v);
+  };
+  CLI::Option* opt =
+      ocudu::add_option_function<std::string>(*app_, flag, std::function<void(const std::string&)>{setter}, description);
+  opt->check([](const std::string& in_str) -> std::string {
+    if (in_str == "auto" || in_str.empty()) {
+      return {};
+    }
+    CLI::TypeValidator<int> int_validator("INTEGER");
+    return int_validator(in_str);
+  });
+  opt->default_str("auto");
+
+  const std::string canonical = detail::canonical_name(flag);
+  for (auto& existing : std::get<group_node>(root_->body).children) {
+    if (existing.name == canonical && std::holds_alternative<leaf_node>(existing.body)) {
+      return option_handle{opt, &existing};
+    }
+  }
+
+  schema_node leaf;
+  leaf.name        = canonical;
+  leaf.description = description;
+
+  leaf_node payload;
+  payload.type           = scalar_type::integer;
+  payload.integer_bits   = static_cast<int>(sizeof(underlying) * 8);
+  payload.integer_signed = std::is_signed_v<underlying>;
+  payload.default_str    = std::string("auto");
+  payload.notes.emplace_back("set to \"auto\" to auto-derive");
+  payload.emit_value = [&target](YAML::Node& node) {
+    if (!target.has_value()) {
+      node = std::string("auto");
+      return;
+    }
+    node = static_cast<long long>(static_cast<underlying>(*target));
+  };
+  leaf.body = std::move(payload);
 
   schema_node& inserted = push_child(std::move(leaf));
   return option_handle{opt, &inserted};
