@@ -92,17 +92,14 @@ static void declare_cu_up_args(config::config_builder& b, cu_up_unit_config& cfg
 
 static void declare_log_args(config::config_builder& b, cu_up_unit_logger_config& cfg)
 {
-  // Same enum-via-string-function pattern as the top-level logger helper —
-  // log levels remain on the cli11_app() path.
-  CLI::App& app = b.cli11_app();
-  app_helpers::add_log_option(app, cfg.pdcp_level, "--pdcp_level", "PDCP log level");
-  app_helpers::add_log_option(app, cfg.sdap_level, "--sdap_level", "SDAP log level");
-  app_helpers::add_log_option(app, cfg.gtpu_level, "--gtpu_level", "GTPU log level");
-  app_helpers::add_log_option(app, cfg.e1ap_level, "--e1ap_level", "E1AP log level");
-  app_helpers::add_log_option(app, cfg.f1u_level, "--f1u_level", "F1-U log level");
-  app_helpers::add_log_option(app, cfg.cu_level, "--cu_level", "Log level for the CU");
-  app_helpers::add_log_option(app, cfg.sec_level, "--sec_level", "Security functions log level");
-  app_helpers::add_log_option(app, cfg.rohc_level, "--rohc_level", "ROHC log level");
+  app_helpers::add_log_option(b, cfg.pdcp_level, "--pdcp_level", "PDCP log level").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.sdap_level, "--sdap_level", "SDAP log level").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.gtpu_level, "--gtpu_level", "GTPU log level").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.e1ap_level, "--e1ap_level", "E1AP log level").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.f1u_level, "--f1u_level", "F1-U log level").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.cu_level, "--cu_level", "Log level for the CU").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.sec_level, "--sec_level", "Security functions log level").fallback_from("--all_level");
+  app_helpers::add_log_option(b, cfg.rohc_level, "--rohc_level", "ROHC log level").fallback_from("--all_level");
 
   b.option("--hex_max_size",
            cfg.hex_max_size,

@@ -100,7 +100,11 @@ void install_fallback_cascade(CLI::App* root_app)
 
   // Use final_callback rather than callback() so we don't collide with any
   // user-registered parse_complete_callback (e.g. cu_up.cpp's autoderivation).
-  root_app->final_callback([root_app]() {
+  // Use parse_complete_callback explicitly. CLI11's App::callback() (without
+  // immediate_callback enabled) writes to final_callback_, so reserving the
+  // parse_complete_callback slot here doesn't collide with user-registered
+  // app.callback() hooks (e.g. cu_up.cpp's autoderivation).
+  root_app->parse_complete_callback([root_app]() {
     auto it = fallback_registries().find(root_app);
     if (it == fallback_registries().end()) {
       return;
@@ -111,7 +115,7 @@ void install_fallback_cascade(CLI::App* root_app)
         continue;
       }
       if (edge.dst_opt->count() > 0) {
-        continue; // user set the destination explicitly — don't override
+        continue;
       }
       const auto& results = src->results();
       if (results.empty()) {

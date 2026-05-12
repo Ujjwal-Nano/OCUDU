@@ -1,39 +1,52 @@
 // SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
-// Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #pragma once
 
+#include "apps/helpers/config/config_builder.h"
 #include "ocudu/ocudulog/logger.h"
-#include "ocudu/support/cli11_utils.h"
 
 namespace ocudu {
 namespace app_helpers {
 
-/// Function to capture the log level.
-inline auto capture_log_level_function = [](ocudulog::basic_levels& level) {
-  return [&level](const std::string& value) {
-    auto val = ocudulog::str_to_basic_level(value);
-    level    = (val) ? val.value() : ocudulog::basic_levels::none;
-  };
-};
-
-/// Helper function to add log options to CLI11.
-inline CLI::Option*
-add_log_option(CLI::App& app, ocudulog::basic_levels& level, const std::string& name, const std::string& descriptrion)
+/// Canonical name<->value mapping for ocudulog::basic_levels. Drives every
+/// log-level option declared through add_log_option().
+inline std::vector<std::pair<std::string, ocudulog::basic_levels>> basic_levels_mapping()
 {
-  /// Function to check that the log level is correct.
-  auto check_log_level = [](const std::string& value) -> std::string {
-    if (ocudulog::str_to_basic_level(value).has_value()) {
-      return {};
-    }
-
-    return fmt::format("Log level '{}' not supported. Accepted values [none,info,debug,warning,error]", value);
+  return {
+      {"none", ocudulog::basic_levels::none},
+      {"error", ocudulog::basic_levels::error},
+      {"warning", ocudulog::basic_levels::warning},
+      {"info", ocudulog::basic_levels::info},
+      {"debug", ocudulog::basic_levels::debug},
   };
+}
 
-  return add_option_function<std::string>(app, name, capture_log_level_function(level), descriptrion)
-      ->default_str(ocudulog::basic_level_to_string(level))
-      ->check(check_log_level);
+/// Declares a single log-level option on the builder. The schema layer sees
+/// it as a string-typed enum (none|error|warning|info|debug). When the option
+/// has a fallback source (typically "--all_level") the post-parse cascade
+/// copies the source's value to the dest at parse time if the user didn't
+/// set the dest explicitly.
+inline config::option_handle add_log_option(config::config_builder& b,
+                                            ocudulog::basic_levels& target,
+                                            const std::string&      name,
+                                            const std::string&      description)
+{
+  return b.enum_option(name, target, description, basic_levels_mapping());
+}
+
+/// Transitional CLI::App-based overload. Existing call sites that haven't been
+/// migrated to config_builder route through a throwaway schema_node. To be
+/// removed once every caller is on the builder API.
+inline void add_log_option(CLI::App&               app,
+                           ocudulog::basic_levels& target,
+                           const std::string&      name,
+                           const std::string&      description)
+{
+  config::schema_node    discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  add_log_option(b, target, name, description);
 }
 
 } // namespace app_helpers
