@@ -201,6 +201,7 @@ ue_cell_event_manager::ue_cell_event_manager(ue_event_manager&          parent_,
   uci_sched(cell_ev.uci_sched),
   slice_sched(cell_ev.slice_sched),
   srs_sched(cell_ev.srs_sched),
+  cg_sched(cell_ev.cg_sched),
   uci_selector(cell_ev.uci_selector),
   metrics(cell_ev.metrics),
   ev_logger(cell_ev.ev_logger),
@@ -279,6 +280,7 @@ void ue_cell_event_manager::handle_ue_creation(ue_config_update_event ev)
       // In case the UE is expecting a C-RNTI CE, defer activation of UCI/SR scheduling.
       uci_sched.add_ue(ue_cc.cfg());
       srs_sched.add_ue(ue_cc.cfg());
+      cg_sched.add_ue(ue_cc.cfg());
     }
 
     // Add UE to slice scheduler.
@@ -328,6 +330,7 @@ void ue_cell_event_manager::handle_ue_reconfiguration(ue_config_update_event ev)
         ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
       uci_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
       srs_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
+      cg_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
     }
 
     // Configure existing UE.
@@ -368,6 +371,7 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
       // F1AP-created UE was only added to UCI/SRS scheduling after the reception of C-RNTI CE.
       uci_sched.rem_ue(u.get_pcell().cfg());
       srs_sched.rem_ue(u.get_pcell().cfg());
+      cg_sched.rem_ue(u.get_pcell().cfg());
     }
     // Schedule removal of UE from slice scheduler.
     slice_sched.rem_ue(ue_idx);
@@ -530,15 +534,15 @@ void ue_cell_event_manager::handle_crc_indication(const ul_crc_indication& crc_i
       }
 
       // Log event.
-      ev_logger.enqueue(scheduler_event_logger::crc_event{
-          crc_ptr->ue_index,
-          crc_ptr->rnti,
-          cfg.cell_index,
-          sl_rx,
-          crc_ptr->harq_id,
-          crc_ptr->tb_crc_success ? scheduler_event_logger::crc_event::crc_res_t::ok
-                                  : scheduler_event_logger::crc_event::crc_res_t::ko,
-          crc_ptr->ul_sinr_dB});
+      ev_logger.enqueue(scheduler_event_logger::crc_event{crc_ptr->ue_index,
+                                                          crc_ptr->rnti,
+                                                          cfg.cell_index,
+                                                          sl_rx,
+                                                          crc_ptr->harq_id,
+                                                          crc_ptr->tb_crc_success
+                                                              ? scheduler_event_logger::crc_event::crc_res_t::ok
+                                                              : scheduler_event_logger::crc_event::crc_res_t::ko,
+                                                          crc_ptr->ul_sinr_dB});
 
       // Notify metrics handler.
       metrics.handle_crc_indication(sl_rx, *crc_ptr, tbs);
