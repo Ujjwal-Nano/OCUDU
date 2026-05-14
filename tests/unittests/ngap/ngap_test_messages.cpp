@@ -1119,8 +1119,9 @@ ngap_handover_preparation_request ocudu::ocucp::generate_handover_preparation_re
 {
   ngap_handover_preparation_request request = {};
   request.ue_index                          = ue_index;
-  request.gnb_id                            = nci.gnb_id(gnb_id_bit_length);
-  request.nci                               = nci;
+  request.target_id.gnb_id                  = nci.gnb_id(gnb_id_bit_length);
+  request.target_id.plmn = plmn_identity::test_value(), request.target_id.tac = 7;
+  request.nci = nci;
   // Fill create a map of all PDU sessions and their associated QoS flows.
   for (const auto& pdu_session : pdu_sessions) {
     std::vector<qos_flow_id_t> qos_flows;
@@ -1307,4 +1308,31 @@ ngap_message ocudu::ocucp::generate_path_switch_request_ack(amf_ue_id_t amf_ue_i
   path_switch_req_ack->allowed_nssai.push_back(allowed_nssai);
 
   return ngap_msg;
+}
+
+ngap_message ocudu::ocucp::generate_path_switch_request_ack_with_ul_tunnel(amf_ue_id_t             amf_ue_id,
+                                                                           ran_ue_id_t             ran_ue_id,
+                                                                           pdu_session_id_t        psi,
+                                                                           transport_layer_address ul_tla,
+                                                                           gtpu_teid_t             ul_teid)
+{
+  ngap_message msg                 = generate_path_switch_request_ack(amf_ue_id, ran_ue_id);
+  auto&        path_switch_req_ack = msg.pdu.successful_outcome().value.path_switch_request_ack();
+
+  // Overwrite the PDU session switched list with one entry that carries UL tunnel info.
+  path_switch_req_ack->pdu_session_res_switched_list.clear();
+
+  pdu_session_res_switched_item_s switched_item;
+  switched_item.pdu_session_id = pdu_session_id_to_uint(psi);
+
+  path_switch_request_ack_transfer_s ack_transfer;
+  ack_transfer.ul_ngu_up_tnl_info_present = true;
+  ack_transfer.ul_ngu_up_tnl_info.set_gtp_tunnel();
+  tla_to_asn1_bitstring(ack_transfer.ul_ngu_up_tnl_info.gtp_tunnel().transport_layer_address, ul_tla);
+  ack_transfer.ul_ngu_up_tnl_info.gtp_tunnel().gtp_teid.from_number(ul_teid.value());
+
+  switched_item.path_switch_request_ack_transfer = pack_into_pdu(ack_transfer);
+  path_switch_req_ack->pdu_session_res_switched_list.push_back(switched_item);
+
+  return msg;
 }

@@ -873,12 +873,9 @@ asn1::rrc_nr::bwp_ul_common_s ocudu::odu::make_asn1_rrc_initial_up_bwp(const ul_
     pusch_res.freq_start_msg_a_pusch_r16                = two_step.pusch.prb_start;
     two_step_success = asn1::number_to_enum(pusch_res.nrof_msg_a_po_fdm_r16, two_step.pusch.po_fdm);
     ocudu_assert(two_step_success, "Invalid nrofMsgA-PO-FDM value");
-    // Use 2 CDM groups (value=1) to match Msg3 DCI 0_0 behavior (TS 38.214 6.2.2), and 1 antenna port (value=0)
-    // to avoid the UE inferring more ports than msgA-MaxLength=len1 allows.
-    pusch_res.msg_a_dmrs_cfg_r16.msg_a_pusch_dmrs_cdm_group_r16_present = true;
-    pusch_res.msg_a_dmrs_cfg_r16.msg_a_pusch_dmrs_cdm_group_r16         = 1;
-    pusch_res.msg_a_dmrs_cfg_r16.msg_a_pusch_nrof_ports_r16_present     = true;
-    pusch_res.msg_a_dmrs_cfg_r16.msg_a_pusch_nrof_ports_r16             = 0;
+    // Leave msgA-DMRS-AddPosition and msgA-PUSCH-DMRS-CDM-Group absent (spec defaults apply).
+    pusch_res.msg_a_dmrs_cfg_r16.msg_a_pusch_nrof_ports_r16_present = true;
+    pusch_res.msg_a_dmrs_cfg_r16.msg_a_pusch_nrof_ports_r16         = 0;
   }
 
   // pucch-ConfigCommon SetupRelease { PUCCH-ConfigCommon } OPTIONAL, -- Need M
@@ -1056,7 +1053,7 @@ static void make_asn1_rrc_qcl_info(asn1::rrc_nr::qcl_info_s& out, const qcl_info
   }
   if (cfg.ref_sig.type == ocudu::qcl_info::reference_signal::reference_signal_type::ssb) {
     auto& ssb = out.ref_sig.set_ssb();
-    ssb       = cfg.ref_sig.ssb;
+    ssb       = cfg.ref_sig.ssb.value();
   } else if (cfg.ref_sig.type == ocudu::qcl_info::reference_signal::reference_signal_type::csi_rs) {
     auto& csi_rs = out.ref_sig.set_csi_rs();
     csi_rs       = cfg.ref_sig.csi_rs;
@@ -1331,7 +1328,7 @@ make_asn1_rrc_rlm_resource(const radio_link_monitoring_config::radio_link_monito
   }
 
   if (std::holds_alternative<ssb_id_t>(cfg.detection_resource)) {
-    rlm_res.detection_res.set_ssb_idx() = std::get<ssb_id_t>(cfg.detection_resource);
+    rlm_res.detection_res.set_ssb_idx() = std::get<ssb_id_t>(cfg.detection_resource).value();
   } else {
     rlm_res.detection_res.set_csi_rs_idx() = std::get<nzp_csi_rs_res_id_t>(cfg.detection_resource);
   }
@@ -1857,7 +1854,7 @@ ocudu::odu::make_asn1_rrc_pusch_pathloss_ref_rs(const pusch_config::pusch_power_
     csi_rs_idx       = *nzp_csi_res;
   } else if (const auto* ssb_id = std::get_if<ssb_id_t>(&cfg.rs)) {
     auto& ssb_idx = ploss_ref_rs.ref_sig.set_ssb_idx();
-    ssb_idx       = *ssb_id;
+    ssb_idx       = ssb_id->value();
   }
   return ploss_ref_rs;
 }
@@ -2343,7 +2340,7 @@ static srs_res_set_s make_asn1_rrc_srs_res_set(const srs_config::srs_resource_se
     srs_res_set.pathloss_ref_rs_present = true;
     if (const auto* ssb_id = std::get_if<ssb_id_t>(&cfg.pathloss_ref_rs.value())) {
       auto& ssb_idx = srs_res_set.pathloss_ref_rs.set_ssb_idx();
-      ssb_idx       = *ssb_id;
+      ssb_idx       = ssb_id->value();
     } else if (const auto* csi_rs_res = std::get_if<nzp_csi_rs_res_id_t>(&cfg.pathloss_ref_rs.value())) {
       auto& csi_res_idx = srs_res_set.pathloss_ref_rs.set_csi_rs_idx();
       csi_res_idx       = *csi_rs_res;
@@ -2555,7 +2552,7 @@ static srs_res_s make_asn1_rrc_srs_res(const srs_config::srs_resource& cfg)
     }
     if (const auto* ssb_id = std::get_if<ssb_id_t>(&cfg.spatial_relation_info.value().reference_signal)) {
       auto& ssb_idx = res.spatial_relation_info.ref_sig.set_ssb_idx();
-      ssb_idx       = *ssb_id;
+      ssb_idx       = ssb_id->value();
     } else if (const auto* nzp_csi_res =
                    std::get_if<nzp_csi_rs_res_id_t>(&cfg.spatial_relation_info.value().reference_signal)) {
       auto& csi_rs_idx = res.spatial_relation_info.ref_sig.set_csi_rs_idx();
@@ -3529,10 +3526,10 @@ void odu::calculate_meas_gap_config_diff(meas_gap_cfg_s&                       o
                                          const std::optional<meas_gap_config>& dest)
 {
   out = {};
-  out.gap_fr1.set_present();
+  out.gap_ue.set_present();
   out.ext =
-      calculate_setup_release(*out.gap_fr1, src, dest, [](const meas_gap_config& cfg) { return make_gap_cfg(cfg); });
+      calculate_setup_release(*out.gap_ue, src, dest, [](const meas_gap_config& cfg) { return make_gap_cfg(cfg); });
   if (not out.ext) {
-    out.gap_fr1.reset();
+    out.gap_ue.reset();
   }
 }
