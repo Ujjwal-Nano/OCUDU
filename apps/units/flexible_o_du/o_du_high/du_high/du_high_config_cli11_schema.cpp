@@ -2647,10 +2647,11 @@ static void configure_cli11_qos_args(CLI::App& app, du_high_unit_qos_config& qos
   static du_high_unit_triggered_ul_grant_config trig_cfg;
   CLI::App*                                     trig_ul_subcmd =
       add_subcommand(app, "triggered_ul_grant", "Proactive UL grant triggered by DL allocation")->configurable();
-  add_option(*trig_ul_subcmd, "--delay_slots", trig_cfg.delay_slots, "Slots between DL PDCCH and UL PDCCH")
+  add_option(
+      *trig_ul_subcmd, "--delay_slots", trig_cfg.delay_slots, "Minimium slots delay between DL PDCCH and UL PDCCH")
       ->capture_default_str()
       ->check(CLI::Range(1, 15));
-  add_option(*trig_ul_subcmd, "--grant_size", trig_cfg.grant_size, "Injected UL pending bytes when grant fires")
+  add_option(*trig_ul_subcmd, "--grant_size", trig_cfg.grant_size, "Injected UL pending bytes to the BSR")
       ->capture_default_str()
       ->check(CLI::PositiveNumber);
   trig_ul_subcmd->parse_complete_callback([&qos_params]() { qos_params.triggered_ul_grant.emplace(trig_cfg); });
