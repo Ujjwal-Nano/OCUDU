@@ -80,6 +80,7 @@ private:
   f1ap_ue_context_modification_request     ue_context_mod_request;
   e1ap_bearer_context_modification_request bearer_context_modification_request;
   rrc_reconfiguration_procedure_request    rrc_reconfig_args;
+  rrc_reconfiguration_procedure_request    rrc_meas_reconfig_args; // phase-2 meas-only reconfiguration
 
   // (sub-)routine results
   cu_cp_pdu_session_resource_setup_response response_msg;

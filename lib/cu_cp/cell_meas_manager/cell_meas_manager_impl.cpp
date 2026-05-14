@@ -121,10 +121,21 @@ cell_meas_manager::get_measurement_config(cu_cp_ue_index_t                   ue_
       }
 
       for (const auto& ncell : cell_config.ncells) {
-        if (is_complete(cfg.cells.at(ncell.nci).serving_cell_cfg) &&
-            cfg.cells.at(ncell.nci).serving_cell_cfg.ssb_arfcn.value() == ssb_freq) {
+        const auto& neighbor_cfg = cfg.cells.at(ncell.nci);
+        if (is_complete(neighbor_cfg.serving_cell_cfg) &&
+            neighbor_cfg.serving_cell_cfg.ssb_arfcn.value() == ssb_freq) {
           logger.debug("ue={}: Adding neighbor cell nci={:#x} to measurement config", ue_index, ncell.nci);
-          for (const auto& report_cfg_id : ncell.report_cfg_ids) {
+
+          // Collect report configs: explicit list plus the neighbor's periodic report if set and not already present.
+          std::vector<report_cfg_id_t> report_ids = ncell.report_cfg_ids;
+          if (neighbor_cfg.periodic_report_cfg_id.has_value()) {
+            const auto pid = neighbor_cfg.periodic_report_cfg_id.value();
+            if (std::find(report_ids.begin(), report_ids.end(), pid) == report_ids.end()) {
+              report_ids.push_back(pid);
+            }
+          }
+
+          for (const auto& report_cfg_id : report_ids) {
             generate_report_config(cfg, ncell.nci, report_cfg_id, new_cfg, ue_meas_context);
           }
         }

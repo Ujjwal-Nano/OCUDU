@@ -306,19 +306,15 @@ static bool validate_mobility_appconfig(gnb_id_t gnb_id, const cu_cp_unit_mobili
       }
     }
 
-    // Check that for neighbor cells managed by this CU-CP no periodic reports are configured.
+    // Check that all report configs referenced by neighbor cells exist.
     for (const auto& ncell : cell.ncells) {
       for (const auto& id : ncell.report_cfg_ids) {
-        auto it = report_cfg_ids_to_report_type.find(id);
-        if (it == report_cfg_ids_to_report_type.end()) {
+        if (report_cfg_ids_to_report_type.find(id) == report_cfg_ids_to_report_type.end()) {
           fmt::print("cell={:#x}: Report configuration for neighbor cell={:#x} with id={} does not exist in the report "
                      "configuration list.\n",
                      cell.nr_cell_id,
                      ncell.nr_cell_id,
                      id);
-          return false;
-        } else if (it->second == "periodical") {
-          fmt::print("cell={:#x}: For neighbor cells no periodic reports are allowed\n", cell.nr_cell_id);
           return false;
         }
       }

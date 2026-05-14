@@ -150,7 +150,8 @@ std::vector<ssb_frequency_t> ocudu::ocucp::generate_measurement_object_list(cons
   for (const auto& ncell : serving_cell.ncells) {
     ocudu_assert(cfg.cells.find(ncell.nci) != cfg.cells.end(), "No cell config for nci={:#x}", ncell.nci);
     const auto& cell_cfg = cfg.cells.at(ncell.nci);
-    if (!ncell.report_cfg_ids.empty() && is_complete(cell_cfg.serving_cell_cfg)) {
+    if ((!ncell.report_cfg_ids.empty() || cell_cfg.periodic_report_cfg_id.has_value()) &&
+        is_complete(cell_cfg.serving_cell_cfg)) {
       if (std::find(ssb_freqs.begin(), ssb_freqs.end(), cell_cfg.serving_cell_cfg.ssb_arfcn.value()) ==
           ssb_freqs.end()) {
         ssb_freqs.push_back(cell_cfg.serving_cell_cfg.ssb_arfcn.value().value());

@@ -252,8 +252,7 @@ void pdu_session_resource_setup_routine::operator()(
                                   {} /* No extra DRB to be removed */,
                                   ue_context_modification_response.du_to_cu_rrc_info,
                                   nas_pdus,
-                                  next_config.initial_context_creation ? rrc_ue->generate_meas_config(std::nullopt)
-                                                                       : std::optional<rrc_meas_cfg>{},
+                                  std::optional<rrc_meas_cfg>{},
                                   false,
                                   false,
                                   std::nullopt,
@@ -279,6 +278,24 @@ void pdu_session_resource_setup_routine::operator()(
           {setup_msg.ue_index, {}, ngap_cause_radio_network_t::release_due_to_ngran_generated_reason}));
       CORO_EARLY_RETURN(handle_pdu_session_resource_setup_result(
           false, ngap_cause_radio_network_t::release_due_to_ngran_generated_reason));
+    }
+
+    // Phase 2: send measurement config in a dedicated RRC Reconfiguration after the initial setup completes.
+    // This avoids burdening the first reconfiguration (which carries DRBs and NAS PDUs) with measurement fields,
+    // improving compatibility with UEs that struggle to process both simultaneously.
+    if (next_config.initial_context_creation) {
+      rrc_meas_reconfig_args         = {};
+      rrc_meas_reconfig_args.meas_cfg = rrc_ue->generate_meas_config(std::nullopt);
+      if (rrc_meas_reconfig_args.meas_cfg.has_value()) {
+        if (!ue_context_modification_response.du_to_cu_rrc_info.meas_gap_cfg.empty()) {
+          rrc_meas_reconfig_args.meas_gap_cfg =
+              ue_context_modification_response.du_to_cu_rrc_info.meas_gap_cfg.copy();
+        }
+        CORO_AWAIT_VALUE(rrc_reconfig_result, rrc_ue->handle_rrc_reconfiguration_request(rrc_meas_reconfig_args));
+        if (!rrc_reconfig_result) {
+          logger.warning("ue={}: \"{}\" Measurement RRC reconfiguration failed", setup_msg.ue_index, name());
+        }
+      }
     }
   }
   {
