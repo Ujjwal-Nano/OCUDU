@@ -10,6 +10,7 @@
 #include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/ocudu_assert.h"
 #include "fmt/ranges.h"
+#include <algorithm>
 #include <variant>
 
 using namespace ocudu;
@@ -28,13 +29,13 @@ error_type<const char*> config_helpers::pucch_parameters_validator(const pucch_r
   const unsigned max_nof_symbols = params.max_nof_symbols.value();
 
   if (params.format_01() == pucch_format::FORMAT_0 and params.format_234() == pucch_format::FORMAT_2 and
-      (params.res_set_0_size > 6 or params.res_set_1_size > 6)) {
+      params.res_set_size > 6) {
     return make_unexpected("When using PUCCH Formats 0 and 2, resource set size cannot be greater than 6, as 2 "
                            "resources in each set are reserved.");
   }
 
   const unsigned nof_res_01 =
-      params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_0_size.value();
+      params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   unsigned nof_rbs_01;
   if (std::holds_alternative<pucch_f0_params>(params.f0_or_f1_params)) {
     const auto& f0_params = std::get<pucch_f0_params>(params.f0_or_f1_params);
@@ -68,7 +69,7 @@ error_type<const char*> config_helpers::pucch_parameters_validator(const pucch_r
   }
 
   const unsigned nof_res_234 =
-      params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_1_size.value();
+      params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   unsigned nof_rbs_234 = 0;
   if (std::holds_alternative<pucch_f2_params>(params.f2_or_f3_or_f4_params)) {
     const auto& f2_params = std::get<pucch_f2_params>(params.f2_or_f3_or_f4_params);
@@ -132,6 +133,24 @@ error_type<const char*> config_helpers::pucch_parameters_validator(const pucch_r
   if (nof_rbs_01 + nof_rbs_234 >= max_allowed_rb_usage * bwp_size_rbs) {
     return make_unexpected("With the given parameters, the number of PRBs for PUCCH exceeds the 50% of the BWP PRBs");
   }
+
+  if (params.harq_ack_rep.has_value()) {
+    const auto& rep = params.harq_ack_rep.value();
+    if (rep.factors_per_res.size() != params.res_set_size.value()) {
+      return make_unexpected(
+          "The number of PUCCH HARQ-ACK repetition factors must equal the HARQ-ACK resource set size.");
+    }
+    if (rep.sinr_thresholds.size() > 3) {
+      return make_unexpected("The number of PUCCH HARQ-ACK repetition SINR thresholds cannot exceed 3.");
+    }
+    const auto max_factor =
+        static_cast<unsigned>(*std::max_element(rep.factors_per_res.begin(), rep.factors_per_res.end()));
+    const unsigned required_thresholds = log2_ceil(max_factor);
+    if (rep.sinr_thresholds.size() < required_thresholds) {
+      return make_unexpected("The number of PUCCH HARQ-ACK repetition SINR thresholds is insufficient for the "
+                             "configured maximum repetition factor.");
+    }
+  }
   return {};
 }
 
@@ -140,7 +159,7 @@ static bool validate_generated_list(const std::vector<pucch_resource>&   res_lis
 {
   auto           expected_res_by_format = std::array<unsigned, 5>{0, 0, 0, 0, 0};
   const unsigned expected_res_01 =
-      params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_0_size.value();
+      params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   if (params.format_01() == pucch_format::FORMAT_0) {
     expected_res_by_format[0] = expected_res_01;
     if (params.format_234() == pucch_format::FORMAT_2) {
@@ -150,7 +169,7 @@ static bool validate_generated_list(const std::vector<pucch_resource>&   res_lis
     expected_res_by_format[1] = expected_res_01;
   }
   const unsigned expected_res_234 =
-      params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_1_size.value();
+      params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   switch (params.format_234()) {
     case pucch_format::FORMAT_2:
       expected_res_by_format[2] = expected_res_234;
@@ -377,9 +396,9 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
   }
 
   const unsigned nof_res_01 =
-      params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_0_size.value();
+      params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   const unsigned nof_res_234 =
-      params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_1_size.value();
+      params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   const unsigned nof_res = nof_res_01 + nof_res_234;
   const bool using_02 = params.format_01() == pucch_format::FORMAT_0 and params.format_234() == pucch_format::FORMAT_2;
 
@@ -442,13 +461,19 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
   }
 
   for (unsigned res_set_cfg_id = 0; res_set_cfg_id != params.nof_cell_res_set_configs; ++res_set_cfg_id) {
-    for (unsigned pri = 0; pri != params.res_set_0_size.value(); ++pri) {
+    for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
       unsigned cell_res_id = params.get_res_set_cell_res_idx<0>(pucch_resource_set_config_id(res_set_cfg_id), pri);
       resources[cell_res_id].res_id = {cell_res_id, params.get_res_set_ue_res_idx<0>(pri)};
+      if (params.harq_ack_rep.has_value()) {
+        resources[cell_res_id].rep_factor = params.harq_ack_rep->factors_per_res[pri];
+      }
     }
-    for (unsigned pri = 0; pri != params.res_set_1_size.value(); ++pri) {
+    for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
       unsigned cell_res_id = params.get_res_set_cell_res_idx<1>(pucch_resource_set_config_id(res_set_cfg_id), pri);
       resources[cell_res_id].res_id = {cell_res_id, params.get_res_set_ue_res_idx<1>(pri)};
+      if (params.harq_ack_rep.has_value()) {
+        resources[cell_res_id].rep_factor = params.harq_ack_rep->factors_per_res[pri];
+      }
     }
   }
   for (unsigned sr_res_id = 0; sr_res_id != params.nof_cell_sr_resources; ++sr_res_id) {

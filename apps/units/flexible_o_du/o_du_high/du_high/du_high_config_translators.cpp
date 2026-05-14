@@ -837,13 +837,11 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
       // Subtract 2 PUCCH resources from value: with Format 0, 2 extra resources will be added by the DU resource
       // allocator when the DU create the UE configuration.
       const unsigned extra_res_harq = pucch_f2f3f4_format(user_pucch_cfg.formats) == pucch_format::FORMAT_2 ? 2U : 0U;
-      du_pucch_cfg.res_set_0_size   = user_pucch_cfg.res_set_size - extra_res_harq;
-      du_pucch_cfg.res_set_1_size   = user_pucch_cfg.res_set_size - extra_res_harq;
+      du_pucch_cfg.res_set_size     = user_pucch_cfg.res_set_size - extra_res_harq;
       f0_params.intraslot_freq_hopping = user_pucch_cfg.f0_intraslot_freq_hopping;
     } else {
       auto& f1_params                  = du_pucch_cfg.f0_or_f1_params.emplace<pucch_f1_params>();
-      du_pucch_cfg.res_set_0_size      = user_pucch_cfg.res_set_size;
-      du_pucch_cfg.res_set_1_size      = user_pucch_cfg.res_set_size;
+      du_pucch_cfg.res_set_size        = user_pucch_cfg.res_set_size;
       f1_params.occ_supported          = user_pucch_cfg.f1_enable_occ;
       f1_params.nof_cyc_shifts         = static_cast<pucch_nof_cyclic_shifts>(user_pucch_cfg.f1_nof_cyclic_shifts);
       f1_params.intraslot_freq_hopping = user_pucch_cfg.f1_intraslot_freq_hopping;
@@ -900,6 +898,15 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
       } break;
       default:
         break;
+    }
+
+    if (!user_pucch_cfg.repetition_sinr_thresholds.empty()) {
+      auto& rep           = out_cell.ran.init_bwp.pucch.resources.harq_ack_rep.emplace();
+      rep.sinr_thresholds = user_pucch_cfg.repetition_sinr_thresholds;
+      rep.factors_per_res.reserve(user_pucch_cfg.repetition_factors.size());
+      for (unsigned f : user_pucch_cfg.repetition_factors) {
+        rep.factors_per_res.push_back(static_cast<pucch_repetition_factor>(f));
+      }
     }
 
     // Parameters for SRS-Config.
