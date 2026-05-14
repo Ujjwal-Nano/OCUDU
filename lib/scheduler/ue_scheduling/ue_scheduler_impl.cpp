@@ -158,8 +158,7 @@ void ue_scheduler_impl::run_slot_impl(slot_point sl_tx)
     group_cell.intra_slice_sched.post_process_results();
 
     // Record UEs needing triggered UL grants based on the finalized DL grant list.
-    group_cell.trig_ul_sched.process_dl_results(
-        sl_tx, group_cell.intra_slice_sched.get_pdsch_slot(), *group_cell.cell_res_alloc);
+    group_cell.trig_ul_sched.process_dl_results(sl_tx, (*group_cell.cell_res_alloc)[0].result);
 
     // Update the UCI indication handler after the slot scheduling.
     group_cell.uci_selector.handle_result(sl_tx, (*group_cell.cell_res_alloc)[0].result);
