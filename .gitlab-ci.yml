@@ -353,6 +353,72 @@ clangsa:
   timeout: 8 hours
 
 ################################################################################
+## Config dryrun validation
+################################################################################
+ocudu config dryrun:
+  stage: static
+  image: ${OCUDU_REGISTRY_URI}/builder-ubuntu-24.04:${DOCKER_BUILDER_VERSION}
+  tags:
+    - ${OCUDU_RUNNER_TAG}-amd64
+  needs:
+    - job: trigger builder
+      optional: true
+      artifacts: false
+  rules:
+    - if: $ON_MR
+      changes:
+        - configs/**/*
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Watchdog/
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Emulated Nightly/
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /functional/
+  variables:
+    OCUDU_BUILD_DIR: build
+  timeout: 4 hours
+  before_script:
+    - |
+      CPU_JOBS="$(/usr/local/bin/get_available_cores.sh 2>/dev/null || ${CI_PROJECT_DIR}/.gitlab/ci/builders/get_available_cores.sh)"
+      if [ -z "${CPU_JOBS}" ] || [ "${CPU_JOBS}" -lt 1 ]; then
+        CPU_JOBS=1
+      fi
+      export CPU_JOBS
+  script:
+    - |
+      # Determine apps directory from build artifacts or build on-the-fly
+      if [ -d "${CI_PROJECT_DIR}/${OCUDU_BUILD_DIR}/apps" ]; then
+        echo "Using compiled binaries from build directory"
+        OCUDU_APPS_DIR="${CI_PROJECT_DIR}/${OCUDU_BUILD_DIR}/apps"
+      else
+        echo "Building OCUDU for dryrun validation..."
+        mkdir -p ${OCUDU_BUILD_DIR}
+        cd ${OCUDU_BUILD_DIR} || exit
+        cmake -DBUILD_TESTING=False -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMARCH=x86-64-v3 -DENABLE_FFTW=True ..
+        make -j${CPU_JOBS}
+        OCUDU_APPS_DIR="${CI_PROJECT_DIR}/${OCUDU_BUILD_DIR}"
+      fi
+
+      # Run dryrun on all config files
+      echo "Running config dryrun validation..."
+      FAILED=0
+      cd ${CI_PROJECT_DIR}
+      find configs -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.json" -o -name "*.cfg" \) | sort | while read -r config_file; do
+        echo ""
+        echo "========================================"
+        echo "Validating: $config_file"
+        echo "========================================"
+        for app in ocu ocucp ocuup odu odu_low gnb; do
+          app_path="${OCUDU_APPS_DIR}/${app}"
+          if [ -x "$app_path" ]; then
+            echo "  Running $app --dryrun $config_file"
+            if ! "$app_path" --dryrun "$config_file" 2>&1; then
+              echo "  FAILED: $app with $config_file"
+              FAILED=1
+            fi
+          fi
+        done
+      done
+      exit $FAILED
+
+################################################################################
 ## Build + Unit Tests + Integration tests
 ################################################################################
 
