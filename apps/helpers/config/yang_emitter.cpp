@@ -5,6 +5,7 @@
 #include "yang_emitter.h"
 #include <fmt/format.h>
 #include <algorithm>
+#include <map>
 #include <sstream>
 
 namespace ocudu {
@@ -166,9 +167,15 @@ std::string emit_description_stmt(const std::string&              desc,
   return fmt::format("{}description {};\n", indent(level), quote(composed));
 }
 
-void emit_group_children(std::string& out, const group_node& group, int level, const yang_options& opts);
+/// Collected typedef declarations. Keyed by canonical type name; value is the
+/// type block (already-indented at typedef body level).
+struct emission_state {
+  std::map<std::string, std::string> typedefs; ///< name -> type-statement body
+};
 
-void emit_leaf(std::string& out, const schema_node& n, const leaf_node& leaf, int level, const yang_options& opts)
+void emit_group_children(std::string& out, const group_node& group, int level, const yang_options& opts, emission_state& st);
+
+void emit_leaf(std::string& out, const schema_node& n, const leaf_node& leaf, int level, const yang_options& opts, emission_state& st)
 {
   const std::string name = yang_name(n.name, opts);
   if (leaf.is_scalar_array) {
@@ -176,7 +183,20 @@ void emit_leaf(std::string& out, const schema_node& n, const leaf_node& leaf, in
   } else {
     out += fmt::format("{}leaf {} {{\n", indent(level), name);
   }
-  out += emit_type_block(leaf, level + 1, opts);
+
+  if (!leaf.type_name.empty()) {
+    // Reference a typedef. Register the typedef body on first sight.
+    const std::string td_name = yang_name(leaf.type_name, opts);
+    if (st.typedefs.find(td_name) == st.typedefs.end()) {
+      // emit_type_block produces a "type <base> { ... }\n" or "type <base>;\n"
+      // block at the requested indent level; for the typedef body we want it
+      // at indent level 2 (module . typedef . type).
+      st.typedefs.emplace(td_name, emit_type_block(leaf, 2, opts));
+    }
+    out += fmt::format("{}type {};\n", indent(level + 1), td_name);
+  } else {
+    out += emit_type_block(leaf, level + 1, opts);
+  }
   if (n.required) {
     out += fmt::format("{}mandatory true;\n", indent(level + 1));
   }
@@ -187,15 +207,15 @@ void emit_leaf(std::string& out, const schema_node& n, const leaf_node& leaf, in
   out += fmt::format("{}}}\n", indent(level));
 }
 
-void emit_container(std::string& out, const schema_node& n, const group_node& group, int level, const yang_options& opts)
+void emit_container(std::string& out, const schema_node& n, const group_node& group, int level, const yang_options& opts, emission_state& st)
 {
   out += fmt::format("{}container {} {{\n", indent(level), yang_name(n.name, opts));
   out += emit_description_stmt(n.description, {}, std::string{}, level + 1);
-  emit_group_children(out, group, level + 1, opts);
+  emit_group_children(out, group, level + 1, opts, st);
   out += fmt::format("{}}}\n", indent(level));
 }
 
-void emit_list(std::string& out, const schema_node& n, const array_node& arr, int level, const yang_options& opts)
+void emit_list(std::string& out, const schema_node& n, const array_node& arr, int level, const yang_options& opts, emission_state& st)
 {
   out += fmt::format("{}list {} {{\n", indent(level), yang_name(n.name, opts));
   if (arr.key_name.empty()) {
@@ -211,22 +231,22 @@ void emit_list(std::string& out, const schema_node& n, const array_node& arr, in
     out += fmt::format("{}max-elements {};\n", indent(level + 1), *arr.max_items);
   }
   out += emit_description_stmt(n.description, {}, std::string{}, level + 1);
-  emit_group_children(out, *arr.items_shape, level + 1, opts);
+  emit_group_children(out, *arr.items_shape, level + 1, opts, st);
   out += fmt::format("{}}}\n", indent(level));
 }
 
-void emit_group_children(std::string& out, const group_node& group, int level, const yang_options& opts)
+void emit_group_children(std::string& out, const group_node& group, int level, const yang_options& opts, emission_state& st)
 {
   for (const auto& child : group.children) {
     std::visit(
         [&](auto&& body) {
           using B = std::decay_t<decltype(body)>;
           if constexpr (std::is_same_v<B, leaf_node>) {
-            emit_leaf(out, child, body, level, opts);
+            emit_leaf(out, child, body, level, opts, st);
           } else if constexpr (std::is_same_v<B, group_node>) {
-            emit_container(out, child, body, level, opts);
+            emit_container(out, child, body, level, opts, st);
           } else if constexpr (std::is_same_v<B, array_node>) {
-            emit_list(out, child, body, level, opts);
+            emit_list(out, child, body, level, opts, st);
           }
         },
         child.body);
@@ -276,18 +296,33 @@ std::string emit_yang(const schema_node& root, const yang_options& opts)
   }
   out += "\n";
 
+  // Emit module body into a temporary buffer first so we can prepend any
+  // typedef declarations collected during the walk.
+  emission_state st;
+  std::string    body_out;
   std::visit(
       [&](auto&& body) {
         using B = std::decay_t<decltype(body)>;
         if constexpr (std::is_same_v<B, group_node>) {
-          emit_group_children(out, body, 1, opts);
+          emit_group_children(body_out, body, 1, opts, st);
         } else if constexpr (std::is_same_v<B, leaf_node>) {
-          emit_leaf(out, root, body, 1, opts);
+          emit_leaf(body_out, root, body, 1, opts, st);
         } else if constexpr (std::is_same_v<B, array_node>) {
-          emit_list(out, root, body, 1, opts);
+          emit_list(body_out, root, body, 1, opts, st);
         }
       },
       root.body);
+
+  // Hoisted typedefs go at the top of the module body.
+  for (const auto& [name, type_block] : st.typedefs) {
+    out += fmt::format("  typedef {} {{\n", name);
+    out += type_block;
+    out += "  }\n";
+  }
+  if (!st.typedefs.empty()) {
+    out += "\n";
+  }
+  out += body_out;
 
   out += "}\n";
   return out;

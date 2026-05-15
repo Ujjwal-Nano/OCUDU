@@ -5,6 +5,7 @@
 #include "schema_emitter.h"
 #include "external/nlohmann/json.hpp"
 #include <stdexcept>
+#include <unordered_map>
 
 namespace ocudu {
 namespace config {
@@ -113,11 +114,54 @@ std::string compose_description(const std::string&              description,
   return out;
 }
 
-json emit_node(const schema_node& n, const json_schema_options& opts);
+/// Builds the structural-only (type + constraints) JSON for a leaf, without
+/// description / default / notes / fallback. This is what lives in $defs.
+json emit_leaf_structure(const leaf_node& leaf)
+{
+  json structure;
+  if (leaf.is_scalar_array) {
+    structure["type"] = "array";
+    json items;
+    items["type"]     = type_string(leaf.type);
+    structure["items"] = items;
+  } else {
+    structure["type"] = type_string(leaf.type);
+  }
+  apply_constraints(structure, leaf.constraints);
+  return structure;
+}
 
-json emit_leaf(const schema_node& n, const leaf_node& leaf)
+struct emission_state {
+  /// Maps type name -> already-emitted structure (so subsequent occurrences
+  /// just reference it). Used for leaf type_name hoisting.
+  std::unordered_map<std::string, json> defs;
+};
+
+json emit_node(const schema_node& n, const json_schema_options& opts, emission_state& st);
+
+json emit_leaf(const schema_node& n, const leaf_node& leaf, emission_state& st)
 {
   json property;
+  if (!leaf.type_name.empty()) {
+    // Hoist the structural shape into $defs (first occurrence wins; later
+    // occurrences must match or the developer has a bug).
+    auto it = st.defs.find(leaf.type_name);
+    if (it == st.defs.end()) {
+      st.defs.emplace(leaf.type_name, emit_leaf_structure(leaf));
+    }
+    property["$ref"] = "#/$defs/" + leaf.type_name;
+    // JSON Schema 2020-12 allows sibling keywords alongside $ref — per-site
+    // description and default stay local.
+    if (!n.description.empty() || !leaf.notes.empty() || !leaf.fallback_source.empty()) {
+      property["description"] = compose_description(n.description, leaf.notes, leaf.fallback_source);
+    }
+    if (auto def = parse_default(leaf)) {
+      property["default"] = *def;
+    }
+    return property;
+  }
+
+  // Non-hoisted leaf: emit inline.
   if (!n.description.empty() || !leaf.notes.empty() || !leaf.fallback_source.empty()) {
     property["description"] = compose_description(n.description, leaf.notes, leaf.fallback_source);
   }
@@ -136,7 +180,10 @@ json emit_leaf(const schema_node& n, const leaf_node& leaf)
   return property;
 }
 
-json emit_group_body(const group_node& group, const std::string& description, const json_schema_options& opts)
+json emit_group_body(const group_node&          group,
+                     const std::string&         description,
+                     const json_schema_options& opts,
+                     emission_state&            st)
 {
   json property;
   if (!description.empty()) {
@@ -147,7 +194,7 @@ json emit_group_body(const group_node& group, const std::string& description, co
 
   json required = json::array();
   for (const auto& child : group.children) {
-    property["properties"][child.name] = emit_node(child, opts);
+    property["properties"][child.name] = emit_node(child, opts, st);
     if (child.required) {
       required.push_back(child.name);
     }
@@ -161,14 +208,14 @@ json emit_group_body(const group_node& group, const std::string& description, co
   return property;
 }
 
-json emit_array(const schema_node& n, const array_node& arr, const json_schema_options& opts)
+json emit_array(const schema_node& n, const array_node& arr, const json_schema_options& opts, emission_state& st)
 {
   json property;
   if (!n.description.empty()) {
     property["description"] = n.description;
   }
   property["type"]  = "array";
-  property["items"] = emit_group_body(*arr.items_shape, "", opts);
+  property["items"] = emit_group_body(*arr.items_shape, "", opts, st);
   if (arr.min_items.has_value()) {
     property["minItems"] = *arr.min_items;
   }
@@ -178,17 +225,17 @@ json emit_array(const schema_node& n, const array_node& arr, const json_schema_o
   return property;
 }
 
-json emit_node(const schema_node& n, const json_schema_options& opts)
+json emit_node(const schema_node& n, const json_schema_options& opts, emission_state& st)
 {
   return std::visit(
       [&](auto&& body) -> json {
         using B = std::decay_t<decltype(body)>;
         if constexpr (std::is_same_v<B, leaf_node>) {
-          return emit_leaf(n, body);
+          return emit_leaf(n, body, st);
         } else if constexpr (std::is_same_v<B, group_node>) {
-          return emit_group_body(body, n.description, opts);
+          return emit_group_body(body, n.description, opts, st);
         } else {
-          return emit_array(n, body, opts);
+          return emit_array(n, body, opts, st);
         }
       },
       n.body);
@@ -198,13 +245,21 @@ json emit_node(const schema_node& n, const json_schema_options& opts)
 
 std::string emit_json_schema(const schema_node& root, const json_schema_options& opts)
 {
-  json schema = emit_node(root, opts);
-  schema["$schema"] = "https://json-schema.org/draft/2020-12/schema";
+  emission_state st;
+  json           schema = emit_node(root, opts, st);
+  schema["$schema"]     = "https://json-schema.org/draft/2020-12/schema";
   if (!opts.id.empty()) {
     schema["$id"] = opts.id;
   }
   if (!opts.title.empty()) {
     schema["title"] = opts.title;
+  }
+  if (!st.defs.empty()) {
+    json defs = json::object();
+    for (auto& [name, body] : st.defs) {
+      defs[name] = body;
+    }
+    schema["$defs"] = defs;
   }
   return schema.dump(2);
 }

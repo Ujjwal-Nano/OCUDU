@@ -121,6 +121,12 @@ struct leaf_node {
   /// The post-parse cascade enforces this at runtime; the schema/docs/YANG
   /// emitters surface it in the rendered description.
   std::string                       fallback_source;
+  /// Optional "named type" identifier. When set, the schema emitter hoists
+  /// the (type + constraints) shape into JSON Schema $defs and YANG typedef
+  /// with this name, and emits a $ref / typedef reference at every
+  /// occurrence. Per-site default and description are preserved. Empty
+  /// when this leaf doesn't participate in type hoisting.
+  std::string                       type_name;
   /// Type-erased value renderer. Assigns the leaf's target to the yaml node.
   std::function<void(YAML::Node&)>  emit_value;
 };
@@ -327,6 +333,12 @@ public:
   /// this option explicitly. Cascaded at runtime by a builder-owned post-
   /// parse hook — no CLI11 visibility at the call site.
   option_handle& fallback_from(std::string source_name);
+
+  /// Tags this leaf as an instance of a named type. The schema_emitter
+  /// will hoist the shape into JSON Schema $defs and emit $ref at the
+  /// occurrence; yang_emitter emits a typedef + named type reference;
+  /// docs_emitter adds a Types section with cross-references.
+  option_handle& type_name(std::string name);
 
   /// Free-text constraint note appended to the description. Use for things
   /// outside the JSON Schema-aligned taxonomy (e.g. cross-field rules).

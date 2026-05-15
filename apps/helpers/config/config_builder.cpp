@@ -248,6 +248,12 @@ option_handle& option_handle::fallback_from(std::string source_name)
   return *this;
 }
 
+option_handle& option_handle::type_name(std::string name)
+{
+  leaf().type_name = std::move(name);
+  return *this;
+}
+
 // ---------------------------------------------------------------------------
 // array_handle
 // ---------------------------------------------------------------------------

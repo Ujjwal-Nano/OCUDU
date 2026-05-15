@@ -26,13 +26,15 @@ inline std::vector<std::pair<std::string, ocudulog::basic_levels>> basic_levels_
 /// it as a string-typed enum (none|error|warning|info|debug). When the option
 /// has a fallback source (typically "--all_level") the post-parse cascade
 /// copies the source's value to the dest at parse time if the user didn't
-/// set the dest explicitly.
+/// set the dest explicitly. The leaf is tagged "log-level" so every level
+/// option across the gnb tree shares one $defs/typedef declaration in the
+/// emitted JSON Schema / YANG.
 inline config::option_handle add_log_option(config::config_builder& b,
                                             ocudulog::basic_levels& target,
                                             const std::string&      name,
                                             const std::string&      description)
 {
-  return b.enum_option(name, target, description, basic_levels_mapping());
+  return b.enum_option(name, target, description, basic_levels_mapping()).type_name("log-level");
 }
 
 } // namespace app_helpers

@@ -6,6 +6,7 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <algorithm>
+#include <map>
 
 namespace ocudu {
 namespace config {
@@ -25,6 +26,9 @@ const char* type_label(scalar_type t)
 
 std::string render_type(const leaf_node& leaf)
 {
+  if (!leaf.type_name.empty()) {
+    return fmt::format("[`{}`](#types-{})", leaf.type_name, leaf.type_name);
+  }
   if (leaf.is_scalar_array) {
     return fmt::format("array of {}", type_label(leaf.type));
   }
@@ -195,6 +199,28 @@ void emit_group(std::string& out, const schema_node& n, const group_node& group,
   }
 }
 
+void collect_named_leaf_types(const schema_node& n, std::map<std::string, leaf_node>& sink)
+{
+  std::visit(
+      [&](auto&& body) {
+        using B = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<B, leaf_node>) {
+          if (!body.type_name.empty() && sink.find(body.type_name) == sink.end()) {
+            sink.emplace(body.type_name, body);
+          }
+        } else if constexpr (std::is_same_v<B, group_node>) {
+          for (const auto& c : body.children) {
+            collect_named_leaf_types(c, sink);
+          }
+        } else if constexpr (std::is_same_v<B, array_node>) {
+          for (const auto& c : body.items_shape->children) {
+            collect_named_leaf_types(c, sink);
+          }
+        }
+      },
+      n.body);
+}
+
 } // namespace
 
 std::string emit_markdown(const schema_node& root, const markdown_options& opts)
@@ -205,6 +231,23 @@ std::string emit_markdown(const schema_node& root, const markdown_options& opts)
     out += opts.title;
     out += "\n";
   }
+
+  // Reusable-types section comes first so the rest of the document can link
+  // back into it.
+  std::map<std::string, leaf_node> named_types;
+  collect_named_leaf_types(root, named_types);
+  if (!named_types.empty()) {
+    out += "\n## Reusable types\n\n";
+    for (const auto& [name, leaf] : named_types) {
+      out += fmt::format("### <a id=\"types-{}\"></a>`{}`\n\n", name, name);
+      out += fmt::format("- Type: {}\n", type_label(leaf.type));
+      if (!leaf.constraints.empty()) {
+        out += fmt::format("- Constraints: {}\n", render_constraints(leaf));
+      }
+      out += "\n";
+    }
+  }
+
   std::visit(
       [&](auto&& body) {
         using B = std::decay_t<decltype(body)>;
