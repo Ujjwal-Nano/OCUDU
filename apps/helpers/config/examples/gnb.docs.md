@@ -46,7 +46,7 @@ Logging configuration
 | `phy_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | PHY log level |
 | `hal_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | HAL log level |
 | `phy_rx_symbols_filename` | string | `` |  | Set to a valid file path to print the received symbols. |
-| `phy_rx_symbols_port` | integer | `0` | legal value: a non-negative port number; the sentinel "all" (dump every port) is not yet supported by the builder API | Set to a valid receive port number to dump the IQ symbols from that port only, or set to "all" to dump the IQ symbols from all UL receive ports. Only works if "phy_rx_symbols_filename" is set. |
+| `phy_rx_symbols_port` | string | `0` | a non-negative port number or the sentinel "all" | Set to a valid receive port number to dump the IQ symbols from that port only, or set to "all" to dump the IQ symbols from all UL receive ports. Only works if "phy_rx_symbols_filename" is set. |
 | `phy_rx_symbols_prach` | boolean | `false` |  | Set to true to dump the IQ symbols from all the PRACH ports. Only works if "phy_rx_symbols_filename" is set. |
 | `ofh_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Open Fronthaul log level |
 | `radio_level` | string | `info` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Radio log level |
@@ -152,7 +152,7 @@ Open Fronthaul CPU affinities configuration
 
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
-| `timing_cpu` | string | `` | legal value: a CPU mask string; not yet parsed into the affinity bitmask by the builder API | CPU used for timing in the Radio Unit |
+| `timing_cpu` | string | `` | comma-separated CPU ids or ranges, e.g. "0-3,5" | CPU used for timing in the Radio Unit |
 
 
 ### threads
@@ -240,8 +240,8 @@ _List of objects with the following items:_
 
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
-| `ru_cpus` | string | `` | legal value: a CPU mask string (e.g. "0-3", "0,2"); not yet parsed into the affinity bitmask by the builder API | Number of CPUs used for the Radio Unit tasks |
-| `ru_pinning` | string | `` | legal value: a pinning-policy string; not yet applied to the affinity config by the builder API | Policy used for assigning CPU cores to the Radio Unit tasks |
+| `ru_cpus` | string | `` | comma-separated CPU ids or ranges, e.g. "0-3,5" | CPU cores used for the Radio Unit tasks |
+| `ru_pinning` | string | `mask` | one of: mask, round-robin | Policy used for assigning CPU cores to the Radio Unit tasks |
 
 
 ### cell_affinities
@@ -2738,7 +2738,7 @@ SDR Radio Unit configuration
 | `clock` | string | `default` |  | Clock source |
 | `sync` | string | `default` |  | Time synchronization source |
 | `otw_format` | string | `default` |  | Over-the-wire format |
-| `time_alignment_calibration` | integer |  | legal values: a signed integer; the sentinel "auto" (skip calibration) is not yet supported by the builder API — omit the option to obtain the same effect | Rx to Tx radio time alignment calibration in samples.
+| `time_alignment_calibration` | string | `auto` | a signed integer or the sentinel "auto" (skip calibration) | Rx to Tx radio time alignment calibration in samples.
 Positive values reduce the RF transmission delay with respect
 to the RF reception, while negative values increase it |
 | `dl_freq_Hz` | number |  |  | Downlink frequency in Hz. If present, it overrides the one derived by DL ARFCN and NR Band. |

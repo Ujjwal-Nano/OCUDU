@@ -335,9 +335,9 @@ module ocudu-gnb {
       description "Set to a valid file path to print the received symbols.";
     }
     leaf phy-rx-symbols-port {
-      type uint32;
-      default 0;
-      description "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set. (legal value: a non-negative port number; the sentinel \"all\" (dump every port) is not yet supported by the builder API)";
+      type string;
+      default "0";
+      description "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set. (a non-negative port number or the sentinel \"all\")";
     }
     leaf phy-rx-symbols-prach {
       type boolean;
@@ -563,7 +563,7 @@ module ocudu-gnb {
         leaf timing-cpu {
           type string;
           default "";
-          description "CPU used for timing in the Radio Unit (legal value: a CPU mask string; not yet parsed into the affinity bitmask by the builder API)";
+          description "CPU used for timing in the Radio Unit (comma-separated CPU ids or ranges, e.g. \"0-3,5\")";
         }
       }
     }
@@ -688,12 +688,12 @@ number of the accelerator queues.";
       leaf ru-cpus {
         type string;
         default "";
-        description "Number of CPUs used for the Radio Unit tasks (legal value: a CPU mask string (e.g. \"0-3\", \"0,2\"); not yet parsed into the affinity bitmask by the builder API)";
+        description "CPU cores used for the Radio Unit tasks (comma-separated CPU ids or ranges, e.g. \"0-3,5\")";
       }
       leaf ru-pinning {
         type string;
-        default "";
-        description "Policy used for assigning CPU cores to the Radio Unit tasks (legal value: a pinning-policy string; not yet applied to the affinity config by the builder API)";
+        default "mask";
+        description "Policy used for assigning CPU cores to the Radio Unit tasks (one of: mask, round-robin)";
       }
     }
     list cell-affinities {
@@ -7123,10 +7123,11 @@ The leftmost bit corresponds to HARQ process ID 0; bits for unconfigured HARQ pr
       description "Over-the-wire format";
     }
     leaf time-alignment-calibration {
-      type int32;
+      type string;
+      default "auto";
       description "Rx to Tx radio time alignment calibration in samples.
 Positive values reduce the RF transmission delay with respect
-to the RF reception, while negative values increase it (legal values: a signed integer; the sentinel \"auto\" (skip calibration) is not yet supported by the builder API — omit the option to obtain the same effect)";
+to the RF reception, while negative values increase it (a signed integer or the sentinel \"auto\" (skip calibration))";
     }
     leaf dl-freq-Hz {
       type decimal64 {

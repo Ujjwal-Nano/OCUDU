@@ -60,16 +60,23 @@ static void configure_cli11_ru_sdr_args(config::config_builder& b, ru_sdr_unit_c
   b.option("--sync", config.synch_source, "Time synchronization source");
   b.option("--otw_format", config.otw_format, "Over-the-wire format");
 
-  // TODO: legacy CLI11 binding accepted "auto" as a sentinel for "skip calibration" (target left unset). The
-  // builder-typed option<optional<int>> accepts only integer literals; the "auto" keyword is lost and must be
-  // reintroduced by a runtime validator/parser. Equivalent behaviour is achieved by omitting the option entirely.
-  b.option("--time_alignment_calibration",
-           config.time_alignment_calibration,
-           "Rx to Tx radio time alignment calibration in samples.\n"
-           "Positive values reduce the RF transmission delay with respect\n"
-           "to the RF reception, while negative values increase it")
-      .note("legal values: a signed integer; the sentinel \"auto\" (skip calibration) is not yet supported by the "
-            "builder API — omit the option to obtain the same effect");
+  b.string_action(
+      "--time_alignment_calibration",
+      [&config](const std::string& value) {
+        if (value.empty() || value == "auto") {
+          config.time_alignment_calibration.reset();
+          return;
+        }
+        config.time_alignment_calibration = std::stoi(value);
+      },
+      [&config]() -> std::string {
+        return config.time_alignment_calibration.has_value() ? std::to_string(*config.time_alignment_calibration)
+                                                             : std::string("auto");
+      },
+      "Rx to Tx radio time alignment calibration in samples.\n"
+      "Positive values reduce the RF transmission delay with respect\n"
+      "to the RF reception, while negative values increase it",
+      "a signed integer or the sentinel \"auto\" (skip calibration)");
 
   // TODO: legacy CLI11 binding parsed "%Y-%m-%d %H:%M:%S" formatted strings into a std::chrono::system_clock
   // time_point. The builder API has no scalar type for time_point, so this option is not declared on the builder.

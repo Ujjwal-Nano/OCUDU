@@ -7,9 +7,14 @@
 #include "apps/helpers/logger/logger_appconfig_cli11_utils.h"
 #include "apps/helpers/metrics/metrics_config_cli11_schema.h"
 #include "apps/services/worker_manager/cli11_cpu_affinities_parser_helper.h"
+#include "apps/services/worker_manager/os_sched_affinity_manager.h"
+#include "ocudu/adt/span.h"
+#include "ocudu/support/error_handling.h"
 #include "ru_ofh_config.h"
 #include "ocudu/support/cli11_utils.h"
 #include "ocudu/support/config_parsers.h"
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 using namespace ocudu;
 
@@ -154,19 +159,26 @@ static void configure_cli11_log_args(config::config_builder& b, ru_ofh_unit_logg
 
 static void configure_cli11_cell_affinity_args(config::config_builder& b, ru_ofh_unit_cpu_affinities_cell_config& config)
 {
-  // TODO: legacy CLI11 binding parsed CPU affinity masks via parse_affinity_mask() (accepting forms like "0-3",
-  // "0,2", etc.). The builder API has no CPU-mask scalar yet. The options below are bound to throwaway string
-  // buffers so the schema records their existence; the values are NOT applied to the affinity config and must be
-  // re-wired through a runtime parser once the builder gains support.
-  static thread_local std::string ru_cpus_buffer;
-  b.option("--ru_cpus", ru_cpus_buffer, "Number of CPUs used for the Radio Unit tasks")
-      .note("legal value: a CPU mask string (e.g. \"0-3\", \"0,2\"); not yet parsed into the affinity bitmask by the "
-            "builder API");
+  b.string_action(
+      "--ru_cpus",
+      [&config](const std::string& value) { parse_affinity_mask(config.ru_cpu_cfg.mask, value, "ru_cpus"); },
+      [&config]() -> std::string {
+        return fmt::format("{:,}", span<const size_t>(config.ru_cpu_cfg.mask.get_cpu_ids()));
+      },
+      "CPU cores used for the Radio Unit tasks",
+      "comma-separated CPU ids or ranges, e.g. \"0-3,5\"");
 
-  static thread_local std::string ru_pinning_buffer;
-  b.option("--ru_pinning", ru_pinning_buffer, "Policy used for assigning CPU cores to the Radio Unit tasks")
-      .note("legal value: a pinning-policy string; not yet applied to the affinity config by the builder API");
-  (void)config;
+  b.string_action(
+      "--ru_pinning",
+      [&config](const std::string& value) {
+        config.ru_cpu_cfg.pinning_policy = to_affinity_mask_policy(value);
+        if (config.ru_cpu_cfg.pinning_policy == sched_affinity_mask_policy::last) {
+          report_error("Incorrect value={} used in {} property", value, "ru_pinning");
+        }
+      },
+      [&config]() -> std::string { return to_string(config.ru_cpu_cfg.pinning_policy); },
+      "Policy used for assigning CPU cores to the Radio Unit tasks",
+      "one of: mask, round-robin");
 }
 
 static void configure_cli11_expert_execution_args(config::config_builder&              b,
@@ -175,13 +187,16 @@ static void configure_cli11_expert_execution_args(config::config_builder&       
   // Affinities section.
   b.group("affinities", "gNB CPU affinities configuration", [&](config::config_builder& af) {
     af.group("ofh", "Open Fronthaul CPU affinities configuration", [&](config::config_builder& ofh) {
-      // TODO: legacy CLI11 binding parsed --timing_cpu via parse_affinity_mask(). The builder API has no CPU-mask
-      // scalar yet, so the option is bound to a throwaway string buffer for schema visibility; the value is NOT
-      // applied to config.ru_timing_cpu and must be reintroduced via a runtime parser.
-      static thread_local std::string timing_cpu_buffer;
-      ofh.option("--timing_cpu", timing_cpu_buffer, "CPU used for timing in the Radio Unit")
-          .note("legal value: a CPU mask string; not yet parsed into the affinity bitmask by the builder API");
-      (void)config;
+      ofh.string_action(
+          "--timing_cpu",
+          [&config](const std::string& value) {
+            parse_affinity_mask(config.ru_timing_cpu, value, "timing_cpu");
+          },
+          [&config]() -> std::string {
+            return fmt::format("{:,}", span<const size_t>(config.ru_timing_cpu.get_cpu_ids()));
+          },
+          "CPU used for timing in the Radio Unit",
+          "comma-separated CPU ids or ranges, e.g. \"0-3,5\"");
 
       // TODO: legacy CLI11 binding parsed --txrx_cpus as a vector of CPU affinity bitmasks (each entry passed
       // through parse_affinity_mask()). The builder API has no list-of-CPU-mask scalar yet, so the option is not

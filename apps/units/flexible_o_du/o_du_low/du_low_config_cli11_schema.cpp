@@ -26,15 +26,22 @@ static void configure_cli11_log_args(config::config_builder& b, du_low_unit_logg
   b.option("--phy_rx_symbols_filename",
            log_params.phy_rx_symbols_filename,
            "Set to a valid file path to print the received symbols.");
-  // TODO: legacy CLI11 binding additionally accepted the sentinel string "all" to mean "dump every UL port" (mapped
-  // to std::nullopt). The builder-typed option<optional<unsigned>> only accepts non-negative integers; the "all"
-  // keyword is now lost and must be re-introduced by a runtime validator/parser.
-  b.option("--phy_rx_symbols_port",
-           log_params.phy_rx_symbols_port,
-           "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump "
-           "the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set.")
-      .note("legal value: a non-negative port number; the sentinel \"all\" (dump every port) is not yet supported by "
-            "the builder API");
+  b.string_action(
+      "--phy_rx_symbols_port",
+      [&log_params](const std::string& value) {
+        if (value.empty() || value == "all") {
+          log_params.phy_rx_symbols_port.reset();
+          return;
+        }
+        log_params.phy_rx_symbols_port = static_cast<unsigned>(std::stoul(value));
+      },
+      [&log_params]() -> std::string {
+        return log_params.phy_rx_symbols_port.has_value() ? std::to_string(*log_params.phy_rx_symbols_port)
+                                                          : std::string("all");
+      },
+      "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump "
+      "the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set.",
+      "a non-negative port number or the sentinel \"all\"");
   b.option("--phy_rx_symbols_prach",
            log_params.phy_rx_symbols_prach,
            "Set to true to dump the IQ symbols from all the PRACH ports. Only works if "

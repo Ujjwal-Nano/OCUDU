@@ -5637,7 +5637,7 @@
               "properties": {
                 "timing_cpu": {
                   "default": "",
-                  "description": "CPU used for timing in the Radio Unit (legal value: a CPU mask string; not yet parsed into the affinity bitmask by the builder API)",
+                  "description": "CPU used for timing in the Radio Unit (comma-separated CPU ids or ranges, e.g. \"0-3,5\")",
                   "type": "string"
                 }
               },
@@ -6177,9 +6177,9 @@
           "type": "string"
         },
         "phy_rx_symbols_port": {
-          "default": 0,
-          "description": "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set. (legal value: a non-negative port number; the sentinel \"all\" (dump every port) is not yet supported by the builder API)",
-          "type": "integer"
+          "default": "0",
+          "description": "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set. (a non-negative port number or the sentinel \"all\")",
+          "type": "string"
         },
         "phy_rx_symbols_prach": {
           "default": false,
@@ -7273,8 +7273,9 @@
           "type": "string"
         },
         "time_alignment_calibration": {
-          "description": "Rx to Tx radio time alignment calibration in samples.\nPositive values reduce the RF transmission delay with respect\nto the RF reception, while negative values increase it (legal values: a signed integer; the sentinel \"auto\" (skip calibration) is not yet supported by the builder API — omit the option to obtain the same effect)",
-          "type": "integer"
+          "default": "auto",
+          "description": "Rx to Tx radio time alignment calibration in samples.\nPositive values reduce the RF transmission delay with respect\nto the RF reception, while negative values increase it (a signed integer or the sentinel \"auto\" (skip calibration))",
+          "type": "string"
         },
         "tx_gain": {
           "default": 50.0,

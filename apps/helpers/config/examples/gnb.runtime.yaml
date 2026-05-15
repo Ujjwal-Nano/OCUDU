@@ -1016,7 +1016,7 @@ ru_sdr:
   clock: default
   sync: default
   otw_format: default
-  time_alignment_calibration: ~
+  time_alignment_calibration: auto
   dl_freq_Hz: ~
   ul_freq_Hz: ~
   amplitude_control:
