@@ -1,0 +1,1030 @@
+{
+  "$defs": {
+    "log-level": {
+      "enum": [
+        "none",
+        "error",
+        "warning",
+        "info",
+        "debug"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "dryrun": {
+      "default": false,
+      "description": "Enable application dry run mode",
+      "type": "boolean"
+    },
+    "expert_execution": {
+      "description": "Expert execution configuration",
+      "properties": {
+        "affinities": {
+          "description": "Application CPU affinities configuration",
+          "properties": {
+            "main_pool_cpus": {
+              "default": "",
+              "description": "CPU cores assigned to main thread pool (comma-separated CPU ids or ranges, e.g. \"0-3,5,7\")",
+              "type": "string"
+            },
+            "main_pool_pinning": {
+              "default": "mask",
+              "description": "Policy used for assigning CPU cores to the main thread pool (one of: mask, round-robin)",
+              "type": "string"
+            },
+            "ofh": {
+              "description": "Open Fronthaul CPU affinities configuration",
+              "properties": {
+                "timing_cpu": {
+                  "default": "",
+                  "description": "CPU used for timing in the Radio Unit (comma-separated CPU ids or ranges, e.g. \"0-3,5\")",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "cell_affinities": {
+          "description": "Sets the cell CPU affinities configuration on a per cell basis",
+          "items": {
+            "properties": {
+              "ru_cpus": {
+                "default": "",
+                "description": "CPU cores used for the Radio Unit tasks (comma-separated CPU ids or ranges, e.g. \"0-3,5\")",
+                "type": "string"
+              },
+              "ru_pinning": {
+                "default": "mask",
+                "description": "Policy used for assigning CPU cores to the Radio Unit tasks (one of: mask, round-robin)",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "threads": {
+          "description": "Threads configuration",
+          "properties": {
+            "lower_phy": {
+              "description": "Lower PHY thread configuration",
+              "properties": {
+                "execution_profile": {
+                  "default": "triple",
+                  "description": "Lower physical layer executor profile [single, dual, triple].\n - single: one task worker for all the lower physical layer task executors.\n - dual: two task workers - one for the downlink and one for the uplink.\n - triple: dedicated task workers for each of the subtasks (demodulation, reception and transmission).",
+                  "enum": [
+                    "blocking",
+                    "single",
+                    "dual",
+                    "triple"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "main_pool": {
+              "description": "Main thread pool configuration",
+              "properties": {
+                "backoff_period": {
+                  "default": 50,
+                  "description": "Main thread pool back-off period, in microseconds.",
+                  "type": "integer"
+                },
+                "nof_threads": {
+                  "description": "Number of threads for processing upper PHY and upper layers.",
+                  "type": "integer"
+                },
+                "task_queue_size": {
+                  "default": 2048,
+                  "description": "Main thread pool task queue size.",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "ofh": {
+              "description": "Open Fronthaul thread configuration",
+              "properties": {
+                "enable_busy_waiting": {
+                  "default": false,
+                  "description": "Enable busy waiting of the RU timing worker",
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "upper_phy": {
+              "description": "Upper PHY thread configuration",
+              "properties": {
+                "max_pdsch_concurrency": {
+                  "default": 0,
+                  "description": "Maximum concurrency level for PDSCH processing for all cells.\nLimits the number of threads that can concurrently process Physical Downlink Shared Channel (PDSCH).\nSet to zero for no limitation. If hardware acceleration is enabled, this parameter is set to the\nnumber of the accelerator queues.",
+                  "type": "integer"
+                },
+                "max_pucch_concurrency": {
+                  "default": 0,
+                  "description": "Maximum PUCCH processing concurrency for all cells.\nLimits the maximum number of threads that can concurrently process Physical Uplink Control Channel\n(PUCCH). Set it to zero for no limit of threads.",
+                  "type": "integer"
+                },
+                "max_pusch_and_srs_concurrency": {
+                  "default": 4,
+                  "description": "Maximum PUSCH and SRS processing concurrency for all cells.\nLimits the maximum number of threads that can concurrently process Physical Uplink Shared Channel \n(PUSCH) and Sounding Reference Signals (SRS). Set it to zero for no limitation. If hardware \nacceleration is enabled, this parameter is set to the number of the accelerator queues.",
+                  "type": "integer"
+                },
+                "pdsch_cb_batch_length": {
+                  "default": 4,
+                  "description": "PDSCH flexible processor codeblock-batch size.\nSet it to 'auto' to adapt the batch length to the number of threads dedicated to downlink processing,\nset it to 'synchronous' to disable batch-splitting and ensure that TB processing remains within the \ncalling thread without parallelization. (legal values: a non-negative integer; the sentinel strings \"auto\", \"default\" and \"synchronous\" are not yet supported by the builder API)",
+                  "type": "integer"
+                },
+                "pdsch_processor_type": {
+                  "default": "auto",
+                  "description": "PDSCH processor type: auto, generic and flexible.",
+                  "enum": [
+                    "auto",
+                    "generic",
+                    "flexible"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "expert_phy": {
+      "description": "Expert physical layer configuration",
+      "properties": {
+        "allow_request_on_empty_uplink_slot": {
+          "default": false,
+          "description": "Generates an uplink request in an uplink slot with no PUCCH/PUSCH/SRS PDUs",
+          "type": "boolean"
+        },
+        "enable_phy_tap": {
+          "default": false,
+          "description": "Enables or disables the PHY tap plugin if it is present while building the application.",
+          "type": "boolean"
+        },
+        "max_proc_delay": {
+          "default": 5,
+          "description": "Maximum allowed DL processing delay in slots.",
+          "maximum": 30.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "max_request_headroom_slots": {
+          "default": 0,
+          "description": "Maximum request headroom size in slots.",
+          "maximum": 30.0,
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "phy_tap_arguments": {
+          "default": "",
+          "description": "PHY tap plugin argument string passed during construction.",
+          "type": "string"
+        },
+        "pusch_channel_equalizer_algorithm": {
+          "default": "zf",
+          "description": "PUSCH channel equalizer algorithm: zf and mmse.",
+          "enum": [
+            "zf",
+            "mmse"
+          ],
+          "type": "string"
+        },
+        "pusch_channel_estimator_cfo_compensation": {
+          "default": true,
+          "description": "PUSCH channel estimator CFO compensation.",
+          "type": "boolean"
+        },
+        "pusch_channel_estimator_fd_strategy": {
+          "default": "filter",
+          "description": "PUSCH channel estimator frequency-domain smoothing strategy: filter, mean and none.",
+          "enum": [
+            "filter",
+            "mean",
+            "none"
+          ],
+          "type": "string"
+        },
+        "pusch_channel_estimator_td_strategy": {
+          "default": "average",
+          "description": "PUSCH channel estimator time-domain strategy: average and interpolate.",
+          "enum": [
+            "average",
+            "interpolate"
+          ],
+          "type": "string"
+        },
+        "pusch_dec_enable_early_stop": {
+          "default": true,
+          "description": "Enables PUSCH LDPC decoder early stop",
+          "type": "boolean"
+        },
+        "pusch_dec_max_iterations": {
+          "default": 6,
+          "description": "Maximum number of PUSCH LDPC decoder iterations",
+          "type": "integer"
+        },
+        "pusch_decoder_force_decoding": {
+          "default": false,
+          "description": "Forces PUSCH LDPC decoder to decode always",
+          "type": "boolean"
+        },
+        "pusch_sinr_calc_method": {
+          "default": "post_equalization",
+          "description": "PUSCH SINR calculation method: channel_estimator, post_equalization and evm.",
+          "enum": [
+            "channel_estimator",
+            "post_equalization",
+            "evm"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "log": {
+      "description": "Logging configuration",
+      "properties": {
+        "all_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU"
+        },
+        "broadcast_enabled": {
+          "default": false,
+          "description": "Enable logging in the physical and MAC layer of broadcast messages and all PRACH opportunities",
+          "type": "boolean"
+        },
+        "config_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "none",
+          "description": "Config log level (falls back to --all_level if unset)"
+        },
+        "e2ap_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "E2AP log level (falls back to --all_level if unset)"
+        },
+        "fapi_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "FAPI log level (falls back to --all_level if unset)"
+        },
+        "filename": {
+          "default": "/tmp/du_low.log",
+          "description": "Log file output path",
+          "type": "string"
+        },
+        "hal_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "HAL log level (falls back to --all_level if unset)"
+        },
+        "hex_max_size": {
+          "default": 0,
+          "description": "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)",
+          "maximum": 1024.0,
+          "minimum": -1.0,
+          "type": "integer"
+        },
+        "lib_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Generic log level"
+        },
+        "ofh_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Open Fronthaul log level (falls back to --all_level if unset)"
+        },
+        "phy_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "PHY log level (falls back to --all_level if unset)"
+        },
+        "phy_rx_symbols_filename": {
+          "default": "",
+          "description": "Set to a valid file path to print the received symbols.",
+          "type": "string"
+        },
+        "phy_rx_symbols_port": {
+          "default": "0",
+          "description": "Set to a valid receive port number to dump the IQ symbols from that port only, or set to \"all\" to dump the IQ symbols from all UL receive ports. Only works if \"phy_rx_symbols_filename\" is set. (a non-negative port number or the sentinel \"all\")",
+          "type": "string"
+        },
+        "phy_rx_symbols_prach": {
+          "default": false,
+          "description": "Set to true to dump the IQ symbols from all the PRACH ports. Only works if \"phy_rx_symbols_filename\" is set.",
+          "type": "boolean"
+        },
+        "radio_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "info",
+          "description": "Radio log level (falls back to --all_level if unset)"
+        }
+      },
+      "type": "object"
+    },
+    "metrics": {
+      "description": "Metrics configuration",
+      "properties": {
+        "enable_json": {
+          "default": false,
+          "description": "Enable JSON metrics reporting",
+          "type": "boolean"
+        },
+        "enable_log": {
+          "default": false,
+          "description": "Enable log metrics reporting",
+          "type": "boolean"
+        },
+        "enable_verbose": {
+          "default": false,
+          "description": "Enable extended detail metrics reporting",
+          "type": "boolean"
+        },
+        "layers": {
+          "description": "Layer basis metrics configuration",
+          "properties": {
+            "enable_app_usage": {
+              "default": false,
+              "description": "Enable application usage metrics",
+              "type": "boolean"
+            },
+            "enable_du_low": {
+              "default": false,
+              "description": "Enable DU low metrics (upper physical layer)",
+              "type": "boolean"
+            },
+            "enable_executor": {
+              "default": false,
+              "description": "Whether to log application executors metrics",
+              "type": "boolean"
+            },
+            "enable_ru": {
+              "default": false,
+              "description": "Enable Radio Unit metrics",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "periodicity": {
+          "description": "Metrics periodicity configuration",
+          "properties": {
+            "app_usage_report_period": {
+              "default": 1000,
+              "description": "Application resource usage metrics report period (in milliseconds)",
+              "type": "integer"
+            },
+            "du_report_period": {
+              "default": 1000,
+              "description": "DU statistics report period in milliseconds",
+              "maximum": 10485760.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "executors_report_period": {
+              "default": 1000,
+              "description": "Executors metrics report period in milliseconds",
+              "maximum": 10485760.0,
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "remote_control": {
+      "description": "Remote control configuration",
+      "properties": {
+        "bind_addr": {
+          "default": "127.0.0.1",
+          "description": "Remote Control Server bind address",
+          "type": "string"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Enables the Remote Control Server",
+          "type": "boolean"
+        },
+        "port": {
+          "default": 8001,
+          "description": "Port where the remote control server listens for incoming connections",
+          "maximum": 65535.0,
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ru_ofh": {
+      "description": "Open Fronthaul Radio Unit configuration",
+      "properties": {
+        "base_cell": {
+          "description": "Base cell parameters that propagate to each entry in --cells",
+          "properties": {
+            "compr_bitwidth_dl": {
+              "default": 9,
+              "description": "Downlink compression bit width",
+              "maximum": 16.0,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "compr_bitwidth_prach": {
+              "default": 9,
+              "description": "PRACH compression bit width",
+              "maximum": 16.0,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "compr_bitwidth_ul": {
+              "default": 9,
+              "description": "Uplink compression bit width",
+              "maximum": 16.0,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "compr_method_dl": {
+              "default": "bfp",
+              "description": "Downlink compression method",
+              "enum": [
+                "none",
+                "bfp",
+                "bfp selective",
+                "block scaling",
+                "mu law",
+                "modulation",
+                "modulation selective"
+              ],
+              "type": "string"
+            },
+            "compr_method_prach": {
+              "default": "bfp",
+              "description": "PRACH compression method",
+              "enum": [
+                "none",
+                "bfp",
+                "bfp selective",
+                "block scaling",
+                "mu law",
+                "modulation",
+                "modulation selective"
+              ],
+              "type": "string"
+            },
+            "compr_method_ul": {
+              "default": "bfp",
+              "description": "Uplink compression method",
+              "enum": [
+                "none",
+                "bfp",
+                "bfp selective",
+                "block scaling",
+                "mu law",
+                "modulation",
+                "modulation selective"
+              ],
+              "type": "string"
+            },
+            "enable_dl_static_compr_hdr": {
+              "default": true,
+              "description": "Downlink static compression header enabled flag",
+              "type": "boolean"
+            },
+            "enable_ul_static_compr_hdr": {
+              "default": true,
+              "description": "Uplink static compression header enabled flag",
+              "type": "boolean"
+            },
+            "ignore_ecpri_payload_size": {
+              "default": false,
+              "description": "Ignore eCPRI payload size field value",
+              "type": "boolean"
+            },
+            "ignore_ecpri_seq_id": {
+              "default": false,
+              "description": "Ignore eCPRI sequence id field value",
+              "type": "boolean"
+            },
+            "ignore_prach_start_symbol": {
+              "default": false,
+              "description": "Ignore the start symbol field in the PRACH U-Plane packets",
+              "type": "boolean"
+            },
+            "is_prach_cp_enabled": {
+              "default": true,
+              "description": "PRACH Control-Plane enabled flag",
+              "type": "boolean"
+            },
+            "log_lates_as_warnings": {
+              "default": true,
+              "description": "Log late events as warnings",
+              "type": "boolean"
+            },
+            "t1a_max_cp_dl": {
+              "default": 500,
+              "description": "T1a maximum value for downlink Control-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "t1a_max_cp_ul": {
+              "default": 500,
+              "description": "T1a maximum value for uplink Control-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "t1a_max_up": {
+              "default": 300,
+              "description": "T1a maximum value for User-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "t1a_min_cp_dl": {
+              "default": 258,
+              "description": "T1a minimum value for downlink Control-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "t1a_min_cp_ul": {
+              "default": 285,
+              "description": "T1a minimum value for uplink Control-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "t1a_min_up": {
+              "default": 85,
+              "description": "T1a minimum value for User-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "ta4_max": {
+              "default": 500,
+              "description": "Ta4 maximum value for User-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "ta4_min": {
+              "default": 85,
+              "description": "Ta4 minimum value for User-Plane",
+              "maximum": 1960.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "warn_unreceived_ru_frames": {
+              "default": "after_traffic_detection",
+              "description": "Warn of unreceived Radio Unit frames",
+              "enum": [
+                "never",
+                "always",
+                "after_traffic_detection"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "cells": {
+          "description": "Sets the cell configuration on a per cell basis, overwriting the default configuration defined by cell_cfg",
+          "items": {
+            "properties": {
+              "check_link_status": {
+                "default": false,
+                "description": "Ethernet link status checking flag",
+                "type": "boolean"
+              },
+              "compr_bitwidth_dl": {
+                "default": 9,
+                "description": "Downlink compression bit width",
+                "maximum": 16.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              "compr_bitwidth_prach": {
+                "default": 9,
+                "description": "PRACH compression bit width",
+                "maximum": 16.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              "compr_bitwidth_ul": {
+                "default": 9,
+                "description": "Uplink compression bit width",
+                "maximum": 16.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              "compr_method_dl": {
+                "default": "bfp",
+                "description": "Downlink compression method",
+                "enum": [
+                  "none",
+                  "bfp",
+                  "bfp selective",
+                  "block scaling",
+                  "mu law",
+                  "modulation",
+                  "modulation selective"
+                ],
+                "type": "string"
+              },
+              "compr_method_prach": {
+                "default": "bfp",
+                "description": "PRACH compression method",
+                "enum": [
+                  "none",
+                  "bfp",
+                  "bfp selective",
+                  "block scaling",
+                  "mu law",
+                  "modulation",
+                  "modulation selective"
+                ],
+                "type": "string"
+              },
+              "compr_method_ul": {
+                "default": "bfp",
+                "description": "Uplink compression method",
+                "enum": [
+                  "none",
+                  "bfp",
+                  "bfp selective",
+                  "block scaling",
+                  "mu law",
+                  "modulation",
+                  "modulation selective"
+                ],
+                "type": "string"
+              },
+              "dl_port_id": {
+                "description": "RU downlink port identifier",
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "du_mac_addr": {
+                "default": "00:11:22:33:00:77",
+                "description": "Distributed Unit MAC address",
+                "type": "string"
+              },
+              "enable_dl_static_compr_hdr": {
+                "default": true,
+                "description": "Downlink static compression header enabled flag",
+                "type": "boolean"
+              },
+              "enable_promiscuous": {
+                "default": false,
+                "description": "Promiscuous mode flag",
+                "type": "boolean"
+              },
+              "enable_ul_static_compr_hdr": {
+                "default": true,
+                "description": "Uplink static compression header enabled flag",
+                "type": "boolean"
+              },
+              "ignore_ecpri_payload_size": {
+                "default": false,
+                "description": "Ignore eCPRI payload size field value",
+                "type": "boolean"
+              },
+              "ignore_ecpri_seq_id": {
+                "default": false,
+                "description": "Ignore eCPRI sequence id field value",
+                "type": "boolean"
+              },
+              "ignore_prach_start_symbol": {
+                "default": false,
+                "description": "Ignore the start symbol field in the PRACH U-Plane packets",
+                "type": "boolean"
+              },
+              "is_prach_cp_enabled": {
+                "default": true,
+                "description": "PRACH Control-Plane enabled flag",
+                "type": "boolean"
+              },
+              "log_lates_as_warnings": {
+                "default": true,
+                "description": "Log late events as warnings",
+                "type": "boolean"
+              },
+              "network_interface": {
+                "default": "enp1s0f0",
+                "description": "Network interface name for raw sockets. PCIe (or other bus) port identifier when using DPDK",
+                "type": "string"
+              },
+              "prach_port_id": {
+                "description": "RU PRACH port identifier",
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "ru_mac_addr": {
+                "default": "70:b3:d5:e1:5b:06",
+                "description": "Radio Unit MAC address",
+                "type": "string"
+              },
+              "t1a_max_cp_dl": {
+                "default": 500,
+                "description": "T1a maximum value for downlink Control-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "t1a_max_cp_ul": {
+                "default": 500,
+                "description": "T1a maximum value for uplink Control-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "t1a_max_up": {
+                "default": 300,
+                "description": "T1a maximum value for User-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "t1a_min_cp_dl": {
+                "default": 258,
+                "description": "T1a minimum value for downlink Control-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "t1a_min_cp_ul": {
+                "default": 285,
+                "description": "T1a minimum value for uplink Control-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "t1a_min_up": {
+                "default": 85,
+                "description": "T1a minimum value for User-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "ta4_max": {
+                "default": 500,
+                "description": "Ta4 maximum value for User-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "ta4_min": {
+                "default": 85,
+                "description": "Ta4 minimum value for User-Plane",
+                "maximum": 1960.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "ul_port_id": {
+                "description": "RU uplink port identifier",
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "vlan_pcp_cp": {
+                "description": "C-Plane VLAN PCP (requires --vlan_tag_cp to be set as well)",
+                "maximum": 7.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "vlan_pcp_up": {
+                "description": "U-Plane VLAN PCP (requires --vlan_tag_up to be set as well)",
+                "maximum": 7.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "vlan_tag_cp": {
+                "description": "C-Plane VLAN identifier",
+                "maximum": 4094.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              "vlan_tag_up": {
+                "description": "U-Plane VLAN identifier",
+                "maximum": 4094.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              "warn_unreceived_ru_frames": {
+                "default": "after_traffic_detection",
+                "description": "Warn of unreceived Radio Unit frames",
+                "enum": [
+                  "never",
+                  "always",
+                  "after_traffic_detection"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "gps_alpha": {
+          "default": 0,
+          "description": "GPS Alpha",
+          "maximum": 12288000.0,
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "gps_beta": {
+          "default": 0,
+          "description": "GPS Beta",
+          "maximum": 32767.0,
+          "minimum": -32768.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ru_sdr": {
+      "description": "SDR Radio Unit configuration",
+      "properties": {
+        "amplitude_control": {
+          "description": "Amplitude control parameters",
+          "properties": {
+            "ceiling": {
+              "default": -0.1,
+              "description": "Clipping ceiling referenced to full scale",
+              "type": "number"
+            },
+            "enable_clipping": {
+              "default": false,
+              "description": "Signal clipping",
+              "type": "boolean"
+            },
+            "tx_gain_backoff": {
+              "default": 12.0,
+              "description": "Gain back-off to accommodate the signal PAPR in decibels",
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "clock": {
+          "default": "default",
+          "description": "Clock source",
+          "type": "string"
+        },
+        "clock_ppm": {
+          "default": 0.0,
+          "description": "Clock calibration in PPM.",
+          "type": "number"
+        },
+        "device_args": {
+          "default": "",
+          "description": "Optional device arguments",
+          "type": "string"
+        },
+        "device_driver": {
+          "default": "uhd",
+          "description": "Device driver name",
+          "type": "string"
+        },
+        "dl_freq_Hz": {
+          "description": "Downlink frequency in Hz. If present, it overrides the one derived by DL ARFCN and NR Band.",
+          "type": "number"
+        },
+        "expert_cfg": {
+          "description": "Generic Radio Unit expert configuration",
+          "properties": {
+            "low_phy_dl_throttling": {
+              "default": 0.0,
+              "description": "System time-based throttling.\nDetermines a minimum baseband processor period time between downlink packets. It is expressed as a \nfraction of the time equivalent to the number of samples in the baseband buffer. Set to 0.9 to ensure \nthat the downlink packets are processed with a minimum period of 90% of the buffer duration.\nSet to zero to disable this feature.",
+              "type": "number"
+            },
+            "power_ramping_time_us": {
+              "default": 0.0,
+              "description": "Specifies the power ramping time in microseconds, it proactively initiates the transmission and \nmitigates transient effects.",
+              "type": "number"
+            },
+            "tx_mode": {
+              "default": "continuous",
+              "description": "Selects a radio transmission mode. Discontinuous modes are not supported by all radios.\n  continuous:    the TX chain is always active.\n  discontinuous: the transmitter stops when there is no data to transmit.\n  same-port:     the radio transmits and receives from the same antenna port.\n",
+              "enum": [
+                "continuous",
+                "discontinuous",
+                "same-port"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "freq_offset": {
+          "default": 0.0,
+          "description": "Center frequency offset in hertz",
+          "type": "number"
+        },
+        "lo_offset": {
+          "default": 0.0,
+          "description": "LO frequency offset in MHz",
+          "type": "number"
+        },
+        "otw_format": {
+          "default": "default",
+          "description": "Over-the-wire format",
+          "type": "string"
+        },
+        "rx_gain": {
+          "default": 60.0,
+          "description": "Receive gain in decibels",
+          "type": "number"
+        },
+        "srate": {
+          "default": 61.44,
+          "description": "Sample rate in MHz",
+          "type": "number"
+        },
+        "sync": {
+          "default": "default",
+          "description": "Time synchronization source",
+          "type": "string"
+        },
+        "time_alignment_calibration": {
+          "default": "auto",
+          "description": "Rx to Tx radio time alignment calibration in samples.\nPositive values reduce the RF transmission delay with respect\nto the RF reception, while negative values increase it (a signed integer or the sentinel \"auto\" (skip calibration))",
+          "type": "string"
+        },
+        "tx_gain": {
+          "default": 50.0,
+          "description": "Transmit gain in decibels",
+          "type": "number"
+        },
+        "ul_freq_Hz": {
+          "description": "Uplink frequency in Hz. If present, it overrides the one derived by UL ARFCN and NR Band.",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "start_time_jitter": {
+      "default": 0,
+      "description": "Start time jitter in milliseconds. A value of 0 disables the start time calculation and the session starts it as soon as possible",
+      "maximum": 600.0,
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "trace": {
+      "description": "General tracer configuration",
+      "properties": {
+        "filename": {
+          "default": "",
+          "description": "Set to a valid file path to enable tracing and write the trace to the file",
+          "type": "string"
+        },
+        "layers": {
+          "description": "Layer basis tracing configuration",
+          "properties": {
+            "phy_enable": {
+              "default": false,
+              "description": "Enable tracing for physical layer executors",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "max_tracing_events_per_file": {
+          "default": 1000000,
+          "description": "Maximum number of events per file. Set to zero for no limit",
+          "type": "integer"
+        },
+        "nof_tracing_events_after_severe": {
+          "default": 0,
+          "description": "Number of events to write prior to a severe event. Set to zero for writing all events",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "title": "OCUDU DU-low configuration",
+  "type": "object"
+}

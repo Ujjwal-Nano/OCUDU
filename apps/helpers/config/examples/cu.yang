@@ -1,0 +1,1600 @@
+module ocudu-cu {
+  yang-version 1.1;
+  namespace "urn:ocudu:cu";
+  prefix cu;
+
+  description "OCUDU CU configuration model.";
+
+  revision 2026-05-11 {
+    description "Generated.";
+  }
+
+  typedef log-level {
+    type enumeration {
+      enum "none";
+      enum "error";
+      enum "warning";
+      enum "info";
+      enum "debug";
+    }
+  }
+
+  grouping sctp-socket {
+    leaf sctp-rto-initial {
+      type int32;
+      default 120;
+      description "SCTP initial RTO value in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-rto-min {
+      type int32;
+      default 120;
+      description "SCTP RTO min in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-rto-max {
+      type int32;
+      default 500;
+      description "SCTP RTO max in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-init-max-attempts {
+      type int32;
+      default 3;
+      description "SCTP init max attempts (-1 to use system default)";
+    }
+    leaf sctp-max-init-timeo {
+      type int32;
+      default 500;
+      description "SCTP max init timeout in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-hb-interval {
+      type int32;
+      default 30000;
+      description "SCTP heartbeat interval in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-assoc-max-retx {
+      type int32;
+      default 10;
+      description "SCTP association max retransmissions (-1 to use system default)";
+    }
+    leaf sctp-nodelay {
+      type boolean;
+      default false;
+      description "Send SCTP messages as soon as possible without any Nagle-like algorithm";
+    }
+  }
+
+  leaf dryrun {
+    type boolean;
+    default false;
+    description "Enable application dry run mode";
+  }
+  container log {
+    description "Logging configuration";
+    leaf filename {
+      type string;
+      default "/tmp/cu.log";
+      description "Log file output path";
+    }
+    leaf all-level {
+      type log-level;
+      default "warning";
+      description "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU";
+    }
+    leaf lib-level {
+      type log-level;
+      default "warning";
+      description "Generic log level";
+    }
+    leaf e2ap-level {
+      type log-level;
+      default "warning";
+      description "E2AP log level (falls back to --all_level if unset)";
+    }
+    leaf config-level {
+      type log-level;
+      default "none";
+      description "Config log level (falls back to --all_level if unset)";
+    }
+    leaf hex-max-size {
+      type int32 {
+        range "-1..1024";
+      }
+      default 0;
+      description "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)";
+    }
+    leaf pdcp-level {
+      type log-level;
+      default "warning";
+      description "PDCP log level";
+    }
+    leaf rrc-level {
+      type log-level;
+      default "warning";
+      description "RRC log level";
+    }
+    leaf ngap-level {
+      type log-level;
+      default "warning";
+      description "NGAP log level";
+    }
+    leaf xnap-level {
+      type log-level;
+      default "warning";
+      description "XNAP log level";
+    }
+    leaf nrppa-level {
+      type log-level;
+      default "warning";
+      description "NRPPA log level";
+    }
+    leaf e1ap-level {
+      type log-level;
+      default "warning";
+      description "E1AP log level";
+    }
+    leaf f1ap-level {
+      type log-level;
+      default "warning";
+      description "F1AP log level";
+    }
+    leaf cu-level {
+      type log-level;
+      default "warning";
+      description "Log level for the CU";
+    }
+    leaf sec-level {
+      type log-level;
+      default "warning";
+      description "Security functions log level";
+    }
+    leaf e1ap-json-enabled {
+      type boolean;
+      default false;
+      description "Enable JSON logging of E1AP PDUs";
+    }
+    leaf f1ap-json-enabled {
+      type boolean;
+      default false;
+      description "Enable JSON logging of F1AP PDUs";
+    }
+    leaf sdap-level {
+      type log-level;
+      default "warning";
+      description "SDAP log level (falls back to --all_level if unset)";
+    }
+    leaf gtpu-level {
+      type log-level;
+      default "warning";
+      description "GTPU log level (falls back to --all_level if unset)";
+    }
+    leaf f1u-level {
+      type log-level;
+      default "warning";
+      description "F1-U log level (falls back to --all_level if unset)";
+    }
+    leaf rohc-level {
+      type log-level;
+      default "warning";
+      description "ROHC log level (falls back to --all_level if unset)";
+    }
+  }
+  container buffer-pool {
+    description "Buffer pool configuration";
+    leaf nof-segments {
+      type uint64;
+      default 1048576;
+      description "Number of segments allocated by the buffer pool";
+    }
+    leaf segment-size {
+      type uint64;
+      default 2048;
+      description "Size of each buffer pool segment in bytes";
+    }
+  }
+  container metrics {
+    description "Metrics configuration";
+    container layers {
+      description "Layer basis metrics configuration";
+      leaf enable-app-usage {
+        type boolean;
+        default false;
+        description "Enable application usage metrics";
+      }
+      leaf enable-ngap {
+        type boolean;
+        default false;
+        description "Enable NGAP metrics";
+      }
+      leaf enable-pdcp {
+        type boolean;
+        default false;
+        description "Enable PDCP metrics";
+      }
+      leaf enable-rrc {
+        type boolean;
+        default false;
+        description "Enable CU-CP RRC metrics";
+      }
+      leaf enable-e1ap {
+        type boolean;
+        default false;
+        description "Enable E1AP metrics";
+      }
+      leaf enable-nrup-cu {
+        type boolean;
+        default false;
+        description "Enable NRUP metrics (CU side)";
+      }
+      leaf skip-cu-up-executor {
+        type boolean;
+        default true;
+        description "Whether to skip logging CU-UP executor metrics when executor logging is enabled application wide";
+      }
+    }
+    leaf enable-json {
+      type boolean;
+      default false;
+      description "Enable JSON metrics reporting";
+    }
+    leaf enable-log {
+      type boolean;
+      default false;
+      description "Enable log metrics reporting";
+    }
+    leaf enable-verbose {
+      type boolean;
+      default false;
+      description "Enable extended detail metrics reporting";
+    }
+    container periodicity {
+      description "Metrics periodicity configuration";
+      leaf app-usage-report-period {
+        type uint32;
+        default 1000;
+        description "Application resource usage metrics report period (in milliseconds)";
+      }
+      leaf cu-cp-report-period {
+        type uint32;
+        default 1000;
+        description "CU-CP metrics report period in milliseconds";
+      }
+      leaf cu-up-report-period {
+        type uint32;
+        default 1000;
+        description "CU-UP metrics report period in milliseconds";
+      }
+    }
+  }
+  container expert-execution {
+    description "Expert execution configuration";
+    container affinities {
+      description "Application CPU affinities configuration";
+      leaf main-pool-cpus {
+        type string;
+        default "";
+        description "CPU cores assigned to main thread pool (comma-separated CPU ids or ranges, e.g. \"0-3,5,7\")";
+      }
+      leaf main-pool-pinning {
+        type string;
+        default "mask";
+        description "Policy used for assigning CPU cores to the main thread pool (one of: mask, round-robin)";
+      }
+    }
+    container threads {
+      description "Threads configuration";
+      container main-pool {
+        description "Main thread pool configuration";
+        leaf nof-threads {
+          type uint32;
+          description "Number of threads for processing upper PHY and upper layers.";
+        }
+        leaf task-queue-size {
+          type uint32;
+          default 2048;
+          description "Main thread pool task queue size.";
+        }
+        leaf backoff-period {
+          type uint32;
+          default 50;
+          description "Main thread pool back-off period, in microseconds.";
+        }
+      }
+    }
+    container queues {
+      description "Task executor queue parameters";
+      leaf cu-up-dl-ue-executor-queue-size {
+        type uint32;
+        default 8192;
+        description "CU-UP's DL UE executor queue size";
+      }
+      leaf cu-up-ul-ue-executor-queue-size {
+        type uint32;
+        default 8192;
+        description "CU-UP's UL UE executor queue size";
+      }
+      leaf cu-up-ctrl-ue-executor-queue-size {
+        type uint32;
+        default 8192;
+        description "CU-UP's CTRL UE executor queue size";
+      }
+      leaf cu-up-strand-batch-size {
+        type uint32;
+        default 256;
+        description "CU-UP's strands batch size";
+      }
+    }
+  }
+  container remote-control {
+    description "Remote control configuration";
+    leaf enabled {
+      type boolean;
+      default false;
+      description "Enables the Remote Control Server";
+    }
+    leaf bind-addr {
+      type string;
+      default "127.0.0.1";
+      description "Remote Control Server bind address";
+    }
+    leaf port {
+      type uint16 {
+        range "0..65535";
+      }
+      default 8001;
+      description "Port where the remote control server listens for incoming connections";
+    }
+  }
+  container cu-cp {
+    description "CU-CP parameters";
+    container f1ap {
+      description "F1AP parameters";
+      leaf-list bind-addrs {
+        type string;
+        description "CU F1-C bind addresses. Multiple addresses can be specified for SCTP multi-homing";
+      }
+      leaf procedure-timeout {
+        type uint32;
+        default 1000;
+        description "Time that the F1AP waits for a DU response in milliseconds";
+      }
+      uses sctp-socket;
+    }
+    leaf max-nof-dus {
+      type uint16;
+      default 6;
+      description "Maximum number of DU connections that the CU-CP may accept";
+    }
+    leaf max-nof-cu-ups {
+      type uint16;
+      default 6;
+      description "Maximum number of CU-UP connections that the CU-CP may accept";
+    }
+    leaf max-nof-ues {
+      type uint32;
+      default 8192;
+      description "Maximum number of UEs that the CU-CP may accept";
+    }
+    leaf max-nof-drbs-per-ue {
+      type uint8 {
+        range "1..29";
+      }
+      default 8;
+      description "Maximum number of DRBs per UE";
+    }
+    leaf inactivity-timer {
+      type int32 {
+        range "1..7200";
+      }
+      default 120;
+      description "UE/PDU Session/DRB inactivity timer in seconds";
+    }
+    leaf enable-rrc-inactive {
+      type boolean;
+      default false;
+      description "Enable RRC inactive state for UEs based on inactivity timer. When disabled, UEs will be released on inactivity";
+    }
+    leaf ran-paging-cycle {
+      type enumeration {
+        enum "32";
+        enum "64";
+        enum "128";
+        enum "256";
+      }
+      default 32;
+      description "RAN Paging cycle for RRC inactive UEs in nof. Radio Frames";
+    }
+    leaf t380 {
+      type enumeration {
+        enum "5";
+        enum "10";
+        enum "20";
+        enum "30";
+        enum "60";
+        enum "120";
+        enum "360";
+        enum "720";
+      }
+      default 10;
+      description "RRC inactivity timer T380 in minutes. The timer is started when the UE recveives a RRC Release message including a suspend config and is stopped on the reception of RRCResume.";
+    }
+    leaf nof-i-rnti-ue-bits {
+      type uint8 {
+        range "1..18";
+      }
+      default 13;
+      description "Number of bits used for the UE id in short and full I-RNTI";
+    }
+    leaf request-pdu-session-timeout {
+      type uint32;
+      default 3;
+      description "Timeout for requesting a PDU session after the InitialUeMessage was sent to the core, in seconds. The timeout must be larger than T310. If the value is reached, the UE will be released. (must be larger than T310)";
+    }
+    container amf {
+      description "AMF configuration";
+      leaf no-core {
+        type boolean;
+        default false;
+        description "Allow CU-CP to run without a core";
+      }
+      leaf amf-reconnection-retry-time {
+        type uint32;
+        default 1000;
+        description "Time to wait after a failed AMF reconnection attempt in ms";
+      }
+      leaf procedure-timeout {
+        type uint32;
+        default 5000;
+        description "Time that the NGAP waits for a response from the AMF in milliseconds";
+      }
+      leaf-list addrs {
+        type string;
+        description "AMF addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing (--addr is the legacy alias of --addrs; kept for backward compatibility)";
+      }
+      leaf port {
+        type uint16 {
+          range "20000..40000";
+        }
+        default 38412;
+        description "AMF port";
+      }
+      leaf-list bind-addrs {
+        type string;
+        description "CU-CP bind addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed (--bind_addr is the legacy alias of --bind_addrs; kept for backward compatibility)";
+      }
+      leaf bind-interface {
+        type string;
+        default "auto";
+        description "Network device to bind for N2 interface";
+      }
+      list supported-tracking-areas {
+        key "tac";
+        description "Sets the list of tracking areas supported by this AMF";
+        leaf tac {
+          type uint32 {
+            range "0..16777215";
+          }
+          default 0;
+          description "TAC to be configured (values 0 and 0xfffffe are reserved)";
+        }
+        list plmn-list {
+          key "plmn";
+          description "Sets the list of PLMN items for this tracking area";
+          leaf plmn {
+            type string;
+            default "";
+            description "PLMN to be configured";
+          }
+          list tai-slice-support-list {
+            key "sst";
+            description "Sets the list of TAI slices for this PLMN";
+            leaf sst {
+              type uint8 {
+                range "0..255";
+              }
+              default 0;
+              description "Slice Service Type";
+            }
+            leaf sd {
+              type uint32 {
+                range "0..16777215";
+              }
+              default 16777215;
+              description "Service Differentiator";
+            }
+          }
+        }
+      }
+      uses sctp-socket;
+    }
+    list extra-amfs {
+      // WARNING: no key designated; YANG list requires `key`. Use .key("...") at declaration.
+      description "Sets the list of extra AMFs for the CU-CP to connect to";
+      leaf-list addrs {
+        type string;
+        description "AMF addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing (--addr is the legacy alias of --addrs; kept for backward compatibility)";
+      }
+      leaf port {
+        type uint16 {
+          range "20000..40000";
+        }
+        default 38412;
+        description "AMF port";
+      }
+      leaf-list bind-addrs {
+        type string;
+        description "CU-CP bind addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed (--bind_addr is the legacy alias of --bind_addrs; kept for backward compatibility)";
+      }
+      leaf bind-interface {
+        type string;
+        default "auto";
+        description "Network device to bind for N2 interface";
+      }
+      list supported-tracking-areas {
+        key "tac";
+        description "Sets the list of tracking areas supported by this AMF";
+        leaf tac {
+          type uint32 {
+            range "0..16777215";
+          }
+          default 0;
+          description "TAC to be configured (values 0 and 0xfffffe are reserved)";
+        }
+        list plmn-list {
+          key "plmn";
+          description "Sets the list of PLMN items for this tracking area";
+          leaf plmn {
+            type string;
+            default "";
+            description "PLMN to be configured";
+          }
+          list tai-slice-support-list {
+            key "sst";
+            description "Sets the list of TAI slices for this PLMN";
+            leaf sst {
+              type uint8 {
+                range "0..255";
+              }
+              default 0;
+              description "Slice Service Type";
+            }
+            leaf sd {
+              type uint32 {
+                range "0..16777215";
+              }
+              default 16777215;
+              description "Service Differentiator";
+            }
+          }
+        }
+      }
+      uses sctp-socket;
+    }
+    container xnap {
+      description "XNAP configuration";
+      leaf procedure-timeout {
+        type uint32;
+        default 5000;
+        description "Time that the XNAP waits for a response in milliseconds";
+      }
+      leaf reconnect-timer {
+        type uint32;
+        default 10000;
+        description "Time that the XNAP waits before trying to reconnect in milliseconds";
+      }
+      leaf no-connection-init {
+        type boolean;
+        default false;
+        description "When true, the CU-CP will not initiate XNAP connections, but will only accept inbound ones (hidden from --help in legacy CLI11 view)";
+      }
+      list connections {
+        // WARNING: no key designated; YANG list requires `key`. Use .key("...") at declaration.
+        description "Sets the list of XN-C peer CU-CPs for the CU-CP to connect to";
+        leaf-list bind-addrs {
+          type string;
+          description "Local IP addresses to bind for XNAP interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed";
+        }
+        leaf-list peer-addrs {
+          type string;
+          description "Peer IP addresses to connect for XNAP interface";
+        }
+      }
+      uses sctp-socket;
+    }
+    container mobility {
+      description "Mobility configuration";
+      leaf trigger-handover-from-measurements {
+        type boolean;
+        default false;
+        description "Whether to start HO if neighbor cells become stronger";
+      }
+      leaf trigger-cho-on-ue-setup {
+        type boolean;
+        default false;
+        description "Whether to auto-trigger CHO after UE setup when readiness checks pass";
+      }
+      leaf cho-timeout-ms {
+        type uint32 {
+          range "1..600000";
+        }
+        default 10000;
+        description "Timeout in milliseconds used for auto-triggered CHO and as default timeout for manual CHO command";
+      }
+      list cells {
+        key "nr-cell-id";
+        description "Sets the list of cells known to the CU-CP";
+        leaf nr-cell-id {
+          type uint64 {
+            range "0..68719476735";
+          }
+          default 0;
+          description "Cell id to be configured";
+        }
+        leaf periodic-report-cfg-id {
+          type uint32 {
+            range "1..64";
+          }
+          description "Periodical report configuration for the serving cell";
+        }
+        leaf band {
+          type int32;
+          default auto;
+          description "NR frequency band (set to \"auto\" to auto-derive)";
+        }
+        leaf gnb-id-bit-length {
+          type uint32 {
+            range "22..32";
+          }
+          description "gNodeB identifier bit length. If not set, it will be automatically set to be equal to the gNodeB Id of the CU-CP";
+        }
+        leaf pci {
+          type uint16 {
+            range "0..1007";
+          }
+          description "Physical Cell Id";
+        }
+        leaf ssb-arfcn {
+          type string;
+          default "";
+          description "SSB ARFCN (integer in [0, 3279165])";
+        }
+        leaf ssb-scs {
+          type enumeration {
+            enum "15";
+            enum "30";
+            enum "60";
+            enum "120";
+            enum "240";
+          }
+          description "SSB subcarrier spacing";
+        }
+        leaf ssb-period {
+          type enumeration {
+            enum "5";
+            enum "10";
+            enum "20";
+            enum "40";
+            enum "80";
+            enum "160";
+          }
+          description "SSB period in ms";
+        }
+        leaf ssb-offset {
+          type uint32;
+          description "SSB offset";
+        }
+        leaf ssb-duration {
+          type enumeration {
+            enum "1";
+            enum "2";
+            enum "3";
+            enum "4";
+            enum "5";
+          }
+          description "SSB duration";
+        }
+        list ncells {
+          key "nr-cell-id";
+          description "Sets the list of neighbor cells known to the CU-CP";
+          leaf nr-cell-id {
+            type uint64 {
+              range "0..68719476735";
+            }
+            default 0;
+            description "Neighbor cell id";
+          }
+          leaf-list report-configs {
+            type uint64;
+            description "Report configurations to configure for this neighbor cell";
+          }
+        }
+      }
+      list report-configs {
+        key "report-cfg-id";
+        description "Sets report configurations";
+        leaf report-cfg-id {
+          type uint32 {
+            range "1..64";
+          }
+          default 0;
+          description "Report configuration id to be configured";
+        }
+        leaf report-type {
+          type enumeration {
+            enum "periodical";
+            enum "event_triggered";
+            enum "cond_trigger";
+          }
+          default "";
+          description "Type of the report configuration";
+        }
+        leaf event-triggered-report-type {
+          type string;
+          default "";
+          description "Type of the event triggered report (one of {a1, a2, a3, a4, a5, a6, d1, t1, d2})";
+        }
+        leaf report-interval-ms {
+          type enumeration {
+            enum "120";
+            enum "240";
+            enum "480";
+            enum "640";
+            enum "1024";
+            enum "2048";
+            enum "5120";
+            enum "10240";
+            enum "20480";
+            enum "40960";
+            enum "60000";
+            enum "360000";
+            enum "720000";
+            enum "1800000";
+          }
+          default 0;
+          description "Report interval in ms";
+        }
+        leaf periodic-ho-rsrp-offset-db {
+          type int32 {
+            range "-1..30";
+          }
+          default -1;
+          description "Measurement trigger quantity offset in dB used to trigger handovers by periodic measurement reports. When set to -1 no handover will be triggered from periodical measurements. Note the actual value is field value * 0.5 dB";
+        }
+        leaf meas-trigger-quantity {
+          type string;
+          default "";
+          description "Measurement trigger quantity (RSRP/RSRQ/SINR) (one of {rsrp, rsrq, sinr})";
+        }
+        leaf meas-trigger-quantity-threshold-db {
+          type int32 {
+            range "-156..40";
+          }
+          description "Measurement trigger quantity threshold in dB used for measurement report trigger of event A1/A2/A4/A5Valid ranges: RSRP [-156..-31] dBm, RSRQ [-43..20] dB, SINR [-23..40] dB";
+        }
+        leaf meas-trigger-quantity-threshold-2-db {
+          type int32 {
+            range "-156..40";
+          }
+          description "Measurement trigger quantity threshold 2 in dB used for measurement report trigger of event A5Valid ranges: RSRP [-156..-31] dBm, RSRQ [-43..20] dB, SINR [-23..40] dB";
+        }
+        leaf meas-trigger-quantity-offset-db {
+          type int32 {
+            range "-15..15";
+          }
+          description "Measurement trigger quantity offset in dB used for measurement report trigger of event A3/A6.";
+        }
+        leaf hysteresis-db {
+          type uint32 {
+            range "0..15";
+          }
+          description "Hysteresis in dB used for measurement report trigger.";
+        }
+        leaf time-to-trigger-ms {
+          type enumeration {
+            enum "0";
+            enum "40";
+            enum "64";
+            enum "80";
+            enum "100";
+            enum "128";
+            enum "160";
+            enum "256";
+            enum "320";
+            enum "480";
+            enum "512";
+            enum "640";
+            enum "1024";
+            enum "1280";
+            enum "2560";
+            enum "5120";
+          }
+          description "Time in ms during which a condition must be met before measurement report trigger";
+        }
+        leaf t312 {
+          type enumeration {
+            enum "0";
+            enum "50";
+            enum "100";
+            enum "200";
+            enum "300";
+            enum "400";
+            enum "500";
+            enum "1000";
+          }
+          description "T312 timer in ms. This timer is started by the UE on event triggered measurement report, when T310 (out-of-sync) timer is already running and on its expiration triggers the RLF to speed up reestablishment to different cell.";
+        }
+        leaf distance-thresh-from-ref1-km {
+          type decimal64 {
+            fraction-digits 6;
+            range "0..3276.75";
+          }
+          description "D1/D2: distance threshold 1 in km [0..3276.75] (50m steps, D1 max is 3276.25)";
+        }
+        leaf distance-thresh-from-ref2-km {
+          type decimal64 {
+            fraction-digits 6;
+            range "0..3276.75";
+          }
+          description "D1/D2: distance threshold 2 in km [0..3276.75] (50m steps, D1 max is 3276.25)";
+        }
+        leaf hysteresis-location-km {
+          type decimal64 {
+            fraction-digits 6;
+            range "0..327.68";
+          }
+          description "D1/D2: location hysteresis in km [0..327.68] (10m steps)";
+        }
+        container ref-location1 {
+          description "D1: reference location 1 (serving cell)";
+          leaf latitude {
+            type string;
+            default "";
+            description "Latitude [degrees, -90..90] (decimal number in [-90, 90])";
+          }
+          leaf longitude {
+            type string;
+            default "";
+            description "Longitude [degrees, -180..180] (decimal number in [-180, 180])";
+          }
+        }
+        container ref-location2 {
+          description "D1: reference location 2 (target cell)";
+          leaf latitude {
+            type string;
+            default "";
+            description "Latitude [degrees, -90..90] (decimal number in [-90, 90])";
+          }
+          leaf longitude {
+            type string;
+            default "";
+            description "Longitude [degrees, -180..180] (decimal number in [-180, 180])";
+          }
+        }
+        leaf t1-thres {
+          type string;
+          default "";
+          description "T1: time threshold (Unix ms integer or YYYY-MM-DDTHH:MM:SS[.mmm]) (Unix time in ms or ISO 8601 YYYY-MM-DDTHH:MM:SS[.mmm])";
+        }
+        leaf duration-s {
+          type string;
+          default "";
+          description "T1: duration in seconds (each step=100ms, range [0.1..600]) (decimal number in [0.1, 600])";
+        }
+      }
+    }
+    container rrc {
+      description "RRC specific configuration";
+      leaf force-reestablishment-fallback {
+        type boolean;
+        default false;
+        description "Force RRC re-establishment fallback to RRC setup";
+      }
+      leaf force-resume-fallback {
+        type boolean;
+        default false;
+        description "Force RRC resume fallback to RRC setup";
+      }
+      leaf rrc-procedure-guard-time-ms {
+        type uint32;
+        default 1000;
+        description "Guard time in ms used for RRC message exchange with UE. This is added to the RRC procedure timeout.";
+      }
+    }
+    container security {
+      description "Security configuration";
+      leaf integrity {
+        type enumeration {
+          enum "required";
+          enum "preferred";
+          enum "not_needed";
+        }
+        default "not_needed";
+        description "Default integrity protection indication for DRBs";
+      }
+      leaf confidentiality {
+        type enumeration {
+          enum "required";
+          enum "preferred";
+          enum "not_needed";
+        }
+        default "required";
+        description "Default confidentiality protection indication for DRBs";
+      }
+      leaf nea-pref-list {
+        type string;
+        default "nea0,nea2,nea1,nea3";
+        description "Ordered preference list for the selection of encryption algorithm (NEA) (default: NEA0, NEA2, NEA1)";
+      }
+      leaf nia-pref-list {
+        type string;
+        default "nia2,nia1,nia3";
+        description "Ordered preference list for the selection of encryption algorithm (NIA) (default: NIA2, NIA1)";
+      }
+    }
+    container e1ap {
+      description "E1AP configuration parameters";
+      leaf procedure-timeout {
+        type uint32;
+        default 1000;
+        description "Time that the E1AP waits for a CU-UP response in milliseconds";
+      }
+    }
+  }
+  container cu-up {
+    description "CU-UP parameters";
+    container f1u {
+      description "F1-U parameters";
+      leaf bind-port {
+        type uint16;
+        default 2152;
+        description "F1-U bind port";
+      }
+      leaf peer-port {
+        type uint16;
+        default 2152;
+        description "F1-U peer port";
+      }
+      list socket {
+        // WARNING: no key designated; YANG list requires `key`. Use .key("...") at declaration.
+        description "Configures UDP/IP socket parameters of the F1-U interface";
+        leaf bind-addr {
+          type string;
+          default "127.0.10.1";
+          description "Default local IP address interfaces bind to, unless a specific bind address is specified (must be a valid IPv4 address)";
+        }
+        leaf sst {
+          type uint8 {
+            range "0..255";
+          }
+          description "Slice Service Type";
+        }
+        leaf sd {
+          type uint32 {
+            range "0..16777214";
+          }
+          description "Service Differentiator";
+        }
+        leaf five-qi {
+          type uint16 {
+            range "0..255";
+          }
+          description "Assign this socket to a specific 5QI";
+        }
+        leaf ext-addr {
+          type string;
+          default "auto";
+          description "External IP address that is advertised for receiving UDP packets. (must be a valid IPv4 address or \"auto\")";
+        }
+        container udp {
+          description "UDP parameters";
+          leaf max-rx-msgs {
+            type uint32;
+            default 256;
+            description "Maximum amount of messages RX in a single syscall";
+          }
+          leaf tx-qsize {
+            type uint32;
+            default 4096;
+            description "Size of TX queue used for batching SDUs.";
+          }
+          leaf max-tx-msgs {
+            type uint32;
+            default 256;
+            description "Maximum amount of messages TX in a single syscall";
+          }
+          leaf max-tx-segments {
+            type uint32;
+            default 256;
+            description "Maximum amount of segments TX in a single SDU";
+          }
+          leaf pool-threshold {
+            type decimal64 {
+              fraction-digits 6;
+            }
+            default 0.9;
+            description "Pool accupancy threshold after which packets are dropped";
+          }
+          leaf reuse-addr {
+            type boolean;
+            default false;
+            description "Allow multiple sockets to bind to the same port.";
+          }
+          leaf dscp {
+            type uint32 {
+              range "0..63";
+            }
+            description "Differentiated Services Code Point value.";
+          }
+        }
+      }
+    }
+    container ngu {
+      description "NG-U parameters";
+      leaf no-core {
+        type boolean;
+        default false;
+        description "Allow gNB to run without a core";
+      }
+      container gtpu {
+        description "CU-UP NG-U GTP-U parameters";
+        leaf queue-size {
+          type uint32;
+          default 2046;
+          description "GTP-U queue size, in PDUs";
+        }
+        leaf batch-size {
+          type uint32;
+          default 256;
+          description "Maximum number of GTP-U PDUs processed in a batch";
+        }
+        leaf reordering-timer {
+          type uint32;
+          default 0;
+          description "GTP-U RX reordering timer (in milliseconds)";
+        }
+        leaf rate-limiter-period {
+          type int64;
+          default 100;
+          description "GTP-U RX rate limiter period (in milliseconds)";
+        }
+        leaf teid-release-linger-time {
+          type int64;
+          default 100;
+          description "Error indication suppression time for released TEIDs (in milliseconds)";
+        }
+        leaf ignore-ue-ambr {
+          type boolean;
+          default true;
+          description "Ignore GTP-U DL UE-AMBR rate limiter";
+        }
+      }
+      list socket {
+        // WARNING: no key designated; YANG list requires `key`. Use .key("...") at declaration.
+        description "Configures UDP/IP socket parameters of the N3 interface";
+        leaf bind-addr {
+          type string;
+          default "127.0.0.1";
+          description "Local IP address to bind for N3 interface (must be a valid IPv4 address or \"auto\")";
+        }
+        leaf bind-interface {
+          type string;
+          default "auto";
+          description "Network device to bind for N3 interface";
+        }
+        leaf ext-addr {
+          type string;
+          default "auto";
+          description "External IP address that is advertised to receive GTP-U packets from UPF via N3 interface (must be a valid IPv4 address or \"auto\") (must be a valid IPv4 address or \"auto\")";
+        }
+        container udp {
+          description "UDP parameters";
+          leaf max-rx-msgs {
+            type uint32;
+            default 256;
+            description "Maximum amount of messages RX in a single syscall";
+          }
+          leaf tx-qsize {
+            type uint32;
+            default 4096;
+            description "Size of TX queue used for batching SDUs.";
+          }
+          leaf max-tx-msgs {
+            type uint32;
+            default 256;
+            description "Maximum amount of messages TX in a single syscall";
+          }
+          leaf max-tx-segments {
+            type uint32;
+            default 256;
+            description "Maximum amount of segments TX in a single SDU";
+          }
+          leaf pool-threshold {
+            type decimal64 {
+              fraction-digits 6;
+            }
+            default 0.9;
+            description "Pool accupancy threshold after which packets are dropped";
+          }
+          leaf reuse-addr {
+            type boolean;
+            default false;
+            description "Allow multiple sockets to bind to the same port.";
+          }
+          leaf dscp {
+            type uint32 {
+              range "0..63";
+            }
+            description "Differentiated Services Code Point value.";
+          }
+        }
+      }
+    }
+    container test-mode {
+      description "CU-UP test mode parameters";
+      leaf enable {
+        type boolean;
+        default false;
+        description "Enable or disable CU-UP test mode";
+      }
+      leaf integrity-enable {
+        type boolean;
+        default true;
+        description "Enable or disable PDCP integrity testing";
+      }
+      leaf ciphering-enable {
+        type boolean;
+        default true;
+        description "Enable or disable PDCP ciphering testing";
+      }
+      leaf nea-algo {
+        type uint16 {
+          range "0..3";
+        }
+        default 2;
+        description "NEA algo to use for testing. Valid values {0, 1, 2, 3}.";
+      }
+      leaf nia-algo {
+        type uint16 {
+          range "1..3";
+        }
+        default 2;
+        description "NIA algo to use for testing. Valid values {1, 2, 3}.";
+      }
+      leaf ue-ambr {
+        type uint64;
+        default 40000000000;
+        description "DL UE-AMBR used for testing in bps";
+      }
+      leaf attach-detach-period {
+        type int64;
+        default 0;
+        description "Attach/detach period for test mode. 0 means always attached";
+      }
+      leaf reestablish-period {
+        type int64;
+        default 0;
+        description "Reestablish period for test mode. 0 means always attached";
+      }
+      leaf f1u-peer-address {
+        type string;
+        default "127.0.10.2";
+        description "Address for DL F1-U packets for test mode";
+      }
+      leaf nof-ues {
+        type uint32;
+        default 1;
+        description "Number of UEs used for test mode";
+      }
+    }
+    leaf warn-on-drop {
+      type boolean;
+      default false;
+      description "Log a warning for dropped packets in GTP-U, SDAP, PDCP and F1-U due to full queues";
+    }
+    leaf max-nof-ues {
+      type uint32 {
+        range "1..65536";
+      }
+      default 16384;
+      description "Maximum number of Bearer Contexts allowed by the CU-UP";
+    }
+  }
+  leaf gnb-id {
+    type uint32;
+    default 411;
+    description "gNodeB identifier";
+  }
+  leaf gnb-id-bit-length {
+    type uint8 {
+      range "22..32";
+    }
+    default 22;
+    description "gNodeB identifier length in bits";
+  }
+  leaf ran-node-name {
+    type string;
+    default "ocucp01";
+    description "RAN node name";
+  }
+  container pcap {
+    description "PCAP configuration";
+    leaf ngap-filename {
+      type string;
+      default "/tmp/cu_ngap.pcap";
+      description "N3 GTP-U PCAP file output path";
+    }
+    leaf ngap-enable {
+      type boolean;
+      default false;
+      description "Enable N3 GTP-U packet capture";
+    }
+    leaf xnap-filename {
+      type string;
+      default "/tmp/cu_xnap.pcap";
+      description "XNAP PCAP file output path";
+    }
+    leaf xnap-enable {
+      type boolean;
+      default false;
+      description "Enable XNAP packet capture";
+    }
+    leaf f1ap-filename {
+      type string;
+      default "/tmp/cu_f1ap.pcap";
+      description "F1AP PCAP file output path";
+    }
+    leaf f1ap-enable {
+      type boolean;
+      default false;
+      description "Enable F1AP packet capture";
+    }
+    leaf e1ap-filename {
+      type string;
+      default "/tmp/cu_e1ap.pcap";
+      description "E1AP PCAP file output path";
+    }
+    leaf e1ap-enable {
+      type boolean;
+      default false;
+      description "Enable E1AP packet capture";
+    }
+    leaf e2ap-cu-cp-filename {
+      type string;
+      default "/tmp/cu_cp_e2ap.pcap";
+      description "E2AP PCAP file output path";
+    }
+    leaf e2ap-enable {
+      type boolean;
+      default false;
+      description "Enable E2AP packet capture";
+    }
+    leaf n3-filename {
+      type string;
+      default "/tmp/cu_n3.pcap";
+      description "N3 GTP-U PCAP file output path";
+    }
+    leaf n3-enable {
+      type boolean;
+      default false;
+      description "Enable N3 GTP-U packet capture";
+    }
+    leaf f1u-filename {
+      type string;
+      default "/tmp/cu_f1u.pcap";
+      description "F1-U GTP-U PCAP file output path";
+    }
+    leaf f1u-enable {
+      type boolean;
+      default false;
+      description "F1-U GTP-U PCAP";
+    }
+    leaf e2ap-cu-up-filename {
+      type string;
+      default "/tmp/cu_up_e2ap.pcap";
+      description "E2AP PCAP file output path";
+    }
+  }
+  list qos {
+    key "five-qi";
+    description "Configures RLC and PDCP radio bearers on a per 5QI basis.";
+    leaf five-qi {
+      type uint16 {
+        range "0..255";
+      }
+      default 9;
+      description "5QI";
+    }
+    container rlc {
+      description "RLC parameters";
+      leaf mode {
+        type string;
+        default "am";
+        description "RLC mode";
+      }
+      container um-bidir {
+        description "UM parameters";
+        container tx {
+          description "UM TX parameters";
+          leaf sn {
+            type uint16;
+            default 0;
+            description "RLC UM TX SN";
+          }
+          leaf queue-size {
+            type uint32;
+            default 0;
+            description "RLC UM TX SDU queue size";
+          }
+        }
+        container rx {
+          description "UM RX parameters";
+          leaf sn {
+            type uint16;
+            default 0;
+            description "RLC UM RX SN";
+          }
+          leaf t-reassembly {
+            type int32;
+            default 0;
+            description "RLC UM t-Reassembly";
+          }
+        }
+      }
+      container am {
+        description "AM parameters";
+        container tx {
+          description "AM TX parameters";
+          leaf sn {
+            type uint16;
+            default 0;
+            description "RLC AM TX SN size";
+          }
+          leaf t-poll-retransmit {
+            type int32;
+            default 0;
+            description "RLC AM TX t-PollRetransmit (ms)";
+          }
+          leaf max-retx-threshold {
+            type uint32;
+            default 0;
+            description "RLC AM max retx threshold";
+          }
+          leaf poll-pdu {
+            type int32;
+            default 0;
+            description "RLC AM TX PollPdu";
+          }
+          leaf poll-byte {
+            type int32;
+            default 0;
+            description "RLC AM TX PollByte";
+          }
+          leaf max-window {
+            type uint32;
+            default 0;
+            description "Non-standard parameter that limits the tx window size. Can be used for limiting memory usage with large windows. 0 means no limits other than the SN size (i.e. 2^[sn_size-1]).";
+          }
+          leaf queue-size {
+            type uint32;
+            default 4096;
+            description "RLC AM TX SDU queue size";
+          }
+        }
+        container rx {
+          description "AM RX parameters";
+          leaf sn {
+            type uint16;
+            default 0;
+            description "RLC AM RX SN";
+          }
+          leaf t-reassembly {
+            type int32;
+            default 0;
+            description "RLC AM RX t-Reassembly";
+          }
+          leaf t-status-prohibit {
+            type int32;
+            default 0;
+            description "RLC AM RX t-StatusProhibit";
+          }
+          leaf max-sn-per-status {
+            type uint32;
+            default 0;
+            description "RLC AM RX status SN limit";
+          }
+        }
+      }
+    }
+    container pdcp {
+      description "PDCP parameters";
+      container rohc {
+        description "Header compression parameters";
+        leaf rohc-type {
+          type enumeration {
+            enum "none";
+            enum "rohc";
+            enum "uplink_only_rohc";
+          }
+          default "none";
+          description "ROHC type (none/rohc/ul_only_rohc). Values: {none, rohc, ul_only_rohc}. Default: none";
+        }
+        leaf max-cid {
+          type uint16;
+          default 15;
+          description "Maximum CID";
+        }
+        leaf profile0x0001 {
+          type boolean;
+          default false;
+          description "Configure profile0x0001 (ROHCv1 RTP/UDP/IP)";
+        }
+        leaf profile0x0002 {
+          type boolean;
+          default false;
+          description "Configure profile0x0002 (ROHCv1 UDP/IP)";
+        }
+        leaf profile0x0003 {
+          type boolean;
+          default false;
+          description "Configure profile0x0003 (ROHCv1 ESP/IP)";
+        }
+        leaf profile0x0004 {
+          type boolean;
+          default false;
+          description "Configure profile0x0004 (ROHCv1 IP)";
+        }
+        leaf profile0x0006 {
+          type boolean;
+          default false;
+          description "Configure profile0x0006 (ROHCv1 TCP/IP)";
+        }
+        leaf profile0x0101 {
+          type boolean;
+          default false;
+          description "Configure profile0x0101 (ROHCv2 RTP/UDP/IP)";
+        }
+        leaf profile0x0102 {
+          type boolean;
+          default false;
+          description "Configure profile0x0102 (ROHCv2 UDP/IP)";
+        }
+        leaf profile0x0103 {
+          type boolean;
+          default false;
+          description "Configure profile0x0103 (ROHCv2 ESP/IP)";
+        }
+        leaf profile0x0104 {
+          type boolean;
+          default false;
+          description "Configure profile0x0104 (ROHCv2 IP)";
+        }
+      }
+      container tx {
+        description "PDCP TX parameters";
+        leaf sn {
+          type uint16;
+          default 0;
+          description "PDCP TX SN size";
+        }
+        leaf discard-timer {
+          type int32;
+          default 0;
+          description "PDCP TX discard timer (ms)";
+        }
+        leaf status-report-required {
+          type boolean;
+          default false;
+          description "PDCP TX status report required";
+        }
+      }
+      container rx {
+        description "PDCP RX parameters";
+        leaf sn {
+          type uint16;
+          default 0;
+          description "PDCP RX SN size";
+        }
+        leaf t-reordering {
+          type int32;
+          default 0;
+          description "PDCP RX t-Reordering (ms)";
+        }
+        leaf out-of-order-delivery {
+          type boolean;
+          default false;
+          description "PDCP RX enable out-of-order delivery";
+        }
+      }
+    }
+  }
+  container e2 {
+    description "E2 parameters";
+    leaf enable-cu-cp-e2 {
+      type boolean;
+      default false;
+      description "Enable CU E2 agent";
+    }
+    leaf-list addrs {
+      type string;
+      description "RIC addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing";
+    }
+    leaf port {
+      type uint16 {
+        range "20000..40000";
+      }
+      default 36421;
+      description "RIC port";
+    }
+    leaf-list bind-addrs {
+      type string;
+      description "Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed";
+    }
+    leaf e2sm-kpm-enabled {
+      type boolean;
+      default false;
+      description "Enable KPM service module";
+    }
+    leaf e2sm-rc-enabled {
+      type boolean;
+      default false;
+      description "Enable RC service module";
+    }
+    leaf e2sm-ccc-enabled {
+      type boolean;
+      default false;
+      description "Enable CCC service module";
+    }
+    leaf enable-cu-up-e2 {
+      type boolean;
+      default false;
+      description "Enable CU-UP E2 agent";
+    }
+    uses sctp-socket;
+  }
+  leaf gnb-cu-up-id {
+    type uint64 {
+      range "0..68719476735";
+    }
+    default 0;
+    description "gNB-CU-UP Id";
+  }
+  container trace {
+    description "General tracer configuration";
+    container layers {
+      description "Metrics configuration";
+      leaf cu-up-enable {
+        type boolean;
+        default false;
+        description "Enable tracing for CU-UP executors";
+      }
+    }
+  }
+  list qos {
+    key "five-qi";
+    description "Configures RLC and PDCP radio bearers on a per 5QI basis.";
+    leaf five-qi {
+      type uint16 {
+        range "0..255";
+      }
+      default 9;
+      description "5QI";
+    }
+    container f1u-cu-up {
+      description "F1-U parameters at CU_UP side";
+      leaf backoff-timer {
+        type int32;
+        default 5;
+        description "F1-U backoff timer (ms)";
+      }
+      leaf queue-size {
+        type uint32;
+        default 8192;
+        description "F1-U backoff timer (ms)";
+      }
+      leaf batch-size {
+        type uint32;
+        default 256;
+        description "F1-U backoff timer (ms)";
+      }
+    }
+  }
+}
+

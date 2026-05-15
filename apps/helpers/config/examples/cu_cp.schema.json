@@ -1,0 +1,1461 @@
+{
+  "$defs": {
+    "log-level": {
+      "enum": [
+        "none",
+        "error",
+        "warning",
+        "info",
+        "debug"
+      ],
+      "type": "string"
+    },
+    "sctp-socket": {
+      "properties": {
+        "sctp_assoc_max_retx": {
+          "default": 10,
+          "description": "SCTP association max retransmissions (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_hb_interval": {
+          "default": 30000,
+          "description": "SCTP heartbeat interval in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_init_max_attempts": {
+          "default": 3,
+          "description": "SCTP init max attempts (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_max_init_timeo": {
+          "default": 500,
+          "description": "SCTP max init timeout in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_nodelay": {
+          "default": false,
+          "description": "Send SCTP messages as soon as possible without any Nagle-like algorithm",
+          "type": "boolean"
+        },
+        "sctp_rto_initial": {
+          "default": 120,
+          "description": "SCTP initial RTO value in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_rto_max": {
+          "default": 500,
+          "description": "SCTP RTO max in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_rto_min": {
+          "default": 120,
+          "description": "SCTP RTO min in milliseconds (-1 to use system default)",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "buffer_pool": {
+      "description": "Buffer pool configuration",
+      "properties": {
+        "nof_segments": {
+          "default": 1048576,
+          "description": "Number of segments allocated by the buffer pool",
+          "type": "integer"
+        },
+        "segment_size": {
+          "default": 2048,
+          "description": "Size of each buffer pool segment in bytes",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "cu_cp": {
+      "description": "CU-CP parameters",
+      "properties": {
+        "amf": {
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "$ref": "#/$defs/sctp-socket",
+              "description": "SCTP socket parameters"
+            }
+          ],
+          "description": "AMF configuration",
+          "properties": {
+            "addrs": {
+              "description": "AMF addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing (--addr is the legacy alias of --addrs; kept for backward compatibility)",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "amf_reconnection_retry_time": {
+              "default": 1000,
+              "description": "Time to wait after a failed AMF reconnection attempt in ms",
+              "type": "integer"
+            },
+            "bind_addrs": {
+              "description": "CU-CP bind addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed (--bind_addr is the legacy alias of --bind_addrs; kept for backward compatibility)",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "bind_interface": {
+              "default": "auto",
+              "description": "Network device to bind for N2 interface",
+              "type": "string"
+            },
+            "no_core": {
+              "default": false,
+              "description": "Allow CU-CP to run without a core",
+              "type": "boolean"
+            },
+            "port": {
+              "default": 38412,
+              "description": "AMF port",
+              "maximum": 40000.0,
+              "minimum": 20000.0,
+              "type": "integer"
+            },
+            "procedure_timeout": {
+              "default": 5000,
+              "description": "Time that the NGAP waits for a response from the AMF in milliseconds",
+              "type": "integer"
+            },
+            "supported_tracking_areas": {
+              "description": "Sets the list of tracking areas supported by this AMF",
+              "items": {
+                "properties": {
+                  "plmn_list": {
+                    "description": "Sets the list of PLMN items for this tracking area",
+                    "items": {
+                      "properties": {
+                        "plmn": {
+                          "default": "",
+                          "description": "PLMN to be configured",
+                          "type": "string"
+                        },
+                        "tai_slice_support_list": {
+                          "description": "Sets the list of TAI slices for this PLMN",
+                          "items": {
+                            "properties": {
+                              "sd": {
+                                "default": 16777215,
+                                "description": "Service Differentiator",
+                                "maximum": 16777215.0,
+                                "minimum": 0.0,
+                                "type": "integer"
+                              },
+                              "sst": {
+                                "default": 0,
+                                "description": "Slice Service Type",
+                                "maximum": 255.0,
+                                "minimum": 0.0,
+                                "type": "integer"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "tac": {
+                    "default": 0,
+                    "description": "TAC to be configured (values 0 and 0xfffffe are reserved)",
+                    "maximum": 16777215.0,
+                    "minimum": 0.0,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "e1ap": {
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "$ref": "#/$defs/sctp-socket",
+              "description": "SCTP socket parameters"
+            }
+          ],
+          "description": "E1AP parameters",
+          "properties": {
+            "bind_addrs": {
+              "description": "E1 bind addresses",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "procedure_timeout": {
+              "default": 1000,
+              "description": "Time that the E1AP waits for a CU-UP response in milliseconds",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "enable_rrc_inactive": {
+          "default": false,
+          "description": "Enable RRC inactive state for UEs based on inactivity timer. When disabled, UEs will be released on inactivity",
+          "type": "boolean"
+        },
+        "extra_amfs": {
+          "description": "Sets the list of extra AMFs for the CU-CP to connect to",
+          "items": {
+            "additionalProperties": true,
+            "allOf": [
+              {
+                "$ref": "#/$defs/sctp-socket",
+                "description": "SCTP socket parameters"
+              }
+            ],
+            "properties": {
+              "addrs": {
+                "description": "AMF addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing (--addr is the legacy alias of --addrs; kept for backward compatibility)",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "bind_addrs": {
+                "description": "CU-CP bind addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed (--bind_addr is the legacy alias of --bind_addrs; kept for backward compatibility)",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "bind_interface": {
+                "default": "auto",
+                "description": "Network device to bind for N2 interface",
+                "type": "string"
+              },
+              "port": {
+                "default": 38412,
+                "description": "AMF port",
+                "maximum": 40000.0,
+                "minimum": 20000.0,
+                "type": "integer"
+              },
+              "supported_tracking_areas": {
+                "description": "Sets the list of tracking areas supported by this AMF",
+                "items": {
+                  "properties": {
+                    "plmn_list": {
+                      "description": "Sets the list of PLMN items for this tracking area",
+                      "items": {
+                        "properties": {
+                          "plmn": {
+                            "default": "",
+                            "description": "PLMN to be configured",
+                            "type": "string"
+                          },
+                          "tai_slice_support_list": {
+                            "description": "Sets the list of TAI slices for this PLMN",
+                            "items": {
+                              "properties": {
+                                "sd": {
+                                  "default": 16777215,
+                                  "description": "Service Differentiator",
+                                  "maximum": 16777215.0,
+                                  "minimum": 0.0,
+                                  "type": "integer"
+                                },
+                                "sst": {
+                                  "default": 0,
+                                  "description": "Slice Service Type",
+                                  "maximum": 255.0,
+                                  "minimum": 0.0,
+                                  "type": "integer"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "tac": {
+                      "default": 0,
+                      "description": "TAC to be configured (values 0 and 0xfffffe are reserved)",
+                      "maximum": 16777215.0,
+                      "minimum": 0.0,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "f1ap": {
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "$ref": "#/$defs/sctp-socket",
+              "description": "SCTP socket parameters"
+            }
+          ],
+          "description": "F1AP parameters",
+          "properties": {
+            "bind_addrs": {
+              "description": "CU-CP F1-C bind addresses. Multiple addresses can be specified for SCTP multi-homing",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "procedure_timeout": {
+              "default": 1000,
+              "description": "Time that the F1AP waits for a DU response in milliseconds",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "inactivity_timer": {
+          "default": 120,
+          "description": "UE/PDU Session/DRB inactivity timer in seconds",
+          "maximum": 7200.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "max_nof_cu_ups": {
+          "default": 6,
+          "description": "Maximum number of CU-UP connections that the CU-CP may accept",
+          "type": "integer"
+        },
+        "max_nof_drbs_per_ue": {
+          "default": 8,
+          "description": "Maximum number of DRBs per UE",
+          "maximum": 29.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "max_nof_dus": {
+          "default": 6,
+          "description": "Maximum number of DU connections that the CU-CP may accept",
+          "type": "integer"
+        },
+        "max_nof_ues": {
+          "default": 8192,
+          "description": "Maximum number of UEs that the CU-CP may accept",
+          "type": "integer"
+        },
+        "mobility": {
+          "description": "Mobility configuration",
+          "properties": {
+            "cells": {
+              "description": "Sets the list of cells known to the CU-CP",
+              "items": {
+                "properties": {
+                  "band": {
+                    "description": "NR frequency band (set to \"auto\" to auto-derive)",
+                    "type": "integer"
+                  },
+                  "gnb_id_bit_length": {
+                    "description": "gNodeB identifier bit length. If not set, it will be automatically set to be equal to the gNodeB Id of the CU-CP",
+                    "maximum": 32.0,
+                    "minimum": 22.0,
+                    "type": "integer"
+                  },
+                  "ncells": {
+                    "description": "Sets the list of neighbor cells known to the CU-CP",
+                    "items": {
+                      "properties": {
+                        "nr_cell_id": {
+                          "default": 0,
+                          "description": "Neighbor cell id",
+                          "maximum": 68719476735.0,
+                          "minimum": 0.0,
+                          "type": "integer"
+                        },
+                        "report_configs": {
+                          "description": "Report configurations to configure for this neighbor cell",
+                          "items": {
+                            "type": "integer"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "nr_cell_id": {
+                    "default": 0,
+                    "description": "Cell id to be configured",
+                    "maximum": 68719476735.0,
+                    "minimum": 0.0,
+                    "type": "integer"
+                  },
+                  "pci": {
+                    "description": "Physical Cell Id",
+                    "maximum": 1007.0,
+                    "minimum": 0.0,
+                    "type": "integer"
+                  },
+                  "periodic_report_cfg_id": {
+                    "description": "Periodical report configuration for the serving cell",
+                    "maximum": 64.0,
+                    "minimum": 1.0,
+                    "type": "integer"
+                  },
+                  "ssb_arfcn": {
+                    "default": "",
+                    "description": "SSB ARFCN (integer in [0, 3279165])",
+                    "type": "string"
+                  },
+                  "ssb_duration": {
+                    "description": "SSB duration",
+                    "enum": [
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5"
+                    ],
+                    "type": "integer"
+                  },
+                  "ssb_offset": {
+                    "description": "SSB offset",
+                    "type": "integer"
+                  },
+                  "ssb_period": {
+                    "description": "SSB period in ms",
+                    "enum": [
+                      "5",
+                      "10",
+                      "20",
+                      "40",
+                      "80",
+                      "160"
+                    ],
+                    "type": "integer"
+                  },
+                  "ssb_scs": {
+                    "description": "SSB subcarrier spacing",
+                    "enum": [
+                      "15",
+                      "30",
+                      "60",
+                      "120",
+                      "240"
+                    ],
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "cho_timeout_ms": {
+              "default": 10000,
+              "description": "Timeout in milliseconds used for auto-triggered CHO and as default timeout for manual CHO command",
+              "maximum": 600000.0,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "report_configs": {
+              "description": "Sets report configurations",
+              "items": {
+                "properties": {
+                  "distance_thresh_from_ref1_km": {
+                    "description": "D1/D2: distance threshold 1 in km [0..3276.75] (50m steps, D1 max is 3276.25)",
+                    "maximum": 3276.75,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "distance_thresh_from_ref2_km": {
+                    "description": "D1/D2: distance threshold 2 in km [0..3276.75] (50m steps, D1 max is 3276.25)",
+                    "maximum": 3276.75,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "duration_s": {
+                    "default": "",
+                    "description": "T1: duration in seconds (each step=100ms, range [0.1..600]) (decimal number in [0.1, 600])",
+                    "type": "string"
+                  },
+                  "event_triggered_report_type": {
+                    "default": "",
+                    "description": "Type of the event triggered report (one of {a1, a2, a3, a4, a5, a6, d1, t1, d2})",
+                    "type": "string"
+                  },
+                  "hysteresis_db": {
+                    "description": "Hysteresis in dB used for measurement report trigger.",
+                    "maximum": 15.0,
+                    "minimum": 0.0,
+                    "type": "integer"
+                  },
+                  "hysteresis_location_km": {
+                    "description": "D1/D2: location hysteresis in km [0..327.68] (10m steps)",
+                    "maximum": 327.68,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "meas_trigger_quantity": {
+                    "default": "",
+                    "description": "Measurement trigger quantity (RSRP/RSRQ/SINR) (one of {rsrp, rsrq, sinr})",
+                    "type": "string"
+                  },
+                  "meas_trigger_quantity_offset_db": {
+                    "description": "Measurement trigger quantity offset in dB used for measurement report trigger of event A3/A6.",
+                    "maximum": 15.0,
+                    "minimum": -15.0,
+                    "type": "integer"
+                  },
+                  "meas_trigger_quantity_threshold_2_db": {
+                    "description": "Measurement trigger quantity threshold 2 in dB used for measurement report trigger of event A5Valid ranges: RSRP [-156..-31] dBm, RSRQ [-43..20] dB, SINR [-23..40] dB",
+                    "maximum": 40.0,
+                    "minimum": -156.0,
+                    "type": "integer"
+                  },
+                  "meas_trigger_quantity_threshold_db": {
+                    "description": "Measurement trigger quantity threshold in dB used for measurement report trigger of event A1/A2/A4/A5Valid ranges: RSRP [-156..-31] dBm, RSRQ [-43..20] dB, SINR [-23..40] dB",
+                    "maximum": 40.0,
+                    "minimum": -156.0,
+                    "type": "integer"
+                  },
+                  "periodic_ho_rsrp_offset_db": {
+                    "default": -1,
+                    "description": "Measurement trigger quantity offset in dB used to trigger handovers by periodic measurement reports. When set to -1 no handover will be triggered from periodical measurements. Note the actual value is field value * 0.5 dB",
+                    "maximum": 30.0,
+                    "minimum": -1.0,
+                    "type": "integer"
+                  },
+                  "ref_location1": {
+                    "description": "D1: reference location 1 (serving cell)",
+                    "properties": {
+                      "latitude": {
+                        "default": "",
+                        "description": "Latitude [degrees, -90..90] (decimal number in [-90, 90])",
+                        "type": "string"
+                      },
+                      "longitude": {
+                        "default": "",
+                        "description": "Longitude [degrees, -180..180] (decimal number in [-180, 180])",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "ref_location2": {
+                    "description": "D1: reference location 2 (target cell)",
+                    "properties": {
+                      "latitude": {
+                        "default": "",
+                        "description": "Latitude [degrees, -90..90] (decimal number in [-90, 90])",
+                        "type": "string"
+                      },
+                      "longitude": {
+                        "default": "",
+                        "description": "Longitude [degrees, -180..180] (decimal number in [-180, 180])",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "report_cfg_id": {
+                    "default": 0,
+                    "description": "Report configuration id to be configured",
+                    "maximum": 64.0,
+                    "minimum": 1.0,
+                    "type": "integer"
+                  },
+                  "report_interval_ms": {
+                    "default": 0,
+                    "description": "Report interval in ms",
+                    "enum": [
+                      "120",
+                      "240",
+                      "480",
+                      "640",
+                      "1024",
+                      "2048",
+                      "5120",
+                      "10240",
+                      "20480",
+                      "40960",
+                      "60000",
+                      "360000",
+                      "720000",
+                      "1800000"
+                    ],
+                    "type": "integer"
+                  },
+                  "report_type": {
+                    "default": "",
+                    "description": "Type of the report configuration",
+                    "enum": [
+                      "periodical",
+                      "event_triggered",
+                      "cond_trigger"
+                    ],
+                    "type": "string"
+                  },
+                  "t1_thres": {
+                    "default": "",
+                    "description": "T1: time threshold (Unix ms integer or YYYY-MM-DDTHH:MM:SS[.mmm]) (Unix time in ms or ISO 8601 YYYY-MM-DDTHH:MM:SS[.mmm])",
+                    "type": "string"
+                  },
+                  "t312": {
+                    "description": "T312 timer in ms. This timer is started by the UE on event triggered measurement report, when T310 (out-of-sync) timer is already running and on its expiration triggers the RLF to speed up reestablishment to different cell.",
+                    "enum": [
+                      "0",
+                      "50",
+                      "100",
+                      "200",
+                      "300",
+                      "400",
+                      "500",
+                      "1000"
+                    ],
+                    "type": "integer"
+                  },
+                  "time_to_trigger_ms": {
+                    "description": "Time in ms during which a condition must be met before measurement report trigger",
+                    "enum": [
+                      "0",
+                      "40",
+                      "64",
+                      "80",
+                      "100",
+                      "128",
+                      "160",
+                      "256",
+                      "320",
+                      "480",
+                      "512",
+                      "640",
+                      "1024",
+                      "1280",
+                      "2560",
+                      "5120"
+                    ],
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "trigger_cho_on_ue_setup": {
+              "default": false,
+              "description": "Whether to auto-trigger CHO after UE setup when readiness checks pass",
+              "type": "boolean"
+            },
+            "trigger_handover_from_measurements": {
+              "default": false,
+              "description": "Whether to start HO if neighbor cells become stronger",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "nof_i_rnti_ue_bits": {
+          "default": 13,
+          "description": "Number of bits used for the UE id in short and full I-RNTI",
+          "maximum": 18.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "ran_paging_cycle": {
+          "default": 32,
+          "description": "RAN Paging cycle for RRC inactive UEs in nof. Radio Frames",
+          "enum": [
+            "32",
+            "64",
+            "128",
+            "256"
+          ],
+          "type": "integer"
+        },
+        "request_pdu_session_timeout": {
+          "default": 3,
+          "description": "Timeout for requesting a PDU session after the InitialUeMessage was sent to the core, in seconds. The timeout must be larger than T310. If the value is reached, the UE will be released. (must be larger than T310)",
+          "type": "integer"
+        },
+        "rrc": {
+          "description": "RRC specific configuration",
+          "properties": {
+            "force_reestablishment_fallback": {
+              "default": false,
+              "description": "Force RRC re-establishment fallback to RRC setup",
+              "type": "boolean"
+            },
+            "force_resume_fallback": {
+              "default": false,
+              "description": "Force RRC resume fallback to RRC setup",
+              "type": "boolean"
+            },
+            "rrc_procedure_guard_time_ms": {
+              "default": 1000,
+              "description": "Guard time in ms used for RRC message exchange with UE. This is added to the RRC procedure timeout.",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "security": {
+          "description": "Security configuration",
+          "properties": {
+            "confidentiality": {
+              "default": "required",
+              "description": "Default confidentiality protection indication for DRBs",
+              "enum": [
+                "required",
+                "preferred",
+                "not_needed"
+              ],
+              "type": "string"
+            },
+            "integrity": {
+              "default": "not_needed",
+              "description": "Default integrity protection indication for DRBs",
+              "enum": [
+                "required",
+                "preferred",
+                "not_needed"
+              ],
+              "type": "string"
+            },
+            "nea_pref_list": {
+              "default": "nea0,nea2,nea1,nea3",
+              "description": "Ordered preference list for the selection of encryption algorithm (NEA) (default: NEA0, NEA2, NEA1)",
+              "type": "string"
+            },
+            "nia_pref_list": {
+              "default": "nia2,nia1,nia3",
+              "description": "Ordered preference list for the selection of encryption algorithm (NIA) (default: NIA2, NIA1)",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "t380": {
+          "default": 10,
+          "description": "RRC inactivity timer T380 in minutes. The timer is started when the UE recveives a RRC Release message including a suspend config and is stopped on the reception of RRCResume.",
+          "enum": [
+            "5",
+            "10",
+            "20",
+            "30",
+            "60",
+            "120",
+            "360",
+            "720"
+          ],
+          "type": "integer"
+        },
+        "xnap": {
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "$ref": "#/$defs/sctp-socket",
+              "description": "SCTP socket parameters"
+            }
+          ],
+          "description": "XNAP configuration",
+          "properties": {
+            "connections": {
+              "description": "Sets the list of XN-C peer CU-CPs for the CU-CP to connect to",
+              "items": {
+                "properties": {
+                  "bind_addrs": {
+                    "description": "Local IP addresses to bind for XNAP interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "peer_addrs": {
+                    "description": "Peer IP addresses to connect for XNAP interface",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "no_connection_init": {
+              "default": false,
+              "description": "When true, the CU-CP will not initiate XNAP connections, but will only accept inbound ones (hidden from --help in legacy CLI11 view)",
+              "type": "boolean"
+            },
+            "procedure_timeout": {
+              "default": 5000,
+              "description": "Time that the XNAP waits for a response in milliseconds",
+              "type": "integer"
+            },
+            "reconnect_timer": {
+              "default": 10000,
+              "description": "Time that the XNAP waits before trying to reconnect in milliseconds",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "dryrun": {
+      "default": false,
+      "description": "Enable application dry run mode",
+      "type": "boolean"
+    },
+    "e2": {
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "$ref": "#/$defs/sctp-socket",
+          "description": "SCTP socket parameters"
+        }
+      ],
+      "description": "E2 parameters",
+      "properties": {
+        "addrs": {
+          "description": "RIC addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "bind_addrs": {
+          "description": "Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "e2sm_ccc_enabled": {
+          "default": false,
+          "description": "Enable CCC service module",
+          "type": "boolean"
+        },
+        "e2sm_kpm_enabled": {
+          "default": false,
+          "description": "Enable KPM service module",
+          "type": "boolean"
+        },
+        "e2sm_rc_enabled": {
+          "default": false,
+          "description": "Enable RC service module",
+          "type": "boolean"
+        },
+        "enable_cu_cp_e2": {
+          "default": false,
+          "description": "Enable CU E2 agent",
+          "type": "boolean"
+        },
+        "port": {
+          "default": 36421,
+          "description": "RIC port",
+          "maximum": 40000.0,
+          "minimum": 20000.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "expert_execution": {
+      "description": "Expert execution configuration",
+      "properties": {
+        "affinities": {
+          "description": "Application CPU affinities configuration",
+          "properties": {
+            "main_pool_cpus": {
+              "default": "",
+              "description": "CPU cores assigned to main thread pool (comma-separated CPU ids or ranges, e.g. \"0-3,5,7\")",
+              "type": "string"
+            },
+            "main_pool_pinning": {
+              "default": "mask",
+              "description": "Policy used for assigning CPU cores to the main thread pool (one of: mask, round-robin)",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "threads": {
+          "description": "Threads configuration",
+          "properties": {
+            "main_pool": {
+              "description": "Main thread pool configuration",
+              "properties": {
+                "backoff_period": {
+                  "default": 50,
+                  "description": "Main thread pool back-off period, in microseconds.",
+                  "type": "integer"
+                },
+                "nof_threads": {
+                  "description": "Number of threads for processing upper PHY and upper layers.",
+                  "type": "integer"
+                },
+                "task_queue_size": {
+                  "default": 2048,
+                  "description": "Main thread pool task queue size.",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "gnb_id": {
+      "default": 411,
+      "description": "gNodeB identifier",
+      "type": "integer"
+    },
+    "gnb_id_bit_length": {
+      "default": 22,
+      "description": "gNodeB identifier length in bits",
+      "maximum": 32.0,
+      "minimum": 22.0,
+      "type": "integer"
+    },
+    "log": {
+      "description": "Logging configuration",
+      "properties": {
+        "all_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU"
+        },
+        "config_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "none",
+          "description": "Config log level (falls back to --all_level if unset)"
+        },
+        "cu_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Log level for the CU"
+        },
+        "e1ap_json_enabled": {
+          "default": false,
+          "description": "Enable JSON logging of E1AP PDUs",
+          "type": "boolean"
+        },
+        "e1ap_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "E1AP log level"
+        },
+        "e2ap_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "E2AP log level (falls back to --all_level if unset)"
+        },
+        "f1ap_json_enabled": {
+          "default": false,
+          "description": "Enable JSON logging of F1AP PDUs",
+          "type": "boolean"
+        },
+        "f1ap_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "F1AP log level"
+        },
+        "filename": {
+          "default": "/tmp/cu_cp.log",
+          "description": "Log file output path",
+          "type": "string"
+        },
+        "hex_max_size": {
+          "default": 0,
+          "description": "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)",
+          "maximum": 1024.0,
+          "minimum": -1.0,
+          "type": "integer"
+        },
+        "lib_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Generic log level"
+        },
+        "ngap_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "NGAP log level"
+        },
+        "nrppa_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "NRPPA log level"
+        },
+        "pdcp_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "PDCP log level"
+        },
+        "rrc_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "RRC log level"
+        },
+        "sec_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "Security functions log level"
+        },
+        "xnap_level": {
+          "$ref": "#/$defs/log-level",
+          "default": "warning",
+          "description": "XNAP log level"
+        }
+      },
+      "type": "object"
+    },
+    "metrics": {
+      "description": "Metrics configuration",
+      "properties": {
+        "enable_json": {
+          "default": false,
+          "description": "Enable JSON metrics reporting",
+          "type": "boolean"
+        },
+        "enable_log": {
+          "default": false,
+          "description": "Enable log metrics reporting",
+          "type": "boolean"
+        },
+        "enable_verbose": {
+          "default": false,
+          "description": "Enable extended detail metrics reporting",
+          "type": "boolean"
+        },
+        "layers": {
+          "description": "Layer basis metrics configuration",
+          "properties": {
+            "enable_app_usage": {
+              "default": false,
+              "description": "Enable application usage metrics",
+              "type": "boolean"
+            },
+            "enable_ngap": {
+              "default": false,
+              "description": "Enable NGAP metrics",
+              "type": "boolean"
+            },
+            "enable_pdcp": {
+              "default": false,
+              "description": "Enable PDCP metrics",
+              "type": "boolean"
+            },
+            "enable_rrc": {
+              "default": false,
+              "description": "Enable CU-CP RRC metrics",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "periodicity": {
+          "description": "Metrics periodicity configuration",
+          "properties": {
+            "app_usage_report_period": {
+              "default": 1000,
+              "description": "Application resource usage metrics report period (in milliseconds)",
+              "type": "integer"
+            },
+            "cu_cp_report_period": {
+              "default": 1000,
+              "description": "CU-CP metrics report period in milliseconds",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "pcap": {
+      "description": "PCAP configuration",
+      "properties": {
+        "e1ap_enable": {
+          "default": false,
+          "description": "Enable E1AP packet capture",
+          "type": "boolean"
+        },
+        "e1ap_filename": {
+          "default": "/tmp/cucp_e1ap.pcap",
+          "description": "E1AP PCAP file output path",
+          "type": "string"
+        },
+        "e2ap_cu_cp_filename": {
+          "default": "/tmp/cu_cp_e2ap.pcap",
+          "description": "E2AP PCAP file output path",
+          "type": "string"
+        },
+        "e2ap_enable": {
+          "default": false,
+          "description": "Enable E2AP packet capture",
+          "type": "boolean"
+        },
+        "f1ap_enable": {
+          "default": false,
+          "description": "Enable F1AP packet capture",
+          "type": "boolean"
+        },
+        "f1ap_filename": {
+          "default": "/tmp/cucp_f1ap.pcap",
+          "description": "F1AP PCAP file output path",
+          "type": "string"
+        },
+        "ngap_enable": {
+          "default": false,
+          "description": "Enable N3 GTP-U packet capture",
+          "type": "boolean"
+        },
+        "ngap_filename": {
+          "default": "/tmp/cucp_ngap.pcap",
+          "description": "N3 GTP-U PCAP file output path",
+          "type": "string"
+        },
+        "xnap_enable": {
+          "default": false,
+          "description": "Enable XNAP packet capture",
+          "type": "boolean"
+        },
+        "xnap_filename": {
+          "default": "/tmp/cu_xnap.pcap",
+          "description": "XNAP PCAP file output path",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "qos": {
+      "description": "Configures RLC and PDCP radio bearers on a per 5QI basis.",
+      "items": {
+        "properties": {
+          "five_qi": {
+            "default": 9,
+            "description": "5QI",
+            "maximum": 255.0,
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "pdcp": {
+            "description": "PDCP parameters",
+            "properties": {
+              "rohc": {
+                "description": "Header compression parameters",
+                "properties": {
+                  "max_cid": {
+                    "default": 15,
+                    "description": "Maximum CID",
+                    "type": "integer"
+                  },
+                  "profile0x0001": {
+                    "default": false,
+                    "description": "Configure profile0x0001 (ROHCv1 RTP/UDP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0002": {
+                    "default": false,
+                    "description": "Configure profile0x0002 (ROHCv1 UDP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0003": {
+                    "default": false,
+                    "description": "Configure profile0x0003 (ROHCv1 ESP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0004": {
+                    "default": false,
+                    "description": "Configure profile0x0004 (ROHCv1 IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0006": {
+                    "default": false,
+                    "description": "Configure profile0x0006 (ROHCv1 TCP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0101": {
+                    "default": false,
+                    "description": "Configure profile0x0101 (ROHCv2 RTP/UDP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0102": {
+                    "default": false,
+                    "description": "Configure profile0x0102 (ROHCv2 UDP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0103": {
+                    "default": false,
+                    "description": "Configure profile0x0103 (ROHCv2 ESP/IP)",
+                    "type": "boolean"
+                  },
+                  "profile0x0104": {
+                    "default": false,
+                    "description": "Configure profile0x0104 (ROHCv2 IP)",
+                    "type": "boolean"
+                  },
+                  "rohc_type": {
+                    "default": "none",
+                    "description": "ROHC type (none/rohc/ul_only_rohc). Values: {none, rohc, ul_only_rohc}. Default: none",
+                    "enum": [
+                      "none",
+                      "rohc",
+                      "uplink_only_rohc"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "rx": {
+                "description": "PDCP RX parameters",
+                "properties": {
+                  "out_of_order_delivery": {
+                    "default": false,
+                    "description": "PDCP RX enable out-of-order delivery",
+                    "type": "boolean"
+                  },
+                  "sn": {
+                    "default": 0,
+                    "description": "PDCP RX SN size",
+                    "type": "integer"
+                  },
+                  "t_reordering": {
+                    "default": 0,
+                    "description": "PDCP RX t-Reordering (ms)",
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "tx": {
+                "description": "PDCP TX parameters",
+                "properties": {
+                  "discard_timer": {
+                    "default": 0,
+                    "description": "PDCP TX discard timer (ms)",
+                    "type": "integer"
+                  },
+                  "sn": {
+                    "default": 0,
+                    "description": "PDCP TX SN size",
+                    "type": "integer"
+                  },
+                  "status_report_required": {
+                    "default": false,
+                    "description": "PDCP TX status report required",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "rlc": {
+            "description": "RLC parameters",
+            "properties": {
+              "am": {
+                "description": "AM parameters",
+                "properties": {
+                  "rx": {
+                    "description": "AM RX parameters",
+                    "properties": {
+                      "max_sn_per_status": {
+                        "default": 0,
+                        "description": "RLC AM RX status SN limit",
+                        "type": "integer"
+                      },
+                      "sn": {
+                        "default": 0,
+                        "description": "RLC AM RX SN",
+                        "type": "integer"
+                      },
+                      "t-reassembly": {
+                        "default": 0,
+                        "description": "RLC AM RX t-Reassembly",
+                        "type": "integer"
+                      },
+                      "t-status-prohibit": {
+                        "default": 0,
+                        "description": "RLC AM RX t-StatusProhibit",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "tx": {
+                    "description": "AM TX parameters",
+                    "properties": {
+                      "max-retx-threshold": {
+                        "default": 0,
+                        "description": "RLC AM max retx threshold",
+                        "type": "integer"
+                      },
+                      "max_window": {
+                        "default": 0,
+                        "description": "Non-standard parameter that limits the tx window size. Can be used for limiting memory usage with large windows. 0 means no limits other than the SN size (i.e. 2^[sn_size-1]).",
+                        "type": "integer"
+                      },
+                      "poll-byte": {
+                        "default": 0,
+                        "description": "RLC AM TX PollByte",
+                        "type": "integer"
+                      },
+                      "poll-pdu": {
+                        "default": 0,
+                        "description": "RLC AM TX PollPdu",
+                        "type": "integer"
+                      },
+                      "queue-size": {
+                        "default": 4096,
+                        "description": "RLC AM TX SDU queue size",
+                        "type": "integer"
+                      },
+                      "sn": {
+                        "default": 0,
+                        "description": "RLC AM TX SN size",
+                        "type": "integer"
+                      },
+                      "t-poll-retransmit": {
+                        "default": 0,
+                        "description": "RLC AM TX t-PollRetransmit (ms)",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "mode": {
+                "default": "am",
+                "description": "RLC mode",
+                "type": "string"
+              },
+              "um-bidir": {
+                "description": "UM parameters",
+                "properties": {
+                  "rx": {
+                    "description": "UM RX parameters",
+                    "properties": {
+                      "sn": {
+                        "default": 0,
+                        "description": "RLC UM RX SN",
+                        "type": "integer"
+                      },
+                      "t-reassembly": {
+                        "default": 0,
+                        "description": "RLC UM t-Reassembly",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "tx": {
+                    "description": "UM TX parameters",
+                    "properties": {
+                      "queue-size": {
+                        "default": 0,
+                        "description": "RLC UM TX SDU queue size",
+                        "type": "integer"
+                      },
+                      "sn": {
+                        "default": 0,
+                        "description": "RLC UM TX SN",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ran_node_name": {
+      "default": "ocucp01",
+      "description": "RAN node name",
+      "type": "string"
+    },
+    "remote_control": {
+      "description": "Remote control configuration",
+      "properties": {
+        "bind_addr": {
+          "default": "127.0.0.1",
+          "description": "Remote Control Server bind address",
+          "type": "string"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Enables the Remote Control Server",
+          "type": "boolean"
+        },
+        "port": {
+          "default": 8001,
+          "description": "Port where the remote control server listens for incoming connections",
+          "maximum": 65535.0,
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "trace": {
+      "description": "General tracer configuration",
+      "properties": {
+        "filename": {
+          "default": "",
+          "description": "Set to a valid file path to enable tracing and write the trace to the file",
+          "type": "string"
+        },
+        "max_tracing_events_per_file": {
+          "default": 1000000,
+          "description": "Maximum number of events per file. Set to zero for no limit",
+          "type": "integer"
+        },
+        "nof_tracing_events_after_severe": {
+          "default": 0,
+          "description": "Number of events to write prior to a severe event. Set to zero for writing all events",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "title": "OCUDU CU-CP configuration",
+  "type": "object"
+}

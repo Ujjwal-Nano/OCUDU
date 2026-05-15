@@ -1,0 +1,166 @@
+dryrun: false
+log:
+  filename: /tmp/du_low.log
+  all_level: warning
+  lib_level: warning
+  e2ap_level: warning
+  config_level: none
+  hex_max_size: 0
+  phy_level: warning
+  hal_level: warning
+  broadcast_enabled: false
+  phy_rx_symbols_filename: ""
+  phy_rx_symbols_port: 0
+  phy_rx_symbols_prach: false
+  ofh_level: warning
+  radio_level: info
+  fapi_level: warning
+trace:
+  filename: ""
+  max_tracing_events_per_file: 1000000
+  nof_tracing_events_after_severe: 0
+  layers:
+    phy_enable: false
+expert_execution:
+  affinities:
+    main_pool_cpus: ""
+    main_pool_pinning: mask
+    ofh:
+      timing_cpu: ""
+  threads:
+    main_pool:
+      nof_threads: ~
+      task_queue_size: 2048
+      backoff_period: 50
+    upper_phy:
+      pdsch_processor_type: auto
+      pdsch_cb_batch_length: 4
+      max_pucch_concurrency: 0
+      max_pusch_and_srs_concurrency: 4
+      max_pdsch_concurrency: 0
+    ofh:
+      enable_busy_waiting: false
+    lower_phy:
+      execution_profile: triple
+  cell_affinities:
+    - ru_cpus: ""
+      ru_pinning: mask
+metrics:
+  layers:
+    enable_executor: false
+    enable_app_usage: false
+    enable_du_low: false
+    enable_ru: false
+  periodicity:
+    executors_report_period: 1000
+    app_usage_report_period: 1000
+    du_report_period: 1000
+  enable_json: false
+  enable_log: false
+  enable_verbose: false
+remote_control:
+  enabled: false
+  bind_addr: 127.0.0.1
+  port: 8001
+expert_phy:
+  max_proc_delay: 5
+  pusch_dec_max_iterations: 6
+  pusch_dec_enable_early_stop: true
+  pusch_decoder_force_decoding: false
+  pusch_sinr_calc_method: post_equalization
+  pusch_channel_estimator_fd_strategy: filter
+  pusch_channel_estimator_td_strategy: average
+  pusch_channel_estimator_cfo_compensation: true
+  pusch_channel_equalizer_algorithm: zf
+  max_request_headroom_slots: 0
+  allow_request_on_empty_uplink_slot: false
+  enable_phy_tap: false
+  phy_tap_arguments: ""
+ru_ofh:
+  gps_alpha: 0
+  gps_beta: 0
+  base_cell:
+    t1a_max_cp_dl: 500
+    t1a_min_cp_dl: 258
+    t1a_max_cp_ul: 500
+    t1a_min_cp_ul: 285
+    t1a_max_up: 300
+    t1a_min_up: 85
+    ta4_max: 500
+    ta4_min: 85
+    is_prach_cp_enabled: true
+    ignore_ecpri_seq_id: false
+    ignore_ecpri_payload_size: false
+    ignore_prach_start_symbol: false
+    log_lates_as_warnings: true
+    warn_unreceived_ru_frames: after_traffic_detection
+    compr_method_ul: bfp
+    compr_bitwidth_ul: 9
+    compr_method_dl: bfp
+    compr_bitwidth_dl: 9
+    compr_method_prach: bfp
+    compr_bitwidth_prach: 9
+    enable_ul_static_compr_hdr: true
+    enable_dl_static_compr_hdr: true
+  cells:
+    - t1a_max_cp_dl: 500
+      t1a_min_cp_dl: 258
+      t1a_max_cp_ul: 500
+      t1a_min_cp_ul: 285
+      t1a_max_up: 300
+      t1a_min_up: 85
+      ta4_max: 500
+      ta4_min: 85
+      is_prach_cp_enabled: true
+      ignore_ecpri_seq_id: false
+      ignore_ecpri_payload_size: false
+      ignore_prach_start_symbol: false
+      log_lates_as_warnings: true
+      warn_unreceived_ru_frames: after_traffic_detection
+      compr_method_ul: bfp
+      compr_bitwidth_ul: 9
+      compr_method_dl: bfp
+      compr_bitwidth_dl: 9
+      compr_method_prach: bfp
+      compr_bitwidth_prach: 9
+      enable_ul_static_compr_hdr: true
+      enable_dl_static_compr_hdr: true
+      network_interface: enp1s0f0
+      enable_promiscuous: false
+      check_link_status: false
+      ru_mac_addr: 70:b3:d5:e1:5b:06
+      du_mac_addr: 00:11:22:33:00:77
+      vlan_tag_cp: ~
+      vlan_tag_up: ~
+      vlan_pcp_cp: ~
+      vlan_pcp_up: ~
+      prach_port_id:
+        - 4
+      dl_port_id:
+        - 0
+      ul_port_id:
+        - 0
+ru_sdr:
+  srate: 61.439999999999998
+  device_driver: uhd
+  device_args: ""
+  tx_gain: 50
+  rx_gain: 60
+  freq_offset: 0
+  clock_ppm: 0
+  lo_offset: 0
+  clock: default
+  sync: default
+  otw_format: default
+  time_alignment_calibration: auto
+  dl_freq_Hz: ~
+  ul_freq_Hz: ~
+  amplitude_control:
+    tx_gain_backoff: 12
+    enable_clipping: false
+    ceiling: -0.100000001
+  expert_cfg:
+    low_phy_dl_throttling: 0
+    tx_mode: continuous
+    power_ramping_time_us: 0
+start_time_jitter: 0
