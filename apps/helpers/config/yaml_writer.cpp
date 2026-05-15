@@ -39,6 +39,15 @@ void emit_group(YAML::Node& node, const group_node& g)
   for (const auto& child : g.children) {
     emit_node(node, child);
   }
+  // Shared blocks (b.uses) are flat-merged at the YAML level: their children
+  // appear as siblings of the parent group's own children. The schema layer
+  // factors them under $defs / YANG grouping, but the runtime YAML stays
+  // backward-compatible with existing user configs.
+  for (const auto& sb : g.shared_blocks) {
+    for (const auto& child : sb.children) {
+      emit_node(node, child);
+    }
+  }
 }
 
 } // namespace

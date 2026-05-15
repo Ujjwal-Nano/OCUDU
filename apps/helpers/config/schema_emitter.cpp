@@ -133,9 +133,15 @@ json emit_leaf_structure(const leaf_node& leaf)
 
 struct emission_state {
   /// Maps type name -> already-emitted structure (so subsequent occurrences
-  /// just reference it). Used for leaf type_name hoisting.
+  /// just reference it). Used for both leaf type_name hoisting and
+  /// shared-block (b.uses) hoisting.
   std::unordered_map<std::string, json> defs;
 };
+
+json emit_group_body(const group_node&          group,
+                     const std::string&         description,
+                     const json_schema_options& opts,
+                     emission_state&            st);
 
 json emit_node(const schema_node& n, const json_schema_options& opts, emission_state& st);
 
@@ -199,11 +205,38 @@ json emit_group_body(const group_node&          group,
       required.push_back(child.name);
     }
   }
+
+  // Shared blocks: register each as a $defs entry (first occurrence wins) and
+  // add an allOf {$ref} clause to require the properties of the named type.
+  // The properties themselves are NOT inlined here — they live in the $def.
+  json all_of = json::array();
+  for (const auto& sb : group.shared_blocks) {
+    if (st.defs.find(sb.type_name) == st.defs.end()) {
+      // Synthesize a group_node containing only sb.children and emit as a
+      // standalone object schema.
+      group_node tmp;
+      tmp.children = sb.children;
+      json shared  = emit_group_body(tmp, "", opts, st);
+      st.defs.emplace(sb.type_name, shared);
+    }
+    json ref;
+    ref["$ref"] = "#/$defs/" + sb.type_name;
+    if (!sb.site_description.empty()) {
+      ref["description"] = sb.site_description;
+    }
+    all_of.push_back(ref);
+  }
+  if (!all_of.empty()) {
+    property["allOf"] = all_of;
+    // additionalProperties:false + allOf would reject the shared properties.
+    // The cleanest fix is to relax it on groups that use shared blocks.
+    property["additionalProperties"] = true;
+  } else if (opts.strict_additional_properties) {
+    property["additionalProperties"] = false;
+  }
+
   if (!required.empty()) {
     property["required"] = required;
-  }
-  if (opts.strict_additional_properties) {
-    property["additionalProperties"] = false;
   }
   return property;
 }

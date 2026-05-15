@@ -131,7 +131,23 @@ struct leaf_node {
   std::function<void(YAML::Node&)>  emit_value;
 };
 
+struct grouping_use;
+
 struct group_node {
+  std::vector<schema_node>  children;
+  /// Shared blocks (named structure types) flat-merged into this group at
+  /// the YAML level, but factored under a single $defs / YANG `grouping`
+  /// declaration in the emitted schema. Populated by config_builder::uses.
+  std::vector<grouping_use> shared_blocks;
+};
+
+struct grouping_use {
+  std::string type_name;            ///< name of the shared structure type
+  std::string site_description;     ///< per-occurrence description
+  /// Children of the shared block. All occurrences with the same type_name
+  /// must have a structurally identical set of children — the emitters
+  /// dedupe by name and the FIRST occurrence's structure is what enters
+  /// $defs / `grouping`.
   std::vector<schema_node> children;
 };
 
@@ -426,6 +442,15 @@ public:
   template <typename Configurator>
   void group(const std::string& name, const std::string& description, Configurator&& configurator);
 
+  /// Declares a flat-merge shared structure block. The configurator runs
+  /// against a child builder that wires options into THIS group's CLI11 app
+  /// (so YAML structure stays flat — no extra nesting under \p type_name).
+  /// Schema emitters hoist the children into JSON Schema $defs[<type_name>]
+  /// and YANG grouping <type_name>, using `allOf` / `uses` at every site.
+  /// Multiple call sites with the same type_name share one declaration.
+  template <typename Configurator>
+  void uses(const std::string& type_name, const std::string& description, Configurator&& configurator);
+
   // -- Arrays of structures --
 
   /// Internally re-uses the existing vector<string>+nested-CLI11 pattern
@@ -686,6 +711,27 @@ void config_builder::group(const std::string& name, const std::string& descripti
 
   config_builder sub(*subcmd, *target, root_app_);
   configurator(sub);
+}
+
+template <typename Configurator>
+void config_builder::uses(const std::string& type_name, const std::string& description, Configurator&& configurator)
+{
+  // Children of a uses block sit in a separate vector on the parent group
+  // (group_node::shared_blocks), but CLI11-wise the options go flat into the
+  // parent's CLI::App. The builder we pass to the configurator targets a
+  // throwaway group_node, and we move its children into the parent at the
+  // end. Same root_app_ is propagated so .fallback_from continues to work.
+  schema_node holder;
+  holder.body = group_node{};
+  config_builder sub(*app_, holder, root_app_);
+  configurator(sub);
+
+  grouping_use use_entry;
+  use_entry.type_name        = type_name;
+  use_entry.site_description = description;
+  use_entry.children         = std::move(std::get<group_node>(holder.body).children);
+
+  std::get<group_node>(root_->body).shared_blocks.push_back(std::move(use_entry));
 }
 
 template <typename Container, typename ElementConfigurator>

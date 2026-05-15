@@ -167,10 +167,12 @@ std::string emit_description_stmt(const std::string&              desc,
   return fmt::format("{}description {};\n", indent(level), quote(composed));
 }
 
-/// Collected typedef declarations. Keyed by canonical type name; value is the
-/// type block (already-indented at typedef body level).
+/// Collected typedef + grouping declarations. Keyed by canonical type name.
+/// typedef bodies hold a "type ..." statement; grouping bodies hold a list
+/// of inner leaf/container/list declarations.
 struct emission_state {
-  std::map<std::string, std::string> typedefs; ///< name -> type-statement body
+  std::map<std::string, std::string> typedefs;  ///< name -> type-statement body
+  std::map<std::string, std::string> groupings; ///< name -> grouping body
 };
 
 void emit_group_children(std::string& out, const group_node& group, int level, const yang_options& opts, emission_state& st);
@@ -251,6 +253,21 @@ void emit_group_children(std::string& out, const group_node& group, int level, c
         },
         child.body);
   }
+  // Shared blocks: register the grouping body once and emit a `uses` stmt
+  // at the call site.
+  for (const auto& sb : group.shared_blocks) {
+    const std::string gname = yang_name(sb.type_name, opts);
+    if (st.groupings.find(gname) == st.groupings.end()) {
+      // Synthesize a group_node from sb.children to reuse emit_group_children
+      // at module-grouping indent (level 2).
+      group_node tmp;
+      tmp.children    = sb.children;
+      std::string body;
+      emit_group_children(body, tmp, 2, opts, st);
+      st.groupings.emplace(gname, body);
+    }
+    out += fmt::format("{}uses {};\n", indent(level), gname);
+  }
 }
 
 std::string sanitize_prefix(const std::string& module_name)
@@ -313,13 +330,21 @@ std::string emit_yang(const schema_node& root, const yang_options& opts)
       },
       root.body);
 
-  // Hoisted typedefs go at the top of the module body.
+  // Hoisted typedefs go at the top of the module body, then groupings.
   for (const auto& [name, type_block] : st.typedefs) {
     out += fmt::format("  typedef {} {{\n", name);
     out += type_block;
     out += "  }\n";
   }
   if (!st.typedefs.empty()) {
+    out += "\n";
+  }
+  for (const auto& [name, grouping_body] : st.groupings) {
+    out += fmt::format("  grouping {} {{\n", name);
+    out += grouping_body;
+    out += "  }\n";
+  }
+  if (!st.groupings.empty()) {
     out += "\n";
   }
   out += body_out;
