@@ -14,7 +14,19 @@ Logging configuration
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
 | `filename` | string | `/tmp/cu_up.log` |  | Log file output path |
+| `all_level` | string | `warning` | enum: none, error, warning, info, debug | Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU |
+| `lib_level` | string | `warning` | enum: none, error, warning, info, debug | Generic log level |
+| `e2ap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E2AP log level |
+| `config_level` | string | `none` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Config log level |
 | `hex_max_size` | integer | `0` | -1..1024 | Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes) |
+| `pdcp_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | PDCP log level |
+| `sdap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | SDAP log level |
+| `gtpu_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | GTPU log level |
+| `e1ap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E1AP log level |
+| `f1u_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | F1-U log level |
+| `cu_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Log level for the CU |
+| `sec_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Security functions log level |
+| `rohc_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | ROHC log level |
 | `e1ap_json_enabled` | boolean | `false` |  | Enable JSON logging of E1AP PDUs |
 
 
@@ -90,6 +102,11 @@ Expert execution configuration
 ### affinities
 
 Application CPU affinities configuration
+
+| Option | Type | Default | Constraints | Description |
+|--------|------|---------|-------------|-------------|
+| `main_pool_cpus` | string | `` | comma-separated CPU ids or ranges, e.g. "0-3,5,7" | CPU cores assigned to main thread pool |
+| `main_pool_pinning` | string | `mask` | one of: mask, round-robin | Policy used for assigning CPU cores to the main thread pool |
 
 
 ### threads

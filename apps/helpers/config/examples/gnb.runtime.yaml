@@ -1,0 +1,1032 @@
+dryrun: false
+gnb_id: 411
+gnb_id_bit_length: 22
+ran_node_name: gnb01
+log:
+  filename: /tmp/gnb.log
+  all_level: warning
+  lib_level: warning
+  e2ap_level: warning
+  config_level: none
+  hex_max_size: 0
+  pdcp_level: warning
+  rrc_level: warning
+  ngap_level: warning
+  xnap_level: warning
+  nrppa_level: warning
+  e1ap_level: warning
+  f1ap_level: warning
+  cu_level: warning
+  sec_level: warning
+  e1ap_json_enabled: false
+  f1ap_json_enabled: false
+  sdap_level: warning
+  gtpu_level: warning
+  f1u_level: warning
+  rohc_level: warning
+  mac_level: warning
+  rlc_level: warning
+  ntn_level: warning
+  du_level: warning
+  broadcast_enabled: false
+  high_latency_diagnostics_enabled: false
+  fapi_level: warning
+  phy_level: warning
+  hal_level: warning
+  phy_rx_symbols_filename: ""
+  phy_rx_symbols_port: 0
+  phy_rx_symbols_prach: false
+  ofh_level: warning
+  radio_level: info
+trace:
+  filename: ""
+  max_tracing_events_per_file: 1000000
+  nof_tracing_events_after_severe: 0
+  layers:
+    cu_up_enable: false
+    du_high_enable: false
+    phy_enable: false
+buffer_pool:
+  nof_segments: 1048576
+  segment_size: 2048
+metrics:
+  layers:
+    enable_app_usage: false
+    enable_executor: false
+    enable_ngap: false
+    enable_pdcp: false
+    enable_rrc: false
+    enable_e1ap: false
+    enable_nrup_cu: false
+    skip_cu_up_executor: true
+    enable_sched: true
+    enable_rlc: false
+    enable_mac: false
+    enable_du_proc: false
+    enable_du_low: false
+    enable_ru: false
+  enable_json: false
+  enable_log: false
+  enable_verbose: false
+  autostart_stdout_metrics: false
+  periodicity:
+    executors_report_period: 1000
+    app_usage_report_period: 1000
+    cu_cp_report_period: 1000
+    cu_up_report_period: 1000
+    du_report_period: 1000
+expert_execution:
+  affinities:
+    main_pool_cpus: ""
+    main_pool_pinning: mask
+    ofh:
+      timing_cpu: ""
+  threads:
+    main_pool:
+      nof_threads: ~
+      task_queue_size: 2048
+      backoff_period: 50
+    upper_phy:
+      pdsch_processor_type: auto
+      pdsch_cb_batch_length: 4
+      max_pucch_concurrency: 0
+      max_pusch_and_srs_concurrency: 4
+      max_pdsch_concurrency: 0
+    ofh:
+      enable_busy_waiting: false
+    lower_phy:
+      execution_profile: triple
+  queues:
+    cu_up_dl_ue_executor_queue_size: 8192
+    cu_up_ul_ue_executor_queue_size: 8192
+    cu_up_ctrl_ue_executor_queue_size: 8192
+    cu_up_strand_batch_size: 256
+    du_ue_data_executor_queue_size: 8192
+  cell_affinities:
+    - ru_cpus: ""
+      ru_pinning: mask
+remote_control:
+  enabled: false
+  bind_addr: 127.0.0.1
+  port: 8001
+cu_cp:
+  max_nof_dus: 6
+  max_nof_cu_ups: 6
+  max_nof_ues: 8192
+  max_nof_drbs_per_ue: 8
+  inactivity_timer: 120
+  enable_rrc_inactive: false
+  ran_paging_cycle: 32
+  t380: 10
+  nof_i_rnti_ue_bits: 13
+  request_pdu_session_timeout: 3
+  amf:
+    no_core: false
+    amf_reconnection_retry_time: 1000
+    procedure_timeout: 5000
+    addrs:
+      - 127.0.1.100
+    port: 38412
+    bind_addrs:
+      - 127.0.0.1
+    bind_interface: auto
+    sctp_rto_initial: 120
+    sctp_rto_min: 120
+    sctp_rto_max: 500
+    sctp_init_max_attempts: 3
+    sctp_max_init_timeo: 500
+    sctp_hb_interval: 30000
+    sctp_assoc_max_retx: 10
+    sctp_nodelay: false
+    supported_tracking_areas:
+      - tac: 7
+        plmn_list:
+          - plmn: 00101
+            tai_slice_support_list:
+              - sst: 1
+                sd: 16777215
+  extra_amfs:
+    []
+  xnap:
+    procedure_timeout: 5000
+    reconnect_timer: 10000
+    no_connection_init: false
+    sctp_rto_initial: 120
+    sctp_rto_min: 120
+    sctp_rto_max: 500
+    sctp_init_max_attempts: 3
+    sctp_max_init_timeo: 500
+    sctp_hb_interval: 30000
+    sctp_assoc_max_retx: 10
+    sctp_nodelay: false
+    connections:
+      []
+  mobility:
+    trigger_handover_from_measurements: false
+    trigger_cho_on_ue_setup: false
+    cho_timeout_ms: 10000
+    cells:
+      []
+    report_configs:
+      []
+  rrc:
+    force_reestablishment_fallback: false
+    force_resume_fallback: false
+    rrc_procedure_guard_time_ms: 1000
+  security:
+    integrity: not_needed
+    confidentiality: required
+    nea_pref_list: nea0,nea2,nea1,nea3
+    nia_pref_list: nia2,nia1,nia3
+  f1ap:
+    procedure_timeout: 1000
+  e1ap:
+    procedure_timeout: 1000
+pcap:
+  ngap_filename: /tmp/gnb_ngap.pcap
+  ngap_enable: false
+  xnap_filename: /tmp/cu_xnap.pcap
+  xnap_enable: false
+  f1ap_filename: /tmp/gnb_f1ap.pcap
+  f1ap_enable: false
+  e1ap_filename: /tmp/gnb_e1ap.pcap
+  e1ap_enable: false
+  e2ap_cu_cp_filename: /tmp/cu_cp_e2ap.pcap
+  e2ap_enable: false
+  n3_filename: /tmp/gnb_n3.pcap
+  n3_enable: false
+  f1u_filename: /tmp/gnb_f1u.pcap
+  f1u_enable: false
+  e2ap_cu_up_filename: /tmp/cu_up_e2ap.pcap
+  rlc_filename: /tmp/gnb_rlc.pcap
+  rlc_rb_type: all
+  rlc_enable: false
+  mac_filename: /tmp/gnb_mac.pcap
+  mac_type: udp
+  mac_enable: false
+  e2ap_du_filename: /tmp/du_e2ap.pcap
+qos:
+  []
+e2:
+  enable_cu_cp_e2: false
+  addrs:
+    - 127.0.0.1
+  port: 36421
+  bind_addrs:
+    - 127.0.0.1
+  sctp_rto_initial: 120
+  sctp_rto_min: 120
+  sctp_rto_max: 500
+  sctp_init_max_attempts: 3
+  sctp_max_init_timeo: 500
+  sctp_hb_interval: 30000
+  sctp_assoc_max_retx: 10
+  sctp_nodelay: false
+  e2sm_kpm_enabled: false
+  e2sm_rc_enabled: false
+  e2sm_ccc_enabled: false
+  enable_cu_up_e2: false
+  enable_du_e2: false
+gnb_cu_up_id: 0
+cu_up:
+  ngu:
+    no_core: false
+    gtpu:
+      queue_size: 2046
+      batch_size: 256
+      reordering_timer: 0
+      rate_limiter_period: 100
+      teid_release_linger_time: 100
+      ignore_ue_ambr: true
+    socket:
+      - bind_addr: 127.0.0.1
+        bind_interface: auto
+        ext_addr: auto
+        udp:
+          max_rx_msgs: 256
+          tx_qsize: 4096
+          max_tx_msgs: 256
+          max_tx_segments: 256
+          pool_threshold: 0.899999976
+          reuse_addr: false
+          dscp: ~
+  test_mode:
+    enable: false
+    integrity_enable: true
+    ciphering_enable: true
+    nea_algo: 2
+    nia_algo: 2
+    ue_ambr: 40000000000
+    attach_detach_period: 0
+    reestablish_period: 0
+    f1u_peer_address: 127.0.10.2
+    nof_ues: 1
+  warn_on_drop: false
+  max_nof_ues: 16384
+gnb_du_id: 0
+cell_cfg:
+  pci: 1
+  sector_id: ~
+  dl_arfcn: 536020
+  band: auto
+  common_scs: 15kHz
+  channel_bandwidth_MHz: 20
+  nof_antennas_ul: 1
+  nof_antennas_dl: 1
+  plmn: 00101
+  additional_plmns:
+    []
+  tac: 7
+  enabled: true
+  cell_barred: false
+  intra_freq_reselection: true
+  q_rx_lev_min: -70
+  q_qual_min: -20
+  pcg_p_nr_fr1: ~
+  mac_cell_group:
+    bsr_cfg:
+      periodic_bsr_timer: 10
+      retx_bsr_timer: 80
+      lc_sr_delay_timer: ~
+    phr_cfg:
+      phr_prohibit_timer: 10
+    sr_cfg:
+      sr_trans_max: 64
+      sr_prohibit_timer: ~
+  ssb:
+    ssb_period: 10
+    ssb_block_power_dbm: -16
+    pss_to_sss_epre: 0
+  sib:
+    si_window_length: 160
+    si_sched_info:
+      []
+    sib2:
+      q_hyst: 3
+      thresh_serving_low_p: 0
+      cell_reselection_priority: 6
+      q_rx_lev_min: -140
+      s_intra_search_p: 62
+      t_reselection_nr: 1
+    sib3:
+      intra_freq_neigh_cell_list:
+        []
+      intra_freq_excluded_cell_list:
+        []
+    sib4:
+      inter_freq_carrier_freq_list:
+        []
+    sib5:
+      t_reselection_eutra: 0
+      carrier_freq_list_eutra:
+        []
+    sib16:
+      freq_prio_list_slicing:
+        []
+    etws:
+      message_id: 4356
+      serial_num: 12288
+      warning_type: 2432
+      data_coding_scheme: 0
+      warning_message: ~
+    cmas:
+      message_id: 4370
+      serial_num: 12291
+      data_coding_scheme: 0
+      warning_message: ""
+    t300: 1000
+    t301: 1000
+    t310: 1000
+    n310: 1
+    t311: 3000
+    n311: 1
+    t319: 1000
+  ul_common:
+    p_max: ~
+    max_pucchs_per_slot: 31
+    max_ul_grants_per_slot: 32
+    min_pucch_pusch_prb_distance: 1
+  pdcch:
+    common:
+      coreset0_index: ~
+      ss1_n_candidates: "[0,0,1,0,0]"
+      ss0_index: 0
+      max_coreset0_duration: ~
+    dedicated:
+      coreset1_rb_start: ~
+      coreset1_l_crb: ~
+      coreset1_duration: ~
+      ss2_n_candidates: "[0,0,0,0,0]"
+      dci_format_0_1_and_1_1: true
+      ss2_type: ue_dedicated
+      al_cqi_offset: 0
+  pdsch:
+    min_ue_mcs: 0
+    max_ue_mcs: 28
+    fixed_rar_mcs: 0
+    fixed_sib1_mcs: 5
+    harq_feedback_disabled: false
+    nof_harqs: 16
+    max_nof_harq_retxs: 4
+    harq_retx_timeout: 100
+    max_consecutive_kos: 100
+    rv_sequence:
+      - 0
+      - 2
+      - 3
+      - 1
+    mcs_table: qam256
+    min_rb_size: 1
+    max_rb_size: 275
+    start_rb: 0
+    end_rb: 275
+    max_pdschs_per_slot: 35
+    max_alloc_attempts: 35
+    olla_cqi_inc_step: 0.00100000005
+    olla_target_bler: 0.00999999978
+    olla_max_cqi_offset: 4
+    dc_offset: center
+    harq_la_cqi_drop_threshold: 3
+    harq_la_ri_drop_threshold: 1
+    dmrs_additional_position: 2
+    interleaving_bundle_size: "\x00"
+    max_rank: ~
+    enable_csi_rs_pdsch_multiplexing: true
+  pusch:
+    min_ue_mcs: 0
+    max_ue_mcs: 28
+    harq_mode_b: false
+    nof_harqs: 16
+    max_nof_harq_retxs: 4
+    harq_retx_timeout: 100
+    max_consecutive_kos: 100
+    rv_sequence:
+      - 0
+    mcs_table: qam256
+    max_rank: 4
+    msg3_delta_preamble: 6
+    p0_nominal_with_grant: -76
+    msg3_delta_power: 8
+    max_puschs_per_slot: 16
+    beta_offset_ack_idx_1: 11
+    beta_offset_ack_idx_2: 6
+    beta_offset_ack_idx_3: 4
+    beta_offset_csi_p1_idx_1: 13
+    beta_offset_csi_p1_idx_2: 10
+    beta_offset_csi_p2_idx_1: 13
+    beta_offset_csi_p2_idx_2: 10
+    min_k2: 4
+    dc_offset: center
+    olla_snr_inc_step: 0.00100000005
+    olla_target_bler: 0.00999999978
+    olla_max_snr_offset: 5
+    dmrs_additional_position: 2
+    min_rb_size: 1
+    max_rb_size: 275
+    start_rb: 0
+    end_rb: 275
+    enable_cl_loop_pw_control: false
+    enable_phr_bw_adaptation: false
+    target_sinr: 10
+    ref_path_loss: 70
+    pl_compensation_factor: 1
+    enable_transform_precoding: false
+  pucch:
+    p0_nominal: -90
+    pucch_resource_common: ~
+    sr_period_ms: 20
+    formats: f1_and_f2
+    resource_set_size: 8
+    nof_cell_res_set_configs: 2
+    nof_cell_sr_res: 8
+    nof_cell_csi_res: 8
+    f0_intraslot_freq_hop: false
+    f1_enable_occ: false
+    f1_nof_cyclic_shifts: 2
+    f1_intraslot_freq_hop: false
+    f2_max_nof_rbs: 1
+    f2_max_payload: ~
+    f2_max_code_rate: dot35
+    f2_intraslot_freq_hop: false
+    f3_max_nof_rbs: 1
+    f3_max_payload: ~
+    f3_max_code_rate: dot35
+    f3_intraslot_freq_hop: false
+    f3_additional_dmrs: false
+    f3_pi2_bpsk: false
+    f4_max_code_rate: dot35
+    f4_intraslot_freq_hop: false
+    f4_additional_dmrs: false
+    f4_pi2_bpsk: false
+    f4_occ_length: 2
+    f4_enable_occ: false
+    min_k1: 4
+    max_consecutive_kos: 100
+    enable_cl_loop_pw_control: false
+    target_sinr_f0: 10
+    target_sinr_f2: 6
+    target_sinr_f3: 1
+  srs:
+    type_enabled: disabled
+    period_ms: 20
+    max_nof_sym_per_slot: 2
+    nof_sym_per_resource: 1
+    c_srs: ~
+    freq_domain_shift: 0
+    tx_comb: 4
+    cyclic_shift_reuse: 1
+    sequence_id_reuse: 1
+    p0: -84
+  prach:
+    prach_config_index: ~
+    prach_root_sequence_index: 1
+    zero_correlation_zone: 0
+    fixed_msg3_mcs: 0
+    max_msg3_harq_retx: 4
+    total_nof_ra_preambles: 64
+    cfra_enabled: false
+    prach_frequency_start: ~
+    preamble_rx_target_pw: -100
+    preamble_trans_max: 7
+    power_ramping_step_db: 4
+    ports:
+      - "\x00"
+    nof_ssb_per_ro: "\x03"
+    nof_cb_preambles_per_ssb: 64
+    ra_resp_window: ~
+    nof_prach_guardbands_rbs: 3
+    slice_based_ra_prioritization:
+      []
+    two_step:
+      cb_preambles_per_ssb_per_shared_ro: 4
+      msgA_rsrp_thres_dbm: -100
+      msgB_response_window_slots: 40
+      td_offset: 1
+      pusch_td_res_index: 0
+      mcs: 0
+      nof_prbs_per_msgA_po: 3
+      prb_start: 0
+      po_fdm: 1
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 10
+    nof_dl_slots: 6
+    nof_dl_symbols: 8
+    nof_ul_slots: 3
+    nof_ul_symbols: 0
+    pattern2:
+      dl_ul_tx_period: 10
+      nof_dl_slots: 6
+      nof_dl_symbols: 8
+      nof_ul_slots: 3
+      nof_ul_symbols: 0
+  paging:
+    pg_search_space_id: 1
+    default_pg_cycle_in_rf: 128
+    nof_pf_per_paging_cycle: oneT
+    pf_offset: 0
+    nof_po_per_pf: 1
+    edrx_enabled: false
+  csi:
+    csi_rs_enabled: true
+    csi_rs_period: 20
+    report_type: periodic
+    meas_csi_rs_slot_offset: ~
+    tracking_csi_rs_slot_offset: ~
+    zp_csi_rs_slot_offset: ~
+    pwr_ctrl_offset: 0
+  scheduler:
+    nof_preselected_newtx_ues: 1024
+    policy:
+      qos_sched:
+        combine_function: gbr_prioritized
+        pf_fairness_coeff: 2
+        prio_enabled: true
+        pdb_enabled: true
+        gbr_enabled: true
+  ta:
+    ta_measurement_slot_period: 80
+    ta_measurement_slot_prohibit_period: 0
+    ta_cmd_offset_threshold: 1
+    ta_target: 1
+    ta_update_measurement_ul_sinr_threshold: 0
+    ta_outlier_detection_zscore_threshold: 1.75
+  drx:
+    on_duration_timer: 10
+    inactivity_timer: 0
+    retx_timer_dl: 0
+    retx_timer_ul: 0
+    long_cycle: 0
+  slicing:
+    []
+  ntn:
+    cell_specific_koffset: 0
+    ntn_ul_sync_validity_dur: ~
+    epoch_time:
+      sfn: 0
+      subframe_number: 0
+    ta_info:
+      ta_common: 0
+      ta_common_drift: 0
+      ta_common_drift_variant: 0
+      ta_common_offset: 0
+    ephemeris_info_ecef:
+      pos_x: 0
+      pos_y: 0
+      pos_z: 0
+      vel_x: 0
+      vel_y: 0
+      vel_z: 0
+    ephemeris_orbital:
+      semi_major_axis: 0
+      eccentricity: 0
+      periapsis: 0
+      longitude: 0
+      inclination: 0
+      mean_anomaly: 0
+  rlm:
+    rlm_resource_type: default_type
+du:
+  warn_on_drop: false
+cells:
+  - pci: 1
+    sector_id: 0
+    dl_arfcn: 536020
+    band: 7
+    common_scs: 15kHz
+    channel_bandwidth_MHz: 20
+    nof_antennas_ul: 1
+    nof_antennas_dl: 1
+    plmn: 00101
+    additional_plmns:
+      []
+    tac: 7
+    enabled: true
+    cell_barred: false
+    intra_freq_reselection: true
+    q_rx_lev_min: -70
+    q_qual_min: -20
+    pcg_p_nr_fr1: ~
+    mac_cell_group:
+      bsr_cfg:
+        periodic_bsr_timer: 10
+        retx_bsr_timer: 80
+        lc_sr_delay_timer: ~
+      phr_cfg:
+        phr_prohibit_timer: 10
+      sr_cfg:
+        sr_trans_max: 64
+        sr_prohibit_timer: ~
+    ssb:
+      ssb_period: 10
+      ssb_block_power_dbm: -16
+      pss_to_sss_epre: 0
+    sib:
+      si_window_length: 160
+      si_sched_info:
+        []
+      sib2:
+        q_hyst: 3
+        thresh_serving_low_p: 0
+        cell_reselection_priority: 6
+        q_rx_lev_min: -140
+        s_intra_search_p: 62
+        t_reselection_nr: 1
+      sib3:
+        intra_freq_neigh_cell_list:
+          []
+        intra_freq_excluded_cell_list:
+          []
+      sib4:
+        inter_freq_carrier_freq_list:
+          []
+      sib5:
+        t_reselection_eutra: 0
+        carrier_freq_list_eutra:
+          []
+      sib16:
+        freq_prio_list_slicing:
+          []
+      etws:
+        message_id: 4356
+        serial_num: 12288
+        warning_type: 2432
+        data_coding_scheme: 0
+        warning_message: ~
+      cmas:
+        message_id: 4370
+        serial_num: 12291
+        data_coding_scheme: 0
+        warning_message: ""
+      t300: 1000
+      t301: 1000
+      t310: 1000
+      n310: 1
+      t311: 3000
+      n311: 1
+      t319: 1000
+    ul_common:
+      p_max: ~
+      max_pucchs_per_slot: 31
+      max_ul_grants_per_slot: 32
+      min_pucch_pusch_prb_distance: 1
+    pdcch:
+      common:
+        coreset0_index: ~
+        ss1_n_candidates: "[0,0,1,0,0]"
+        ss0_index: 0
+        max_coreset0_duration: ~
+      dedicated:
+        coreset1_rb_start: ~
+        coreset1_l_crb: ~
+        coreset1_duration: ~
+        ss2_n_candidates: "[0,0,0,0,0]"
+        dci_format_0_1_and_1_1: true
+        ss2_type: ue_dedicated
+        al_cqi_offset: 0
+    pdsch:
+      min_ue_mcs: 0
+      max_ue_mcs: 28
+      fixed_rar_mcs: 0
+      fixed_sib1_mcs: 5
+      harq_feedback_disabled: false
+      nof_harqs: 16
+      max_nof_harq_retxs: 4
+      harq_retx_timeout: 100
+      max_consecutive_kos: 100
+      rv_sequence:
+        - 0
+        - 2
+        - 3
+        - 1
+      mcs_table: qam256
+      min_rb_size: 1
+      max_rb_size: 275
+      start_rb: 0
+      end_rb: 275
+      max_pdschs_per_slot: 35
+      max_alloc_attempts: 35
+      olla_cqi_inc_step: 0.00100000005
+      olla_target_bler: 0.00999999978
+      olla_max_cqi_offset: 4
+      dc_offset: center
+      harq_la_cqi_drop_threshold: 3
+      harq_la_ri_drop_threshold: 1
+      dmrs_additional_position: 2
+      interleaving_bundle_size: "\x00"
+      max_rank: ~
+      enable_csi_rs_pdsch_multiplexing: true
+    pusch:
+      min_ue_mcs: 0
+      max_ue_mcs: 28
+      harq_mode_b: false
+      nof_harqs: 16
+      max_nof_harq_retxs: 4
+      harq_retx_timeout: 100
+      max_consecutive_kos: 100
+      rv_sequence:
+        - 0
+      mcs_table: qam256
+      max_rank: 4
+      msg3_delta_preamble: 6
+      p0_nominal_with_grant: -76
+      msg3_delta_power: 8
+      max_puschs_per_slot: 16
+      beta_offset_ack_idx_1: 11
+      beta_offset_ack_idx_2: 6
+      beta_offset_ack_idx_3: 4
+      beta_offset_csi_p1_idx_1: 13
+      beta_offset_csi_p1_idx_2: 10
+      beta_offset_csi_p2_idx_1: 13
+      beta_offset_csi_p2_idx_2: 10
+      min_k2: 4
+      dc_offset: center
+      olla_snr_inc_step: 0.00100000005
+      olla_target_bler: 0.00999999978
+      olla_max_snr_offset: 5
+      dmrs_additional_position: 2
+      min_rb_size: 1
+      max_rb_size: 275
+      start_rb: 0
+      end_rb: 275
+      enable_cl_loop_pw_control: false
+      enable_phr_bw_adaptation: false
+      target_sinr: 10
+      ref_path_loss: 70
+      pl_compensation_factor: 1
+      enable_transform_precoding: false
+    pucch:
+      p0_nominal: -90
+      pucch_resource_common: ~
+      sr_period_ms: 20
+      formats: f1_and_f2
+      resource_set_size: 8
+      nof_cell_res_set_configs: 2
+      nof_cell_sr_res: 8
+      nof_cell_csi_res: 8
+      f0_intraslot_freq_hop: false
+      f1_enable_occ: false
+      f1_nof_cyclic_shifts: 2
+      f1_intraslot_freq_hop: false
+      f2_max_nof_rbs: 1
+      f2_max_payload: ~
+      f2_max_code_rate: dot35
+      f2_intraslot_freq_hop: false
+      f3_max_nof_rbs: 1
+      f3_max_payload: ~
+      f3_max_code_rate: dot35
+      f3_intraslot_freq_hop: false
+      f3_additional_dmrs: false
+      f3_pi2_bpsk: false
+      f4_max_code_rate: dot35
+      f4_intraslot_freq_hop: false
+      f4_additional_dmrs: false
+      f4_pi2_bpsk: false
+      f4_occ_length: 2
+      f4_enable_occ: false
+      min_k1: 4
+      max_consecutive_kos: 100
+      enable_cl_loop_pw_control: false
+      target_sinr_f0: 10
+      target_sinr_f2: 6
+      target_sinr_f3: 1
+    srs:
+      type_enabled: disabled
+      period_ms: 20
+      max_nof_sym_per_slot: 2
+      nof_sym_per_resource: 1
+      c_srs: ~
+      freq_domain_shift: 0
+      tx_comb: 4
+      cyclic_shift_reuse: 1
+      sequence_id_reuse: 1
+      p0: -84
+    prach:
+      prach_config_index: 16
+      prach_root_sequence_index: 1
+      zero_correlation_zone: 0
+      fixed_msg3_mcs: 0
+      max_msg3_harq_retx: 4
+      total_nof_ra_preambles: 64
+      cfra_enabled: false
+      prach_frequency_start: ~
+      preamble_rx_target_pw: -100
+      preamble_trans_max: 7
+      power_ramping_step_db: 4
+      ports:
+        - "\x00"
+      nof_ssb_per_ro: "\x03"
+      nof_cb_preambles_per_ssb: 64
+      ra_resp_window: 10
+      nof_prach_guardbands_rbs: 3
+      slice_based_ra_prioritization:
+        []
+      two_step:
+        cb_preambles_per_ssb_per_shared_ro: 4
+        msgA_rsrp_thres_dbm: -100
+        msgB_response_window_slots: 40
+        td_offset: 1
+        pusch_td_res_index: 0
+        mcs: 0
+        nof_prbs_per_msgA_po: 3
+        prb_start: 0
+        po_fdm: 1
+    tdd_ul_dl_cfg:
+      dl_ul_tx_period: 10
+      nof_dl_slots: 6
+      nof_dl_symbols: 8
+      nof_ul_slots: 3
+      nof_ul_symbols: 0
+      pattern2:
+        dl_ul_tx_period: 10
+        nof_dl_slots: 6
+        nof_dl_symbols: 8
+        nof_ul_slots: 3
+        nof_ul_symbols: 0
+    paging:
+      pg_search_space_id: 1
+      default_pg_cycle_in_rf: 128
+      nof_pf_per_paging_cycle: oneT
+      pf_offset: 0
+      nof_po_per_pf: 1
+      edrx_enabled: false
+    csi:
+      csi_rs_enabled: true
+      csi_rs_period: 20
+      report_type: periodic
+      meas_csi_rs_slot_offset: ~
+      tracking_csi_rs_slot_offset: ~
+      zp_csi_rs_slot_offset: ~
+      pwr_ctrl_offset: 0
+    scheduler:
+      nof_preselected_newtx_ues: 1024
+      policy:
+        qos_sched:
+          combine_function: gbr_prioritized
+          pf_fairness_coeff: 2
+          prio_enabled: true
+          pdb_enabled: true
+          gbr_enabled: true
+    ta:
+      ta_measurement_slot_period: 80
+      ta_measurement_slot_prohibit_period: 0
+      ta_cmd_offset_threshold: 1
+      ta_target: 1
+      ta_update_measurement_ul_sinr_threshold: 0
+      ta_outlier_detection_zscore_threshold: 1.75
+    drx:
+      on_duration_timer: 10
+      inactivity_timer: 0
+      retx_timer_dl: 0
+      retx_timer_ul: 0
+      long_cycle: 0
+    slicing:
+      []
+    ntn:
+      cell_specific_koffset: 0
+      ntn_ul_sync_validity_dur: ~
+      epoch_time:
+        sfn: 0
+        subframe_number: 0
+      ta_info:
+        ta_common: 0
+        ta_common_drift: 0
+        ta_common_drift_variant: 0
+        ta_common_offset: 0
+      ephemeris_info_ecef:
+        pos_x: 0
+        pos_y: 0
+        pos_z: 0
+        vel_x: 0
+        vel_y: 0
+        vel_z: 0
+      ephemeris_orbital:
+        semi_major_axis: 0
+        eccentricity: 0
+        periapsis: 0
+        longitude: 0
+        inclination: 0
+        mean_anomaly: 0
+    rlm:
+      rlm_resource_type: default_type
+srbs:
+  []
+test_mode:
+  test_ue:
+    rnti: 0
+    nof_ues: 1
+    ue_creation_stagger_slots: 10
+    auto_ack_indication_delay: ~
+    attach_detach_duration_ms: ~
+    attach_detach_guard_duration_ms: 1000
+    pdsch_active: true
+    pusch_active: true
+    cqi: 15
+    ri: 1
+    pmi: 0
+    i_1_1: 0
+    i_1_3: 0
+    i_2: 0
+expert_phy:
+  max_proc_delay: 2
+  pusch_dec_max_iterations: 6
+  pusch_dec_enable_early_stop: true
+  pusch_decoder_force_decoding: false
+  pusch_sinr_calc_method: post_equalization
+  pusch_channel_estimator_fd_strategy: filter
+  pusch_channel_estimator_td_strategy: average
+  pusch_channel_estimator_cfo_compensation: true
+  pusch_channel_equalizer_algorithm: zf
+  max_request_headroom_slots: 2
+  allow_request_on_empty_uplink_slot: false
+  enable_phy_tap: false
+  phy_tap_arguments: ""
+ru_ofh:
+  gps_alpha: 0
+  gps_beta: 0
+  base_cell:
+    t1a_max_cp_dl: 500
+    t1a_min_cp_dl: 258
+    t1a_max_cp_ul: 500
+    t1a_min_cp_ul: 285
+    t1a_max_up: 300
+    t1a_min_up: 85
+    ta4_max: 500
+    ta4_min: 85
+    is_prach_cp_enabled: true
+    ignore_ecpri_seq_id: false
+    ignore_ecpri_payload_size: false
+    ignore_prach_start_symbol: false
+    log_lates_as_warnings: true
+    warn_unreceived_ru_frames: after_traffic_detection
+    compr_method_ul: bfp
+    compr_bitwidth_ul: 9
+    compr_method_dl: bfp
+    compr_bitwidth_dl: 9
+    compr_method_prach: bfp
+    compr_bitwidth_prach: 9
+    enable_ul_static_compr_hdr: true
+    enable_dl_static_compr_hdr: true
+  cells:
+    - t1a_max_cp_dl: 500
+      t1a_min_cp_dl: 258
+      t1a_max_cp_ul: 500
+      t1a_min_cp_ul: 285
+      t1a_max_up: 300
+      t1a_min_up: 85
+      ta4_max: 500
+      ta4_min: 85
+      is_prach_cp_enabled: true
+      ignore_ecpri_seq_id: false
+      ignore_ecpri_payload_size: false
+      ignore_prach_start_symbol: false
+      log_lates_as_warnings: true
+      warn_unreceived_ru_frames: after_traffic_detection
+      compr_method_ul: bfp
+      compr_bitwidth_ul: 9
+      compr_method_dl: bfp
+      compr_bitwidth_dl: 9
+      compr_method_prach: bfp
+      compr_bitwidth_prach: 9
+      enable_ul_static_compr_hdr: true
+      enable_dl_static_compr_hdr: true
+      network_interface: enp1s0f0
+      enable_promiscuous: false
+      check_link_status: false
+      ru_mac_addr: 70:b3:d5:e1:5b:06
+      du_mac_addr: 00:11:22:33:00:77
+      vlan_tag_cp: ~
+      vlan_tag_up: ~
+      vlan_pcp_cp: ~
+      vlan_pcp_up: ~
+      prach_port_id:
+        - 4
+      dl_port_id:
+        - 0
+      ul_port_id:
+        - 0
+ru_sdr:
+  srate: 61.439999999999998
+  device_driver: uhd
+  device_args: ""
+  tx_gain: 50
+  rx_gain: 60
+  freq_offset: 0
+  clock_ppm: 0
+  lo_offset: 0
+  clock: default
+  sync: default
+  otw_format: default
+  time_alignment_calibration: ~
+  dl_freq_Hz: ~
+  ul_freq_Hz: ~
+  amplitude_control:
+    tx_gain_backoff: 12
+    enable_clipping: false
+    ceiling: -0.100000001
+  expert_cfg:
+    low_phy_dl_throttling: 0
+    tx_mode: continuous
+    power_ramping_time_us: 0
+ru_dummy:
+  dl_processing_delay: 1
+  time_scaling: 1

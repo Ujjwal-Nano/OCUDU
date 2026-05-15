@@ -21,12 +21,144 @@ module ocudu-cu-up {
       default "/tmp/cu_up.log";
       description "Log file output path";
     }
+    leaf all-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU";
+    }
+    leaf lib-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "Generic log level";
+    }
+    leaf e2ap-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "E2AP log level (falls back to --all_level if unset)";
+    }
+    leaf config-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "none";
+      description "Config log level (falls back to --all_level if unset)";
+    }
     leaf hex-max-size {
       type int32 {
         range "-1..1024";
       }
       default 0;
       description "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)";
+    }
+    leaf pdcp-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "PDCP log level (falls back to --all_level if unset)";
+    }
+    leaf sdap-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "SDAP log level (falls back to --all_level if unset)";
+    }
+    leaf gtpu-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "GTPU log level (falls back to --all_level if unset)";
+    }
+    leaf e1ap-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "E1AP log level (falls back to --all_level if unset)";
+    }
+    leaf f1u-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "F1-U log level (falls back to --all_level if unset)";
+    }
+    leaf cu-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "Log level for the CU (falls back to --all_level if unset)";
+    }
+    leaf sec-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "Security functions log level (falls back to --all_level if unset)";
+    }
+    leaf rohc-level {
+      type enumeration {
+        enum "none";
+        enum "error";
+        enum "warning";
+        enum "info";
+        enum "debug";
+      }
+      default "warning";
+      description "ROHC log level (falls back to --all_level if unset)";
     }
     leaf e1ap-json-enabled {
       type boolean;
@@ -136,6 +268,16 @@ module ocudu-cu-up {
     description "Expert execution configuration";
     container affinities {
       description "Application CPU affinities configuration";
+      leaf main-pool-cpus {
+        type string;
+        default "";
+        description "CPU cores assigned to main thread pool (comma-separated CPU ids or ranges, e.g. \"0-3,5,7\")";
+      }
+      leaf main-pool-pinning {
+        type string;
+        default "mask";
+        description "Policy used for assigning CPU cores to the main thread pool (one of: mask, round-robin)";
+      }
     }
     container threads {
       description "Threads configuration";

@@ -460,7 +460,18 @@
       "properties": {
         "affinities": {
           "description": "Application CPU affinities configuration",
-          "properties": {},
+          "properties": {
+            "main_pool_cpus": {
+              "default": "",
+              "description": "CPU cores assigned to main thread pool (comma-separated CPU ids or ranges, e.g. \"0-3,5,7\")",
+              "type": "string"
+            },
+            "main_pool_pinning": {
+              "default": "mask",
+              "description": "Policy used for assigning CPU cores to the main thread pool (one of: mask, round-robin)",
+              "type": "string"
+            }
+          },
           "type": "object"
         },
         "queues": {
@@ -540,14 +551,98 @@
     "log": {
       "description": "Logging configuration",
       "properties": {
+        "all_level": {
+          "default": "warning",
+          "description": "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "config_level": {
+          "default": "none",
+          "description": "Config log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "cu_level": {
+          "default": "warning",
+          "description": "Log level for the CU (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
         "e1ap_json_enabled": {
           "default": false,
           "description": "Enable JSON logging of E1AP PDUs",
           "type": "boolean"
         },
+        "e1ap_level": {
+          "default": "warning",
+          "description": "E1AP log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "e2ap_level": {
+          "default": "warning",
+          "description": "E2AP log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "f1u_level": {
+          "default": "warning",
+          "description": "F1-U log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
         "filename": {
           "default": "/tmp/cu_up.log",
           "description": "Log file output path",
+          "type": "string"
+        },
+        "gtpu_level": {
+          "default": "warning",
+          "description": "GTPU log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
           "type": "string"
         },
         "hex_max_size": {
@@ -556,6 +651,66 @@
           "maximum": 1024.0,
           "minimum": -1.0,
           "type": "integer"
+        },
+        "lib_level": {
+          "default": "warning",
+          "description": "Generic log level",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "pdcp_level": {
+          "default": "warning",
+          "description": "PDCP log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "rohc_level": {
+          "default": "warning",
+          "description": "ROHC log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "sdap_level": {
+          "default": "warning",
+          "description": "SDAP log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
+        },
+        "sec_level": {
+          "default": "warning",
+          "description": "Security functions log level (falls back to --all_level if unset)",
+          "enum": [
+            "none",
+            "error",
+            "warning",
+            "info",
+            "debug"
+          ],
+          "type": "string"
         }
       },
       "type": "object"

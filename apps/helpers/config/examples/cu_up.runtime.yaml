@@ -1,7 +1,19 @@
 dryrun: false
 log:
   filename: /tmp/cu_up.log
+  all_level: warning
+  lib_level: warning
+  e2ap_level: warning
+  config_level: none
   hex_max_size: 0
+  pdcp_level: warning
+  sdap_level: warning
+  gtpu_level: warning
+  e1ap_level: warning
+  f1u_level: warning
+  cu_level: warning
+  sec_level: warning
+  rohc_level: warning
   e1ap_json_enabled: false
 trace:
   filename: ""
@@ -26,6 +38,9 @@ metrics:
     app_usage_report_period: 1000
     cu_up_report_period: 1000
 expert_execution:
+  affinities:
+    main_pool_cpus: ""
+    main_pool_pinning: mask
   threads:
     main_pool:
       nof_threads: ~
