@@ -1,4 +1,12 @@
 # CU-UP configuration reference
+
+## Reusable types
+
+### <a id="types-log-level"></a>`log-level`
+
+- Type: string
+- Constraints: enum: none, error, warning, info, debug
+
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
 | `dryrun` | boolean | `false` |  | Enable application dry run mode |
@@ -14,19 +22,19 @@ Logging configuration
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
 | `filename` | string | `/tmp/cu_up.log` |  | Log file output path |
-| `all_level` | string | `warning` | enum: none, error, warning, info, debug | Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU |
-| `lib_level` | string | `warning` | enum: none, error, warning, info, debug | Generic log level |
-| `e2ap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E2AP log level |
-| `config_level` | string | `none` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Config log level |
+| `all_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU |
+| `lib_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | Generic log level |
+| `e2ap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E2AP log level |
+| `config_level` | [`log-level`](#types-log-level) | `none` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Config log level |
 | `hex_max_size` | integer | `0` | -1..1024 | Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes) |
-| `pdcp_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | PDCP log level |
-| `sdap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | SDAP log level |
-| `gtpu_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | GTPU log level |
-| `e1ap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E1AP log level |
-| `f1u_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | F1-U log level |
-| `cu_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Log level for the CU |
-| `sec_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Security functions log level |
-| `rohc_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | ROHC log level |
+| `pdcp_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | PDCP log level |
+| `sdap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | SDAP log level |
+| `gtpu_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | GTPU log level |
+| `e1ap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E1AP log level |
+| `f1u_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | F1-U log level |
+| `cu_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Log level for the CU |
+| `sec_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Security functions log level |
+| `rohc_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | ROHC log level |
 | `e1ap_json_enabled` | boolean | `false` |  | Enable JSON logging of E1AP PDUs |
 
 
@@ -166,14 +174,6 @@ E1AP parameters
 |--------|------|---------|-------------|-------------|
 | `addrs` | array of string | `[127.0.20.1]` |  | CU-CP addresses to be used for E1 interface. Multiple addresses can be specified for SCTP multi-homing |
 | `bind_addrs` | array of string | `[127.0.20.2]` |  | CU-UP bind addresses to be used for E1 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed |
-| `sctp_rto_initial` | integer | `120` |  | SCTP initial RTO value in milliseconds (-1 to use system default) |
-| `sctp_rto_min` | integer | `120` |  | SCTP RTO min in milliseconds (-1 to use system default) |
-| `sctp_rto_max` | integer | `500` |  | SCTP RTO max in milliseconds (-1 to use system default) |
-| `sctp_init_max_attempts` | integer | `3` |  | SCTP init max attempts (-1 to use system default) |
-| `sctp_max_init_timeo` | integer | `500` |  | SCTP max init timeout in milliseconds (-1 to use system default) |
-| `sctp_hb_interval` | integer | `30000` |  | SCTP heartbeat interval in milliseconds (-1 to use system default) |
-| `sctp_assoc_max_retx` | integer | `10` |  | SCTP association max retransmissions (-1 to use system default) |
-| `sctp_nodelay` | boolean | `false` |  | Send SCTP messages as soon as possible without any Nagle-like algorithm |
 
 
 ### f1u
@@ -342,14 +342,6 @@ E2 parameters
 | `addrs` | array of string | `[127.0.0.1]` |  | RIC addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing |
 | `port` | integer | `36421` | 20000..40000 | RIC port |
 | `bind_addrs` | array of string | `[127.0.0.1]` |  | Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed |
-| `sctp_rto_initial` | integer | `120` |  | SCTP initial RTO value in milliseconds (-1 to use system default) |
-| `sctp_rto_min` | integer | `120` |  | SCTP RTO min in milliseconds (-1 to use system default) |
-| `sctp_rto_max` | integer | `500` |  | SCTP RTO max in milliseconds (-1 to use system default) |
-| `sctp_init_max_attempts` | integer | `3` |  | SCTP init max attempts (-1 to use system default) |
-| `sctp_max_init_timeo` | integer | `500` |  | SCTP max init timeout in milliseconds (-1 to use system default) |
-| `sctp_hb_interval` | integer | `30000` |  | SCTP heartbeat interval in milliseconds (-1 to use system default) |
-| `sctp_assoc_max_retx` | integer | `10` |  | SCTP association max retransmissions (-1 to use system default) |
-| `sctp_nodelay` | boolean | `false` |  | Send SCTP messages as soon as possible without any Nagle-like algorithm |
 | `e2sm_kpm_enabled` | boolean | `false` |  | Enable KPM service module |
 | `e2sm_rc_enabled` | boolean | `false` |  | Enable RC service module |
 | `e2sm_ccc_enabled` | boolean | `false` |  | Enable CCC service module |

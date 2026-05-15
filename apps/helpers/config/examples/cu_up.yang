@@ -9,6 +9,59 @@ module ocudu-cu-up {
     description "Generated.";
   }
 
+  typedef log-level {
+    type enumeration {
+      enum "none";
+      enum "error";
+      enum "warning";
+      enum "info";
+      enum "debug";
+    }
+  }
+
+  grouping sctp-socket {
+    leaf sctp-rto-initial {
+      type int32;
+      default 120;
+      description "SCTP initial RTO value in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-rto-min {
+      type int32;
+      default 120;
+      description "SCTP RTO min in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-rto-max {
+      type int32;
+      default 500;
+      description "SCTP RTO max in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-init-max-attempts {
+      type int32;
+      default 3;
+      description "SCTP init max attempts (-1 to use system default)";
+    }
+    leaf sctp-max-init-timeo {
+      type int32;
+      default 500;
+      description "SCTP max init timeout in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-hb-interval {
+      type int32;
+      default 30000;
+      description "SCTP heartbeat interval in milliseconds (-1 to use system default)";
+    }
+    leaf sctp-assoc-max-retx {
+      type int32;
+      default 10;
+      description "SCTP association max retransmissions (-1 to use system default)";
+    }
+    leaf sctp-nodelay {
+      type boolean;
+      default false;
+      description "Send SCTP messages as soon as possible without any Nagle-like algorithm";
+    }
+  }
+
   leaf dryrun {
     type boolean;
     default false;
@@ -22,46 +75,22 @@ module ocudu-cu-up {
       description "Log file output path";
     }
     leaf all-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU";
     }
     leaf lib-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "Generic log level";
     }
     leaf e2ap-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "E2AP log level (falls back to --all_level if unset)";
     }
     leaf config-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "none";
       description "Config log level (falls back to --all_level if unset)";
     }
@@ -73,90 +102,42 @@ module ocudu-cu-up {
       description "Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes)";
     }
     leaf pdcp-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "PDCP log level (falls back to --all_level if unset)";
     }
     leaf sdap-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "SDAP log level (falls back to --all_level if unset)";
     }
     leaf gtpu-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "GTPU log level (falls back to --all_level if unset)";
     }
     leaf e1ap-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "E1AP log level (falls back to --all_level if unset)";
     }
     leaf f1u-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "F1-U log level (falls back to --all_level if unset)";
     }
     leaf cu-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "Log level for the CU (falls back to --all_level if unset)";
     }
     leaf sec-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "Security functions log level (falls back to --all_level if unset)";
     }
     leaf rohc-level {
-      type enumeration {
-        enum "none";
-        enum "error";
-        enum "warning";
-        enum "info";
-        enum "debug";
-      }
+      type log-level;
       default "warning";
       description "ROHC log level (falls back to --all_level if unset)";
     }
@@ -355,46 +336,7 @@ module ocudu-cu-up {
         type string;
         description "CU-UP bind addresses to be used for E1 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed";
       }
-      leaf sctp-rto-initial {
-        type int32;
-        default 120;
-        description "SCTP initial RTO value in milliseconds (-1 to use system default)";
-      }
-      leaf sctp-rto-min {
-        type int32;
-        default 120;
-        description "SCTP RTO min in milliseconds (-1 to use system default)";
-      }
-      leaf sctp-rto-max {
-        type int32;
-        default 500;
-        description "SCTP RTO max in milliseconds (-1 to use system default)";
-      }
-      leaf sctp-init-max-attempts {
-        type int32;
-        default 3;
-        description "SCTP init max attempts (-1 to use system default)";
-      }
-      leaf sctp-max-init-timeo {
-        type int32;
-        default 500;
-        description "SCTP max init timeout in milliseconds (-1 to use system default)";
-      }
-      leaf sctp-hb-interval {
-        type int32;
-        default 30000;
-        description "SCTP heartbeat interval in milliseconds (-1 to use system default)";
-      }
-      leaf sctp-assoc-max-retx {
-        type int32;
-        default 10;
-        description "SCTP association max retransmissions (-1 to use system default)";
-      }
-      leaf sctp-nodelay {
-        type boolean;
-        default false;
-        description "Send SCTP messages as soon as possible without any Nagle-like algorithm";
-      }
+      uses sctp-socket;
     }
     container f1u {
       description "F1-U parameters";
@@ -766,46 +708,6 @@ module ocudu-cu-up {
       type string;
       description "Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed";
     }
-    leaf sctp-rto-initial {
-      type int32;
-      default 120;
-      description "SCTP initial RTO value in milliseconds (-1 to use system default)";
-    }
-    leaf sctp-rto-min {
-      type int32;
-      default 120;
-      description "SCTP RTO min in milliseconds (-1 to use system default)";
-    }
-    leaf sctp-rto-max {
-      type int32;
-      default 500;
-      description "SCTP RTO max in milliseconds (-1 to use system default)";
-    }
-    leaf sctp-init-max-attempts {
-      type int32;
-      default 3;
-      description "SCTP init max attempts (-1 to use system default)";
-    }
-    leaf sctp-max-init-timeo {
-      type int32;
-      default 500;
-      description "SCTP max init timeout in milliseconds (-1 to use system default)";
-    }
-    leaf sctp-hb-interval {
-      type int32;
-      default 30000;
-      description "SCTP heartbeat interval in milliseconds (-1 to use system default)";
-    }
-    leaf sctp-assoc-max-retx {
-      type int32;
-      default 10;
-      description "SCTP association max retransmissions (-1 to use system default)";
-    }
-    leaf sctp-nodelay {
-      type boolean;
-      default false;
-      description "Send SCTP messages as soon as possible without any Nagle-like algorithm";
-    }
     leaf e2sm-kpm-enabled {
       type boolean;
       default false;
@@ -821,6 +723,7 @@ module ocudu-cu-up {
       default false;
       description "Enable CCC service module";
     }
+    uses sctp-socket;
   }
 }
 

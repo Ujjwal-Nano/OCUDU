@@ -1,4 +1,12 @@
 # gNB configuration reference
+
+## Reusable types
+
+### <a id="types-log-level"></a>`log-level`
+
+- Type: string
+- Constraints: enum: none, error, warning, info, debug
+
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
 | `dryrun` | boolean | `false` |  | Enable application dry run mode |
@@ -16,40 +24,40 @@ Logging configuration
 | Option | Type | Default | Constraints | Description |
 |--------|------|---------|-------------|-------------|
 | `filename` | string | `/tmp/gnb.log` |  | Log file output path |
-| `all_level` | string | `warning` | enum: none, error, warning, info, debug | Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU |
-| `lib_level` | string | `warning` | enum: none, error, warning, info, debug | Generic log level |
-| `e2ap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E2AP log level |
-| `config_level` | string | `none` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Config log level |
+| `all_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU |
+| `lib_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | Generic log level |
+| `e2ap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | E2AP log level |
+| `config_level` | [`log-level`](#types-log-level) | `none` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Config log level |
 | `hex_max_size` | integer | `0` | -1..1024 | Maximum number of bytes to print in hex (zero for no hex dumps, -1 for unlimited bytes) |
-| `pdcp_level` | string | `warning` | enum: none, error, warning, info, debug | PDCP log level |
-| `rrc_level` | string | `warning` | enum: none, error, warning, info, debug | RRC log level |
-| `ngap_level` | string | `warning` | enum: none, error, warning, info, debug | NGAP log level |
-| `xnap_level` | string | `warning` | enum: none, error, warning, info, debug | XNAP log level |
-| `nrppa_level` | string | `warning` | enum: none, error, warning, info, debug | NRPPA log level |
-| `e1ap_level` | string | `warning` | enum: none, error, warning, info, debug | E1AP log level |
-| `f1ap_level` | string | `warning` | enum: none, error, warning, info, debug | F1AP log level |
-| `cu_level` | string | `warning` | enum: none, error, warning, info, debug | Log level for the CU |
-| `sec_level` | string | `warning` | enum: none, error, warning, info, debug | Security functions log level |
+| `pdcp_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | PDCP log level |
+| `rrc_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | RRC log level |
+| `ngap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | NGAP log level |
+| `xnap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | XNAP log level |
+| `nrppa_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | NRPPA log level |
+| `e1ap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | E1AP log level |
+| `f1ap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | F1AP log level |
+| `cu_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | Log level for the CU |
+| `sec_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug | Security functions log level |
 | `e1ap_json_enabled` | boolean | `false` |  | Enable JSON logging of E1AP PDUs |
 | `f1ap_json_enabled` | boolean | `false` |  | Enable JSON logging of F1AP PDUs |
-| `sdap_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | SDAP log level |
-| `gtpu_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | GTPU log level |
-| `f1u_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | F1-U log level |
-| `rohc_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | ROHC log level |
-| `mac_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | MAC log level |
-| `rlc_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | RLC log level |
-| `ntn_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | NTN log level |
-| `du_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Log level for the DU |
+| `sdap_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | SDAP log level |
+| `gtpu_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | GTPU log level |
+| `f1u_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | F1-U log level |
+| `rohc_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | ROHC log level |
+| `mac_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | MAC log level |
+| `rlc_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | RLC log level |
+| `ntn_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | NTN log level |
+| `du_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Log level for the DU |
 | `broadcast_enabled` | boolean | `false` |  | Enable logging in the physical and MAC layer of broadcast messages and all PRACH opportunities |
 | `high_latency_diagnostics_enabled` | boolean | `false` |  | Log performance diagnostics when high computational latencies are detected |
-| `fapi_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | FAPI log level |
-| `phy_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | PHY log level |
-| `hal_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | HAL log level |
+| `fapi_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | FAPI log level |
+| `phy_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | PHY log level |
+| `hal_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | HAL log level |
 | `phy_rx_symbols_filename` | string | `` |  | Set to a valid file path to print the received symbols. |
 | `phy_rx_symbols_port` | string | `0` | a non-negative port number or the sentinel "all" | Set to a valid receive port number to dump the IQ symbols from that port only, or set to "all" to dump the IQ symbols from all UL receive ports. Only works if "phy_rx_symbols_filename" is set. |
 | `phy_rx_symbols_prach` | boolean | `false` |  | Set to true to dump the IQ symbols from all the PRACH ports. Only works if "phy_rx_symbols_filename" is set. |
-| `ofh_level` | string | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Open Fronthaul log level |
-| `radio_level` | string | `info` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Radio log level |
+| `ofh_level` | [`log-level`](#types-log-level) | `warning` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Open Fronthaul log level |
+| `radio_level` | [`log-level`](#types-log-level) | `info` | enum: none, error, warning, info, debug; falls back to --all_level if unset | Radio log level |
 
 
 ## trace
@@ -316,14 +324,6 @@ AMF configuration
 | `port` | integer | `38412` | 20000..40000 | AMF port |
 | `bind_addrs` | array of string | `[127.0.0.1]` | --bind_addr is the legacy alias of --bind_addrs; kept for backward compatibility | CU-CP bind addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed |
 | `bind_interface` | string | `auto` |  | Network device to bind for N2 interface |
-| `sctp_rto_initial` | integer | `120` |  | SCTP initial RTO value in milliseconds (-1 to use system default) |
-| `sctp_rto_min` | integer | `120` |  | SCTP RTO min in milliseconds (-1 to use system default) |
-| `sctp_rto_max` | integer | `500` |  | SCTP RTO max in milliseconds (-1 to use system default) |
-| `sctp_init_max_attempts` | integer | `3` |  | SCTP init max attempts (-1 to use system default) |
-| `sctp_max_init_timeo` | integer | `500` |  | SCTP max init timeout in milliseconds (-1 to use system default) |
-| `sctp_hb_interval` | integer | `30000` |  | SCTP heartbeat interval in milliseconds (-1 to use system default) |
-| `sctp_assoc_max_retx` | integer | `10` |  | SCTP association max retransmissions (-1 to use system default) |
-| `sctp_nodelay` | boolean | `false` |  | Send SCTP messages as soon as possible without any Nagle-like algorithm |
 
 
 #### supported_tracking_areas
@@ -384,14 +384,6 @@ _List of objects with the following items:_
 | `port` | integer | `38412` | 20000..40000 | AMF port |
 | `bind_addrs` | array of string | `[127.0.0.1]` | --bind_addr is the legacy alias of --bind_addrs; kept for backward compatibility | CU-CP bind addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed |
 | `bind_interface` | string | `auto` |  | Network device to bind for N2 interface |
-| `sctp_rto_initial` | integer | `120` |  | SCTP initial RTO value in milliseconds (-1 to use system default) |
-| `sctp_rto_min` | integer | `120` |  | SCTP RTO min in milliseconds (-1 to use system default) |
-| `sctp_rto_max` | integer | `500` |  | SCTP RTO max in milliseconds (-1 to use system default) |
-| `sctp_init_max_attempts` | integer | `3` |  | SCTP init max attempts (-1 to use system default) |
-| `sctp_max_init_timeo` | integer | `500` |  | SCTP max init timeout in milliseconds (-1 to use system default) |
-| `sctp_hb_interval` | integer | `30000` |  | SCTP heartbeat interval in milliseconds (-1 to use system default) |
-| `sctp_assoc_max_retx` | integer | `10` |  | SCTP association max retransmissions (-1 to use system default) |
-| `sctp_nodelay` | boolean | `false` |  | Send SCTP messages as soon as possible without any Nagle-like algorithm |
 
 
 ##### supported_tracking_areas
@@ -446,14 +438,6 @@ XNAP configuration
 | `procedure_timeout` | integer | `5000` |  | Time that the XNAP waits for a response in milliseconds |
 | `reconnect_timer` | integer | `10000` |  | Time that the XNAP waits before trying to reconnect in milliseconds |
 | `no_connection_init` | boolean | `false` | hidden from --help in legacy CLI11 view | When true, the CU-CP will not initiate XNAP connections, but will only accept inbound ones |
-| `sctp_rto_initial` | integer | `120` |  | SCTP initial RTO value in milliseconds (-1 to use system default) |
-| `sctp_rto_min` | integer | `120` |  | SCTP RTO min in milliseconds (-1 to use system default) |
-| `sctp_rto_max` | integer | `500` |  | SCTP RTO max in milliseconds (-1 to use system default) |
-| `sctp_init_max_attempts` | integer | `3` |  | SCTP init max attempts (-1 to use system default) |
-| `sctp_max_init_timeo` | integer | `500` |  | SCTP max init timeout in milliseconds (-1 to use system default) |
-| `sctp_hb_interval` | integer | `30000` |  | SCTP heartbeat interval in milliseconds (-1 to use system default) |
-| `sctp_assoc_max_retx` | integer | `10` |  | SCTP association max retransmissions (-1 to use system default) |
-| `sctp_nodelay` | boolean | `false` |  | Send SCTP messages as soon as possible without any Nagle-like algorithm |
 
 
 #### connections
@@ -777,14 +761,6 @@ E2 parameters
 | `addrs` | array of string | `[127.0.0.1]` |  | RIC addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing |
 | `port` | integer | `36421` | 20000..40000 | RIC port |
 | `bind_addrs` | array of string | `[127.0.0.1]` |  | Local bind addresses to be used for E2 interface. Multiple addresses can be specified for SCTP multi-homing. If left empty, implicit bind is performed |
-| `sctp_rto_initial` | integer | `120` |  | SCTP initial RTO value in milliseconds (-1 to use system default) |
-| `sctp_rto_min` | integer | `120` |  | SCTP RTO min in milliseconds (-1 to use system default) |
-| `sctp_rto_max` | integer | `500` |  | SCTP RTO max in milliseconds (-1 to use system default) |
-| `sctp_init_max_attempts` | integer | `3` |  | SCTP init max attempts (-1 to use system default) |
-| `sctp_max_init_timeo` | integer | `500` |  | SCTP max init timeout in milliseconds (-1 to use system default) |
-| `sctp_hb_interval` | integer | `30000` |  | SCTP heartbeat interval in milliseconds (-1 to use system default) |
-| `sctp_assoc_max_retx` | integer | `10` |  | SCTP association max retransmissions (-1 to use system default) |
-| `sctp_nodelay` | boolean | `false` |  | Send SCTP messages as soon as possible without any Nagle-like algorithm |
 | `e2sm_kpm_enabled` | boolean | `false` |  | Enable KPM service module |
 | `e2sm_rc_enabled` | boolean | `false` |  | Enable RC service module |
 | `e2sm_ccc_enabled` | boolean | `false` |  | Enable CCC service module |

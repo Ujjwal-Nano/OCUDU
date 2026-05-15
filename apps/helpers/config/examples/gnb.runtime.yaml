@@ -130,14 +130,6 @@ cu_cp:
     bind_addrs:
       - 127.0.0.1
     bind_interface: auto
-    sctp_rto_initial: 120
-    sctp_rto_min: 120
-    sctp_rto_max: 500
-    sctp_init_max_attempts: 3
-    sctp_max_init_timeo: 500
-    sctp_hb_interval: 30000
-    sctp_assoc_max_retx: 10
-    sctp_nodelay: false
     supported_tracking_areas:
       - tac: 7
         plmn_list:
@@ -145,12 +137,6 @@ cu_cp:
             tai_slice_support_list:
               - sst: 1
                 sd: 16777215
-  extra_amfs:
-    []
-  xnap:
-    procedure_timeout: 5000
-    reconnect_timer: 10000
-    no_connection_init: false
     sctp_rto_initial: 120
     sctp_rto_min: 120
     sctp_rto_max: 500
@@ -159,8 +145,22 @@ cu_cp:
     sctp_hb_interval: 30000
     sctp_assoc_max_retx: 10
     sctp_nodelay: false
+  extra_amfs:
+    []
+  xnap:
+    procedure_timeout: 5000
+    reconnect_timer: 10000
+    no_connection_init: false
     connections:
       []
+    sctp_rto_initial: 120
+    sctp_rto_min: 120
+    sctp_rto_max: 500
+    sctp_init_max_attempts: 3
+    sctp_max_init_timeo: 500
+    sctp_hb_interval: 30000
+    sctp_assoc_max_retx: 10
+    sctp_nodelay: false
   mobility:
     trigger_handover_from_measurements: false
     trigger_cho_on_ue_setup: false
@@ -214,6 +214,11 @@ e2:
   port: 36421
   bind_addrs:
     - 127.0.0.1
+  e2sm_kpm_enabled: false
+  e2sm_rc_enabled: false
+  e2sm_ccc_enabled: false
+  enable_cu_up_e2: false
+  enable_du_e2: false
   sctp_rto_initial: 120
   sctp_rto_min: 120
   sctp_rto_max: 500
@@ -222,11 +227,6 @@ e2:
   sctp_hb_interval: 30000
   sctp_assoc_max_retx: 10
   sctp_nodelay: false
-  e2sm_kpm_enabled: false
-  e2sm_rc_enabled: false
-  e2sm_ccc_enabled: false
-  enable_cu_up_e2: false
-  enable_du_e2: false
 gnb_cu_up_id: 0
 cu_up:
   ngu:

@@ -141,6 +141,9 @@ e2:
   port: 36421
   bind_addrs:
     - 127.0.0.1
+  e2sm_kpm_enabled: false
+  e2sm_rc_enabled: false
+  e2sm_ccc_enabled: false
   sctp_rto_initial: 120
   sctp_rto_min: 120
   sctp_rto_max: 500
@@ -149,6 +152,3 @@ e2:
   sctp_hb_interval: 30000
   sctp_assoc_max_retx: 10
   sctp_nodelay: false
-  e2sm_kpm_enabled: false
-  e2sm_rc_enabled: false
-  e2sm_ccc_enabled: false

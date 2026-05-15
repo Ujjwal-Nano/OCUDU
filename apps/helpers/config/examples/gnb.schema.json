@@ -1,4 +1,61 @@
 {
+  "$defs": {
+    "log-level": {
+      "enum": [
+        "none",
+        "error",
+        "warning",
+        "info",
+        "debug"
+      ],
+      "type": "string"
+    },
+    "sctp-socket": {
+      "properties": {
+        "sctp_assoc_max_retx": {
+          "default": 10,
+          "description": "SCTP association max retransmissions (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_hb_interval": {
+          "default": 30000,
+          "description": "SCTP heartbeat interval in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_init_max_attempts": {
+          "default": 3,
+          "description": "SCTP init max attempts (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_max_init_timeo": {
+          "default": 500,
+          "description": "SCTP max init timeout in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_nodelay": {
+          "default": false,
+          "description": "Send SCTP messages as soon as possible without any Nagle-like algorithm",
+          "type": "boolean"
+        },
+        "sctp_rto_initial": {
+          "default": 120,
+          "description": "SCTP initial RTO value in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_rto_max": {
+          "default": 500,
+          "description": "SCTP RTO max in milliseconds (-1 to use system default)",
+          "type": "integer"
+        },
+        "sctp_rto_min": {
+          "default": 120,
+          "description": "SCTP RTO min in milliseconds (-1 to use system default)",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "buffer_pool": {
@@ -4496,6 +4553,13 @@
       "description": "CU-CP parameters",
       "properties": {
         "amf": {
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "$ref": "#/$defs/sctp-socket",
+              "description": "SCTP socket parameters"
+            }
+          ],
           "description": "AMF configuration",
           "properties": {
             "addrs": {
@@ -4537,46 +4601,6 @@
             "procedure_timeout": {
               "default": 5000,
               "description": "Time that the NGAP waits for a response from the AMF in milliseconds",
-              "type": "integer"
-            },
-            "sctp_assoc_max_retx": {
-              "default": 10,
-              "description": "SCTP association max retransmissions (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_hb_interval": {
-              "default": 30000,
-              "description": "SCTP heartbeat interval in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_init_max_attempts": {
-              "default": 3,
-              "description": "SCTP init max attempts (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_max_init_timeo": {
-              "default": 500,
-              "description": "SCTP max init timeout in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_nodelay": {
-              "default": false,
-              "description": "Send SCTP messages as soon as possible without any Nagle-like algorithm",
-              "type": "boolean"
-            },
-            "sctp_rto_initial": {
-              "default": 120,
-              "description": "SCTP initial RTO value in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_rto_max": {
-              "default": 500,
-              "description": "SCTP RTO max in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_rto_min": {
-              "default": 120,
-              "description": "SCTP RTO min in milliseconds (-1 to use system default)",
               "type": "integer"
             },
             "supported_tracking_areas": {
@@ -4654,6 +4678,13 @@
         "extra_amfs": {
           "description": "Sets the list of extra AMFs for the CU-CP to connect to",
           "items": {
+            "additionalProperties": true,
+            "allOf": [
+              {
+                "$ref": "#/$defs/sctp-socket",
+                "description": "SCTP socket parameters"
+              }
+            ],
             "properties": {
               "addrs": {
                 "description": "AMF addresses to be used for N2 interface. Multiple addresses can be specified for SCTP multi-homing (--addr is the legacy alias of --addrs; kept for backward compatibility)",
@@ -4679,46 +4710,6 @@
                 "description": "AMF port",
                 "maximum": 40000.0,
                 "minimum": 20000.0,
-                "type": "integer"
-              },
-              "sctp_assoc_max_retx": {
-                "default": 10,
-                "description": "SCTP association max retransmissions (-1 to use system default)",
-                "type": "integer"
-              },
-              "sctp_hb_interval": {
-                "default": 30000,
-                "description": "SCTP heartbeat interval in milliseconds (-1 to use system default)",
-                "type": "integer"
-              },
-              "sctp_init_max_attempts": {
-                "default": 3,
-                "description": "SCTP init max attempts (-1 to use system default)",
-                "type": "integer"
-              },
-              "sctp_max_init_timeo": {
-                "default": 500,
-                "description": "SCTP max init timeout in milliseconds (-1 to use system default)",
-                "type": "integer"
-              },
-              "sctp_nodelay": {
-                "default": false,
-                "description": "Send SCTP messages as soon as possible without any Nagle-like algorithm",
-                "type": "boolean"
-              },
-              "sctp_rto_initial": {
-                "default": 120,
-                "description": "SCTP initial RTO value in milliseconds (-1 to use system default)",
-                "type": "integer"
-              },
-              "sctp_rto_max": {
-                "default": 500,
-                "description": "SCTP RTO max in milliseconds (-1 to use system default)",
-                "type": "integer"
-              },
-              "sctp_rto_min": {
-                "default": 120,
-                "description": "SCTP RTO min in milliseconds (-1 to use system default)",
                 "type": "integer"
               },
               "supported_tracking_areas": {
@@ -5226,6 +5217,13 @@
           "type": "integer"
         },
         "xnap": {
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "$ref": "#/$defs/sctp-socket",
+              "description": "SCTP socket parameters"
+            }
+          ],
           "description": "XNAP configuration",
           "properties": {
             "connections": {
@@ -5264,46 +5262,6 @@
             "reconnect_timer": {
               "default": 10000,
               "description": "Time that the XNAP waits before trying to reconnect in milliseconds",
-              "type": "integer"
-            },
-            "sctp_assoc_max_retx": {
-              "default": 10,
-              "description": "SCTP association max retransmissions (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_hb_interval": {
-              "default": 30000,
-              "description": "SCTP heartbeat interval in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_init_max_attempts": {
-              "default": 3,
-              "description": "SCTP init max attempts (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_max_init_timeo": {
-              "default": 500,
-              "description": "SCTP max init timeout in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_nodelay": {
-              "default": false,
-              "description": "Send SCTP messages as soon as possible without any Nagle-like algorithm",
-              "type": "boolean"
-            },
-            "sctp_rto_initial": {
-              "default": 120,
-              "description": "SCTP initial RTO value in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_rto_max": {
-              "default": 500,
-              "description": "SCTP RTO max in milliseconds (-1 to use system default)",
-              "type": "integer"
-            },
-            "sctp_rto_min": {
-              "default": 120,
-              "description": "SCTP RTO min in milliseconds (-1 to use system default)",
               "type": "integer"
             }
           },
@@ -5520,6 +5478,13 @@
       "type": "object"
     },
     "e2": {
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "$ref": "#/$defs/sctp-socket",
+          "description": "SCTP socket parameters"
+        }
+      ],
       "description": "E2 parameters",
       "properties": {
         "addrs": {
@@ -5571,46 +5536,6 @@
           "description": "RIC port",
           "maximum": 40000.0,
           "minimum": 20000.0,
-          "type": "integer"
-        },
-        "sctp_assoc_max_retx": {
-          "default": 10,
-          "description": "SCTP association max retransmissions (-1 to use system default)",
-          "type": "integer"
-        },
-        "sctp_hb_interval": {
-          "default": 30000,
-          "description": "SCTP heartbeat interval in milliseconds (-1 to use system default)",
-          "type": "integer"
-        },
-        "sctp_init_max_attempts": {
-          "default": 3,
-          "description": "SCTP init max attempts (-1 to use system default)",
-          "type": "integer"
-        },
-        "sctp_max_init_timeo": {
-          "default": 500,
-          "description": "SCTP max init timeout in milliseconds (-1 to use system default)",
-          "type": "integer"
-        },
-        "sctp_nodelay": {
-          "default": false,
-          "description": "Send SCTP messages as soon as possible without any Nagle-like algorithm",
-          "type": "boolean"
-        },
-        "sctp_rto_initial": {
-          "default": 120,
-          "description": "SCTP initial RTO value in milliseconds (-1 to use system default)",
-          "type": "integer"
-        },
-        "sctp_rto_max": {
-          "default": 500,
-          "description": "SCTP RTO max in milliseconds (-1 to use system default)",
-          "type": "integer"
-        },
-        "sctp_rto_min": {
-          "default": 120,
-          "description": "SCTP RTO min in milliseconds (-1 to use system default)",
           "type": "integer"
         }
       },
@@ -5912,16 +5837,9 @@
       "description": "Logging configuration",
       "properties": {
         "all_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Default log level for PHY, MAC, RLC, PDCP, RRC, SDAP, NGAP and GTPU"
         },
         "broadcast_enabled": {
           "default": false,
@@ -5929,40 +5847,19 @@
           "type": "boolean"
         },
         "config_level": {
+          "$ref": "#/$defs/log-level",
           "default": "none",
-          "description": "Config log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Config log level (falls back to --all_level if unset)"
         },
         "cu_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "Log level for the CU",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Log level for the CU"
         },
         "du_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "Log level for the DU (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Log level for the DU (falls back to --all_level if unset)"
         },
         "e1ap_json_enabled": {
           "default": false,
@@ -5970,28 +5867,14 @@
           "type": "boolean"
         },
         "e1ap_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "E1AP log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "E1AP log level"
         },
         "e2ap_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "E2AP log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "E2AP log level (falls back to --all_level if unset)"
         },
         "f1ap_json_enabled": {
           "default": false,
@@ -5999,40 +5882,19 @@
           "type": "boolean"
         },
         "f1ap_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "F1AP log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "F1AP log level"
         },
         "f1u_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "F1-U log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "F1-U log level (falls back to --all_level if unset)"
         },
         "fapi_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "FAPI log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "FAPI log level (falls back to --all_level if unset)"
         },
         "filename": {
           "default": "/tmp/gnb.log",
@@ -6040,28 +5902,14 @@
           "type": "string"
         },
         "gtpu_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "GTPU log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "GTPU log level (falls back to --all_level if unset)"
         },
         "hal_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "HAL log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "HAL log level (falls back to --all_level if unset)"
         },
         "hex_max_size": {
           "default": 0,
@@ -6076,100 +5924,44 @@
           "type": "boolean"
         },
         "lib_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "Generic log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Generic log level"
         },
         "mac_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "MAC log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "MAC log level (falls back to --all_level if unset)"
         },
         "ngap_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "NGAP log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "NGAP log level"
         },
         "nrppa_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "NRPPA log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "NRPPA log level"
         },
         "ntn_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "NTN log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "NTN log level (falls back to --all_level if unset)"
         },
         "ofh_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "Open Fronthaul log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Open Fronthaul log level (falls back to --all_level if unset)"
         },
         "pdcp_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "PDCP log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "PDCP log level"
         },
         "phy_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "PHY log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "PHY log level (falls back to --all_level if unset)"
         },
         "phy_rx_symbols_filename": {
           "default": "",
@@ -6187,88 +5979,39 @@
           "type": "boolean"
         },
         "radio_level": {
+          "$ref": "#/$defs/log-level",
           "default": "info",
-          "description": "Radio log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Radio log level (falls back to --all_level if unset)"
         },
         "rlc_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "RLC log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "RLC log level (falls back to --all_level if unset)"
         },
         "rohc_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "ROHC log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "ROHC log level (falls back to --all_level if unset)"
         },
         "rrc_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "RRC log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "RRC log level"
         },
         "sdap_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "SDAP log level (falls back to --all_level if unset)",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "SDAP log level (falls back to --all_level if unset)"
         },
         "sec_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "Security functions log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "Security functions log level"
         },
         "xnap_level": {
+          "$ref": "#/$defs/log-level",
           "default": "warning",
-          "description": "XNAP log level",
-          "enum": [
-            "none",
-            "error",
-            "warning",
-            "info",
-            "debug"
-          ],
-          "type": "string"
+          "description": "XNAP log level"
         }
       },
       "type": "object"
