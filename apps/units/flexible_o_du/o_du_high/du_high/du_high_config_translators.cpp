@@ -1071,9 +1071,9 @@ static std::map<five_qi_t, odu::du_qos_config> generate_du_qos_config(const du_h
 
     // Convert triggered UL grant config (optional - presence enables the feature)
     if (qos.triggered_ul_grant.has_value()) {
-      auto& out_trig        = out_cfg[qos.five_qi].triggered_ul_grant.emplace();
-      out_trig.delay_slots  = qos.triggered_ul_grant->delay_slots;
-      out_trig.grant_size   = units::bytes{qos.triggered_ul_grant->grant_size};
+      auto& out_trig       = out_cfg[qos.five_qi].triggered_ul_grant.emplace();
+      out_trig.delay_slots = qos.triggered_ul_grant->delay_slots;
+      out_trig.grant_size  = units::bytes{qos.triggered_ul_grant->grant_size};
     }
   }
   return out_cfg;

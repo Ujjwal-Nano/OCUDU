@@ -128,6 +128,10 @@ struct mac_lc_config {
     /// Number of bytes to inject as pending UL buffer when the grant fires.
     units::bytes grant_size = units::bytes{512};
 
+    // This user provided constructor is added here to fix a Clang compilation error related to the use of nested types
+    // with std::optional.
+    triggered_ul_grant_cfg() {}
+
     bool operator==(const triggered_ul_grant_cfg& rhs) const
     {
       return delay_slots == rhs.delay_slots && grant_size == rhs.grant_size;

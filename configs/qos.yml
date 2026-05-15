@@ -365,6 +365,9 @@ qos:
           sn: 18
           t-reassembly: 20
           t-status-prohibit: 10
+    triggered_ul_grant:
+      delay_slots: 3
+      grant_size: 512
   -
     # 5QI = 10 e.g Video (Buffered Streaming)
     # PDB = 1100ms PER = 10^-6
