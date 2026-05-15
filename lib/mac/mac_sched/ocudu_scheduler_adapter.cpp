@@ -18,6 +18,7 @@ static sched_ue_creation_request_message make_scheduler_ue_creation_request(cons
   ret.crnti              = request.crnti;
   ret.starts_in_fallback = request.initial_fallback;
   ret.ul_ccch_slot_rx    = request.ul_ccch_slot_rx;
+  ret.cfra_enabled       = request.cfra_preamble_index.has_value();
   ret.cfg                = request.sched_cfg;
   return ret;
 }
@@ -149,6 +150,10 @@ async_task<void> ocudu_scheduler_adapter::handle_ue_removal_request(const mac_ue
 
 void ocudu_scheduler_adapter::handle_ue_config_applied(du_ue_index_t ue_index)
 {
+  // Free any CFRA preamble slot still held by this UE — the config being applied means
+  // the random access procedure is complete and the slot can be reused.
+  rach_handler.handle_cfra_deallocation(ue_index);
+
   // Notify scheduler that the UE confirmed the configuration.
   sched_impl->handle_ue_config_applied(ue_index);
 }

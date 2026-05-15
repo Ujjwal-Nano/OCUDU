@@ -40,6 +40,9 @@ public:
   /// \note Potentially called from a different executor than the cell scheduler executor.
   void handle_crc_indication(const ul_crc_indication& crc_ind);
 
+  /// Save an upcoming CFRA UE Ids.
+  void handle_cfra_mapping_update(du_ue_index_t ue_index, rnti_t crnti);
+
   /// Allocate pending RARs + Msg3s
   void run_slot(cell_resource_allocator& res_alloc);
 
@@ -202,9 +205,10 @@ private:
   // -- Derived from args.
 
   /// RA window size in number of slots.
-  const unsigned ra_win_nof_slots;
-  crb_interval   ra_crb_lims;
-  const bool     prach_format_is_long;
+  const unsigned           ra_win_nof_slots;
+  const crb_interval       ra_crb_lims;
+  const interval<unsigned> cfra_preambles;
+  const bool               prach_format_is_long;
   /// Duration of a single PRACH occasion in slots.
   const unsigned prach_occasion_duration_slots;
   /// Bitmap of CRBs that might be used for PUCCH transmissions, to avoid scheduling MSG3-PUSCH over them.
@@ -255,6 +259,9 @@ private:
 
   // Marks whether the next slot indication is the first.
   bool first_slot_flag = true;
+
+  // Circular map of RNTIs associated with CFRA.
+  std::vector<std::atomic<rnti_t>> pending_cfra_ues;
 };
 
 } // namespace ocudu

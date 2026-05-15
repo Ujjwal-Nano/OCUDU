@@ -49,7 +49,10 @@ public:
   const ue* find_by_rnti(rnti_t rnti) const;
 
   /// \brief Add new UE in the UE repository.
-  void add_ue(const ue_configuration& ue_cfg, bool starts_in_fallback, std::optional<slot_point> ul_ccch_slot_rx);
+  void add_ue(const ue_configuration&   ue_cfg,
+              bool                      starts_in_fallback,
+              std::optional<slot_point> ul_ccch_slot_rx,
+              bool                      cfra_enabled);
 
   /// \brief Reconfigure existing UE.
   void reconfigure_ue(const ue_configuration& new_cfg, sched_ue_config_request::causes cause);
@@ -59,6 +62,9 @@ public:
 
   /// \brief Called when C-RNTI CE is received.
   bool crnti_ce_received(du_ue_index_t ue_index);
+
+  /// \brief Called when CFRA Msg3 is successfully ACKed.
+  bool cfra_msg3_acked(du_ue_index_t ue_index);
 
   /// \brief Called when C-RNTI CE is received.
   bool handle_conres_ce_outcome(du_ue_index_t ue_index, bool success);
