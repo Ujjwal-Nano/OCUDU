@@ -89,7 +89,7 @@ du_ue_manager::handle_ue_create_request(const f1ap_ue_context_creation_request& 
     // Note: It is not enough to just check if the UE exists. It might exist, but be scheduled for removal. So,
     // we confirm it has an assigned C-RNTI.
     const du_ue* u      = find_ue(req.ue_index);
-    bool         result = u != nullptr and is_crnti(u->rnti);
+    const bool   result = u != nullptr and is_crnti(u->rnti);
     CORO_RETURN(f1ap_ue_context_creation_response{result, result ? u->rnti : rnti_t::INVALID_RNTI});
   });
 }
