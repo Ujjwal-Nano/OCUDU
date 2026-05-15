@@ -5,9 +5,8 @@
 
 add_executable(ocu
         cu.cpp
-        cu_appconfig_cli11_schema.cpp
+        cu_appconfig_schema.cpp
         cu_appconfig_validator.cpp
-        cu_appconfig_yaml_writer.cpp
 )
 
 install(TARGETS ocu
@@ -15,6 +14,7 @@ install(TARGETS ocu
 
 target_link_libraries(ocu PRIVATE
         ocudu_app_helpers
+        ocudu_config_app_helpers
         ocudu_app_services
         ocudu_e1_gateway
         ocudu_e2

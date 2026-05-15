@@ -4,15 +4,15 @@
 
 set(SOURCES
         adapters/f1c_test_mode_adapter.cpp
-        du_appconfig_cli11_schema.cpp
+        du_appconfig_schema.cpp
         du_appconfig_validators.cpp
-        du_appconfig_translators.cpp
-        du_appconfig_yaml_writer.cpp)
+        du_appconfig_translators.cpp)
 
 
 add_library(odu_base STATIC ${SOURCES})
 target_link_libraries(odu_base PRIVATE
         ocudu_app_helpers
+        ocudu_config_app_helpers
         ocudu_app_services
         ocudu_f1u_du_split_connector
         ocudu_cu_cp

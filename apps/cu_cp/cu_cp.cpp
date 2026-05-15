@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "apps/cu_cp/cu_cp_appconfig_cli11_schema.h"
+#include "apps/cu_cp/cu_cp_appconfig_schema.h"
+#include "apps/helpers/config/config_builder.h"
+#include "apps/helpers/config/docs_emitter.h"
+#include "apps/helpers/config/schema_emitter.h"
+#include "apps/helpers/config/yaml_writer.h"
+#include "apps/helpers/config/yang_emitter.h"
 #include "apps/helpers/e2/e2_config_translators.h"
 #include "apps/helpers/metrics/metrics_helpers.h"
 #include "apps/helpers/network/sctp_config_translators.h"
@@ -21,7 +26,6 @@
 #include "apps/units/o_cu_cp/o_cu_cp_unit_config.h"
 #include "apps/units/o_cu_cp/pcap_factory.h"
 #include "cu_cp_appconfig.h"
-#include "cu_cp_appconfig_yaml_writer.h"
 #include "ocudu/adt/scope_exit.h"
 #include "ocudu/cu_cp/cu_cp_operation_controller.h"
 #include "ocudu/e1ap/gateways/e1_network_server_factory.h"
@@ -168,9 +172,22 @@ int main(int argc, char** argv)
   // Fill the generic application arguments to parse.
   populate_cli11_generic_args(app);
 
-  // Configure CLI11 with the CU application configuration schema.
-  cu_cp_appconfig cu_cp_cfg;
-  configure_cli11_with_cu_cp_appconfig_schema(app, cu_cp_cfg);
+  // Declare the CU-CP configuration schema. The builder wires CLI11 under the
+  // hood and accumulates the metadata tree consumed by the --dump-* flags.
+  cu_cp_appconfig        cu_cp_cfg;
+  config::schema_node    cu_cp_schema;
+  cu_cp_schema.body = config::group_node{};
+  config::config_builder root_builder(app, cu_cp_schema);
+  declare_cu_cp_appconfig_schema(root_builder, cu_cp_cfg);
+
+  bool dump_schema = false;
+  bool dump_docs   = false;
+  bool dump_yang   = false;
+  bool dump_yaml   = false;
+  app.add_flag("--dump-schema", dump_schema, "Emit JSON Schema for the full config tree and exit");
+  app.add_flag("--dump-docs", dump_docs, "Emit Markdown reference for the full config tree and exit");
+  app.add_flag("--dump-yang", dump_yang, "Emit YANG 1.1 module for the full config tree and exit");
+  app.add_flag("--dump-yaml", dump_yaml, "Emit YAML config dump for the full config tree and exit");
 
   auto o_cu_cp_app_unit = create_o_cu_cp_application_unit("cucp");
   o_cu_cp_app_unit->on_parsing_configuration_registration(app);
@@ -180,6 +197,38 @@ int main(int argc, char** argv)
 
   // Parse arguments.
   CLI11_PARSE(app, argc, argv);
+
+  config::merge_into(cu_cp_schema, config::schema_node{o_cu_cp_app_unit->get_schema()});
+
+  if (dump_schema) {
+    config::json_schema_options sopts;
+    sopts.title                        = "OCUDU CU-CP configuration";
+    sopts.strict_additional_properties = false;
+    fmt::println("{}", config::emit_json_schema(cu_cp_schema, sopts));
+    return 0;
+  }
+  if (dump_docs) {
+    config::markdown_options dopts;
+    dopts.title = "CU-CP configuration reference";
+    fmt::println("{}", config::emit_markdown(cu_cp_schema, dopts));
+    return 0;
+  }
+  if (dump_yang) {
+    config::yang_options yopts;
+    yopts.module_name   = "ocudu-cu-cp";
+    yopts.namespace_uri = "urn:ocudu:cu-cp";
+    yopts.prefix        = "cu-cp";
+    yopts.revision      = "2026-05-11";
+    yopts.description   = "OCUDU CU-CP configuration model.";
+    fmt::println("{}", config::emit_yang(cu_cp_schema, yopts));
+    return 0;
+  }
+  if (dump_yaml) {
+    YAML::Node node;
+    config::emit_yaml(node, cu_cp_schema);
+    fmt::println("{}", YAML::Dump(node));
+    return 0;
+  }
 
   // Dry run mode, exit.
   if (cu_cp_cfg.enable_dryrun) {
@@ -213,8 +262,7 @@ int main(int argc, char** argv)
   ocudulog::basic_logger& config_logger = ocudulog::fetch_basic_logger("CONFIG");
   if (config_logger.debug.enabled()) {
     YAML::Node node;
-    fill_cu_cp_appconfig_in_yaml_schema(node, cu_cp_cfg);
-    o_cu_cp_app_unit->dump_config(node);
+    config::emit_yaml(node, cu_cp_schema);
     config_logger.debug("Input configuration (all values): \n{}", YAML::Dump(node));
   } else {
     config_logger.info("Input configuration (only non-default values): \n{}", app.config_to_str(false, false));

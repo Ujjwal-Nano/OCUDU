@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/helpers/config/config_builder.h"
 #include "apps/services/metrics/metrics_config.h"
 #include "apps/units/application_unit.h"
 #include "split6_o_du_low_plugin.h"
@@ -60,9 +61,13 @@ public:
                                                 timer_manager&                               timers,
                                                 ocudulog::basic_logger&                      logger);
 
+  /// Returns the metadata tree describing the options this unit registered.
+  const config::schema_node& get_schema() const { return schema_root; }
+
 private:
   split6_o_du_low_unit_config             unit_cfg;
   std::unique_ptr<split6_o_du_low_plugin> plugin;
+  config::schema_node                     schema_root;
 };
 
 std::unique_ptr<split6_o_du_low_application_unit_impl>

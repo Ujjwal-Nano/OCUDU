@@ -4,15 +4,15 @@
 
 
 set(SOURCES
-        du_low_appconfig_cli11_schema.cpp
+        du_low_appconfig_schema.cpp
         du_low_appconfig_validators.cpp
-        du_low_appconfig_translators.cpp
-        du_low_appconfig_yaml_writer.cpp)
+        du_low_appconfig_translators.cpp)
 
 
 add_library(odu_low_base STATIC ${SOURCES})
 target_link_libraries(odu_low_base PRIVATE
         ocudu_app_helpers
+        ocudu_config_app_helpers
         ocudu_app_services
         ocudu_support
         ocudu_yaml_util

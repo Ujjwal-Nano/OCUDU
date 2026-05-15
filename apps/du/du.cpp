@@ -20,10 +20,14 @@
 #include "apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h"
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_pcap_factory.h"
 #include "du_appconfig.h"
-#include "du_appconfig_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
+#include "apps/helpers/config/docs_emitter.h"
+#include "apps/helpers/config/schema_emitter.h"
+#include "apps/helpers/config/yaml_writer.h"
+#include "apps/helpers/config/yang_emitter.h"
+#include "du_appconfig_schema.h"
 #include "du_appconfig_translators.h"
 #include "du_appconfig_validators.h"
-#include "du_appconfig_yaml_writer.h"
 #include "ocudu/adt/scope_exit.h"
 #include "ocudu/du/du_high/du_high_clock_controller.h"
 #include "ocudu/du/du_operation_controller.h"
@@ -166,9 +170,22 @@ int main(int argc, char** argv)
   // Fill the generic application arguments to parse.
   populate_cli11_generic_args(app);
 
-  du_appconfig du_cfg;
-  // Configure CLI11 with the DU application configuration schema.
-  configure_cli11_with_du_appconfig_schema(app, du_cfg);
+  // Declare the DU configuration schema. The builder wires CLI11 under the
+  // hood and accumulates the metadata tree consumed by the --dump-* flags.
+  du_appconfig           du_cfg;
+  config::schema_node    du_schema;
+  du_schema.body = config::group_node{};
+  config::config_builder root_builder(app, du_schema);
+  declare_du_appconfig_schema(root_builder, du_cfg);
+
+  bool dump_schema = false;
+  bool dump_docs   = false;
+  bool dump_yang   = false;
+  bool dump_yaml   = false;
+  app.add_flag("--dump-schema", dump_schema, "Emit JSON Schema for the full config tree and exit");
+  app.add_flag("--dump-docs", dump_docs, "Emit Markdown reference for the full config tree and exit");
+  app.add_flag("--dump-yang", dump_yang, "Emit YANG 1.1 module for the full config tree and exit");
+  app.add_flag("--dump-yaml", dump_yaml, "Emit YAML config dump for the full config tree and exit");
 
   auto o_du_app_unit = create_flexible_o_du_application_unit("du");
   o_du_app_unit->on_parsing_configuration_registration(app);
@@ -181,6 +198,38 @@ int main(int argc, char** argv)
 
   // Parse arguments.
   CLI11_PARSE(app, argc, argv);
+
+  config::merge_into(du_schema, config::schema_node{o_du_app_unit->get_schema()});
+
+  if (dump_schema) {
+    config::json_schema_options sopts;
+    sopts.title                        = "OCUDU DU configuration";
+    sopts.strict_additional_properties = false;
+    fmt::println("{}", config::emit_json_schema(du_schema, sopts));
+    return 0;
+  }
+  if (dump_docs) {
+    config::markdown_options dopts;
+    dopts.title = "DU configuration reference";
+    fmt::println("{}", config::emit_markdown(du_schema, dopts));
+    return 0;
+  }
+  if (dump_yang) {
+    config::yang_options yopts;
+    yopts.module_name   = "ocudu-du";
+    yopts.namespace_uri = "urn:ocudu:du";
+    yopts.prefix        = "du";
+    yopts.revision      = "2026-05-11";
+    yopts.description   = "OCUDU DU configuration model.";
+    fmt::println("{}", config::emit_yang(du_schema, yopts));
+    return 0;
+  }
+  if (dump_yaml) {
+    YAML::Node node;
+    config::emit_yaml(node, du_schema);
+    fmt::println("{}", YAML::Dump(node));
+    return 0;
+  }
 
   // Dry run mode, exit.
   if (du_cfg.enable_dryrun) {
@@ -215,8 +264,7 @@ int main(int argc, char** argv)
   ocudulog::basic_logger& config_logger = ocudulog::fetch_basic_logger("CONFIG");
   if (config_logger.debug.enabled()) {
     YAML::Node node;
-    fill_du_appconfig_in_yaml_schema(node, du_cfg);
-    o_du_app_unit->dump_config(node);
+    config::emit_yaml(node, du_schema);
     config_logger.debug("Input configuration (all values): \n{}", YAML::Dump(node));
   } else {
     config_logger.info("Input configuration (only non-default values): \n{}", app.config_to_str(false, false));

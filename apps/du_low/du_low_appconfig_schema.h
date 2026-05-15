@@ -5,15 +5,16 @@
 #pragma once
 
 #include "CLI/CLI11.hpp"
+#include "apps/helpers/config/config_builder.h"
 
 namespace ocudu {
 
-struct du_appconfig;
+struct du_low_appconfig;
 
-/// Configures the given CLI11 application with the DU application configuration schema.
-void configure_cli11_with_du_appconfig_schema(CLI::App& app, du_appconfig& parsed_cfg);
+/// Declares the DU-low application configuration schema on the given builder.
+void declare_du_low_appconfig_schema(config::config_builder& b, du_low_appconfig& config);
 
 /// Auto derive DU parameters after the parsing.
-void autoderive_du_parameters_after_parsing(CLI::App& app, du_appconfig& du_cfg);
+void autoderive_du_low_parameters_after_parsing(CLI::App& app, du_low_appconfig& config);
 
 } // namespace ocudu

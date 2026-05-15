@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <yaml-cpp/yaml.h>
+#include "apps/helpers/config/config_builder.h"
 
 namespace ocudu {
 
 struct cu_cp_appconfig;
 
-/// Fills the given node with the CU-CP application configuration values.
-void fill_cu_cp_appconfig_in_yaml_schema(YAML::Node& node, const cu_cp_appconfig& config);
+/// Declares the CU-CP application configuration schema on the given builder.
+void declare_cu_cp_appconfig_schema(config::config_builder& b, cu_cp_appconfig& cu_cp_cfg);
 
 } // namespace ocudu
