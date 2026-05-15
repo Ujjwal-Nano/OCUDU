@@ -4,8 +4,8 @@
 
 #include "schema_emitter.h"
 #include "external/nlohmann/json.hpp"
+#include <map>
 #include <stdexcept>
-#include <unordered_map>
 
 namespace ocudu {
 namespace config {
@@ -134,8 +134,10 @@ json emit_leaf_structure(const leaf_node& leaf)
 struct emission_state {
   /// Maps type name -> already-emitted structure (so subsequent occurrences
   /// just reference it). Used for both leaf type_name hoisting and
-  /// shared-block (b.uses) hoisting.
-  std::unordered_map<std::string, json> defs;
+  /// shared-block (b.uses) hoisting. std::map (not unordered_map) so the
+  /// $defs section emits in deterministic alphabetical order — keeps diffs
+  /// reviewable when example artifacts are regenerated.
+  std::map<std::string, json> defs;
 };
 
 json emit_group_body(const group_node&          group,
