@@ -7,12 +7,9 @@
 #include "ocudu/mac/bsr_config.h"
 #include "ocudu/mac/mac_cell_group_config.h"
 #include "ocudu/mac/mac_sdu_handler.h"
-#include "ocudu/mac/phr_config.h"
 #include "ocudu/ran/logical_channel/lcid.h"
 #include "ocudu/ran/physical_cell_group.h"
 #include "ocudu/ran/rnti.h"
-#include "ocudu/ran/sr_configuration.h"
-#include "ocudu/ran/time_alignment_config.h"
 #include "ocudu/scheduler/scheduler_configurator.h"
 #include "ocudu/support/async/async_task.h"
 
