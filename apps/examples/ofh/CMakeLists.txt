@@ -6,7 +6,7 @@
 set_directory_properties(PROPERTIES LABELS "ofh")
 
 set (SOURCES
-        ru_emulator_cli11_schema.cpp
+        ru_emulator_schema.cpp
         ru_emulator.cpp
         ru_emulator_rx_window_checker.cpp
         ru_emulator_socket_transceiver.cpp
@@ -18,7 +18,7 @@ endif (DPDK_FOUND)
 add_executable(ru_emulator ${SOURCES})
 target_include_directories(ru_emulator PRIVATE ${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/external)
-target_link_libraries(ru_emulator ocudulog ocudu_ofh ocudu_phy_support ocudu_support ocudu_yaml_util)
+target_link_libraries(ru_emulator ocudulog ocudu_ofh ocudu_phy_support ocudu_support ocudu_yaml_util ocudu_config_app_helpers)
 
 if (DPDK_FOUND)
     target_compile_options(ru_emulator PRIVATE ${DPDK_CFLAGS})

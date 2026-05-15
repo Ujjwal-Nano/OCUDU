@@ -4,7 +4,8 @@
 
 #include "helpers.h"
 #include "ru_emulator_appconfig.h"
-#include "ru_emulator_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
+#include "ru_emulator_schema.h"
 #include "ru_emulator_rx_window_checker.h"
 #include "ru_emulator_seq_id_checker.h"
 #include "ru_emulator_timing_notifier.h"
@@ -956,9 +957,29 @@ int main(int argc, char** argv)
   app.allow_config_extras(CLI::config_extras_mode::error);
   app.set_config("-c,", config_file, "Read config from file", false)->expected(1, MAX_CONFIG_FILES);
 
-  ru_emulator_appconfig ru_emulator_parsed_cfg;
-  // Configure CLI11 with the RU emulator application configuration schema.
-  configure_cli11_with_ru_emulator_appconfig_schema(app, ru_emulator_parsed_cfg);
+  // Declare the RU emulator configuration schema.
+  ru_emulator_appconfig  ru_emulator_parsed_cfg;
+  config::schema_node    schema_root;
+  schema_root.body = config::group_node{};
+  config::config_builder root_builder(app, schema_root);
+  declare_ru_emulator_appconfig_schema(root_builder, ru_emulator_parsed_cfg);
+
+  app.callback([&]() {
+    // Clean the DPDK optional.
+    if (app.get_subcommand("dpdk")->count_all() == 0) {
+      ru_emulator_parsed_cfg.dpdk_config.reset();
+    }
+#ifdef DPDK_FOUND
+    bool uses_dpdk = ru_emulator_parsed_cfg.dpdk_config.has_value();
+    if (uses_dpdk && ru_emulator_parsed_cfg.dpdk_config->eal_args.empty()) {
+      report_error("It is mandatory to fill the EAL configuration arguments to initialize DPDK correctly");
+    }
+#else
+    if (ru_emulator_parsed_cfg.dpdk_config.has_value()) {
+      report_error("Unable to use DPDK as the application was not compiled with DPDK support");
+    }
+#endif
+  });
 
   // Parse arguments.
   CLI11_PARSE(app, argc, argv);

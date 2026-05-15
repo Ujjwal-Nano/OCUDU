@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include "CLI/CLI11.hpp"
+#include "apps/helpers/config/config_builder.h"
 
 namespace ocudu {
 
 struct ru_emulator_appconfig;
 
-/// Configures the given CLI11 application with the RU emulator application configuration schema.
-void configure_cli11_with_ru_emulator_appconfig_schema(CLI::App& app, ru_emulator_appconfig& ru_emu_parsed_cfg);
+/// Declares the RU emulator application configuration schema on the given builder.
+void declare_ru_emulator_appconfig_schema(config::config_builder& b, ru_emulator_appconfig& ru_emu_parsed_cfg);
 
 } // namespace ocudu
