@@ -161,6 +161,38 @@ TEST_F(du_ue_manager_tester, when_mac_fails_to_create_ue_then_no_ue_is_created_i
   ASSERT_FALSE(is_ue_creation_complete());
 }
 
+TEST_F(du_ue_manager_tester, when_f1ap_initiated_ue_creation_fails_then_failure_is_reported)
+{
+  const du_ue_index_t ue_index = to_du_ue_index(0);
+
+  // Start F1AP-initiated UE creation (e.g. CFRA handover target cell path).
+  std::optional<f1ap_ue_context_creation_response> resp;
+  ue_mng.schedule_async_task(
+      ue_index, launch_async([this, &resp](coro_context<async_task<void>>& ctx) mutable {
+        CORO_BEGIN(ctx);
+        CORO_AWAIT_VALUE(
+            resp, ue_mng.handle_ue_create_request(f1ap_ue_context_creation_request{ue_index, to_du_cell_index(0)}));
+        CORO_RETURN();
+      }));
+
+  // F1AP and MAC received the creation requests.
+  ASSERT_TRUE(f1ap_dummy.last_ue_create.has_value());
+  ASSERT_TRUE(mac_dummy.last_ue_create_msg.has_value());
+  ASSERT_FALSE(resp.has_value());
+
+  // MAC rejects the UE.
+  mac_completes_ue_creation(false);
+
+  // The response must indicate failure.
+  ASSERT_TRUE(resp.has_value());
+  ASSERT_FALSE(resp->result);
+  ASSERT_EQ(resp->crnti, rnti_t::INVALID_RNTI);
+
+  // F1AP UE context was cleaned up during the failure path.
+  ASSERT_TRUE(f1ap_dummy.last_ue_deleted.has_value());
+  ASSERT_EQ(f1ap_dummy.last_ue_deleted.value(), ue_index);
+}
+
 TEST_F(du_ue_manager_tester, inexistent_ue_index_removal_is_handled)
 {
   // Action: Request UE deletion for inexistent UE Index.

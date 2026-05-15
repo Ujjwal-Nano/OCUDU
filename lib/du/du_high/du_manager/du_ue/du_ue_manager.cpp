@@ -69,11 +69,9 @@ async_task<f1ap_ue_context_creation_response>
 du_ue_manager::handle_ue_create_request(const f1ap_ue_context_creation_request& req)
 {
   ocudu_assert(req.ue_index != INVALID_DU_UE_INDEX, "Invalid DU UE index");
-  ocudu_assert(
-      not ue_db.contains(req.ue_index), "Creating a ue={} but it already exists", fmt::underlying(req.ue_index));
+  ocudu_assert(not ue_db.contains(req.ue_index), "Creating a ue={} but it already exists", req.ue_index);
   if (stop_accepting_ues) {
-    logger.info("ue={}: UE creation request ignored. Caused: The DU is being shut down.",
-                fmt::underlying(req.ue_index));
+    logger.info("ue={}: UE creation request ignored. Caused: The DU is being shut down.", req.ue_index);
     return launch_no_op_task(f1ap_ue_context_creation_response{false, rnti_t::INVALID_RNTI});
   }
 
@@ -88,8 +86,11 @@ du_ue_manager::handle_ue_create_request(const f1ap_ue_context_creation_request& 
         cell_res_alloc,
         metrics));
 
-    bool result = ue_db.contains(req.ue_index);
-    CORO_RETURN(f1ap_ue_context_creation_response{result, result ? find_ue(req.ue_index)->rnti : rnti_t::INVALID_RNTI});
+    // Note: It is not enough to just check if the UE exists. It might exist, but be scheduled for removal. So,
+    // we confirm it has an assigned C-RNTI.
+    const du_ue* u      = find_ue(req.ue_index);
+    const bool   result = u != nullptr and is_crnti(u->rnti);
+    CORO_RETURN(f1ap_ue_context_creation_response{result, result ? u->rnti : rnti_t::INVALID_RNTI});
   });
 }
 
@@ -108,7 +109,7 @@ async_task<void> du_ue_manager::handle_ue_delete_request(const f1ap_ue_delete_re
 async_task<void> du_ue_manager::handle_ue_drb_deactivation_request(du_ue_index_t ue_index)
 {
   if (not ue_db.contains(ue_index)) {
-    logger.warning("ue={}: UE DRB deactivation request for inexistent UE index", fmt::underlying(ue_index));
+    logger.warning("ue={}: UE DRB deactivation request for inexistent UE index", ue_index);
     return launch_no_op_task();
   }
   return ue_db[ue_index].handle_activity_stop_request(false);
@@ -135,7 +136,7 @@ void du_ue_manager::handle_reestablishment_request(du_ue_index_t new_ue_index, d
 
 void du_ue_manager::handle_ue_config_applied(du_ue_index_t ue_index)
 {
-  ocudu_assert(ue_db.contains(ue_index), "Invalid UE index={}", fmt::underlying(ue_index));
+  ocudu_assert(ue_db.contains(ue_index), "Invalid UE index={}", ue_index);
 
   // Notify UE resource configurator of config completion.
   ue_db[ue_index].resources.handle_ue_config_applied();
@@ -190,12 +191,12 @@ async_task<void> du_ue_manager::stop()
 
 du_ue* du_ue_manager::find_ue(du_ue_index_t ue_index)
 {
-  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", fmt::underlying(ue_index));
+  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", ue_index);
   return ue_db.contains(ue_index) ? &ue_db[ue_index] : nullptr;
 }
 const du_ue* du_ue_manager::find_ue(du_ue_index_t ue_index) const
 {
-  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", fmt::underlying(ue_index));
+  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", ue_index);
   return ue_db.contains(ue_index) ? &ue_db[ue_index] : nullptr;
 }
 
@@ -248,27 +249,32 @@ void du_ue_manager::remove_ue(du_ue_index_t ue_index)
   // Note: The caller of this function can be a UE procedure. Thus, we have to wait for the procedure to finish
   // before safely removing the UE. This achieved via a scheduled async task
 
-  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", fmt::underlying(ue_index));
-  logger.debug("ue={}: Scheduled deletion of UE context", fmt::underlying(ue_index));
+  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", ue_index);
+  ocudu_assert(ue_db.contains(ue_index), "Update C-RNTI called for inexistent ueId={}", ue_index);
+  logger.debug("ue={}: Scheduled deletion of UE context", ue_index);
   ue_ctrl_loop[ue_index].clear_pending_tasks();
 
-  // Schedule UE removal task
+  // Promptly clear the RNTI->UE lookup.
+  auto& u = ue_db[ue_index];
+  rnti_to_ue_index.erase(u.rnti);
+  u.rnti = rnti_t::INVALID_RNTI;
+
+  // Schedule UE removal task.
   ue_ctrl_loop[ue_index].schedule([this, ue_index](coro_context<async_task<void>>& ctx) {
     CORO_BEGIN(ctx);
-    ocudu_assert(ue_db.contains(ue_index), "ue={}: Remove UE called for inexistent UE", fmt::underlying(ue_index));
-    rnti_to_ue_index.erase(ue_db[ue_index].rnti);
+    ocudu_assert(ue_db.contains(ue_index), "ue={}: Remove UE called for inexistent UE", ue_index);
     ue_db.erase(ue_index);
     ue_ctrl_loop[ue_index].clear_pending_tasks();
-    logger.debug("ue={}: Freeing UE context", fmt::underlying(ue_index));
+    logger.debug("ue={}: Freeing UE context", ue_index);
     CORO_RETURN();
   });
 }
 
 void du_ue_manager::update_crnti(du_ue_index_t ue_index, rnti_t crnti)
 {
-  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", fmt::underlying(ue_index));
+  ocudu_assert(is_du_ue_index_valid(ue_index), "Invalid ue index={}", ue_index);
   ocudu_assert(is_crnti(crnti), "Invalid c-rnti={}", crnti);
-  ocudu_assert(ue_db.contains(ue_index), "Update C-RNTI called for inexistent ueId={}", fmt::underlying(ue_index));
+  ocudu_assert(ue_db.contains(ue_index), "Update C-RNTI called for inexistent ueId={}", ue_index);
   du_ue& u = ue_db[ue_index];
 
   if (u.rnti == crnti) {
