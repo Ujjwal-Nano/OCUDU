@@ -10,7 +10,7 @@ add_subdirectory(helpers)
 set(SOURCES
         split_8_o_du_application_unit_impl.cpp
         split_8_o_du_factory.cpp
-        split_8_o_du_unit_cli11_schema.cpp
+        split_8_o_du_unit_schema.cpp
         split_8_o_du_unit_config_validator.cpp
         split_8_o_du_unit_config_yaml_writer.cpp)
 

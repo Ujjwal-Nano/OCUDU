@@ -5,7 +5,7 @@
 
 set(SOURCES
         worker_manager.cpp
-        worker_manager_cli11_schema.cpp
+        worker_manager_schema.cpp
         worker_manager_appconfig_validator.cpp)
 
 add_library(ocudu_cpu_affinities_helper STATIC cli11_cpu_affinities_parser_helper.cpp)

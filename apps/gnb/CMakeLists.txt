@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-        gnb_appconfig_cli11_schema.cpp
+        gnb_appconfig_schema.cpp
         gnb_appconfig_validators.cpp
         gnb_appconfig_translators.cpp
         gnb_appconfig_yaml_writer.cpp)

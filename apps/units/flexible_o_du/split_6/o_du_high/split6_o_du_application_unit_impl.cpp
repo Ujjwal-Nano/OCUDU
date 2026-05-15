@@ -9,7 +9,7 @@
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_config_yaml_writer.h"
 #include "apps/units/flexible_o_du/split_6/o_du_high/split6_o_du_low_fapi_adaptor_configuration.h"
 #include "split6_o_du_factory.h"
-#include "split6_o_du_unit_cli11_schema.h"
+#include "split6_o_du_unit_schema.h"
 #include "split6_o_du_unit_config_validator.h"
 #include "split6_o_du_unit_logger_registrator.h"
 #include "ocudu/du/du_high/du_high_configuration.h"
@@ -66,7 +66,7 @@ void split6_o_du_application_unit_impl::on_parsing_configuration_registration(CL
 {
   schema_root.body = config::group_node{};
   config::config_builder b(app, schema_root);
-  configure_cli11_with_split6_o_du_unit_config_schema(b, unit_cfg);
+  declare_split6_o_du_unit_config_schema(b, unit_cfg);
   plugin->on_parsing_configuration_registration(app);
 }
 

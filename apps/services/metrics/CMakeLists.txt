@@ -5,7 +5,7 @@
 
 
 set(SOURCES
-        metrics_config_cli11_schema.cpp
+        metrics_config_schema.cpp
         metrics_config_yaml_writer.cpp)
 
 add_library(ocudu_metrics_app_service STATIC ${SOURCES})

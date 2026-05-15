@@ -16,7 +16,7 @@
 #include "split6_constants.h"
 #include "split6_flexible_o_du_low.h"
 #include "split6_flexible_o_du_low_session_factory.h"
-#include "split6_o_du_low_unit_cli11_schema.h"
+#include "split6_o_du_low_unit_schema.h"
 #include "split6_o_du_low_unit_config_validator.h"
 #include "split6_o_du_low_unit_logger_registrator.h"
 
@@ -59,7 +59,7 @@ void split6_o_du_low_application_unit_impl::on_parsing_configuration_registratio
 {
   schema_root.body = config::group_node{};
   config::config_builder b(app, schema_root);
-  configure_cli11_with_split6_o_du_low_unit_config_schema(b, unit_cfg);
+  declare_split6_o_du_low_unit_config_schema(b, unit_cfg);
   plugin->on_parsing_configuration_registration(app);
 }
 

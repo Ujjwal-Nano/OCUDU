@@ -3,7 +3,7 @@
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 
-set(SOURCES f1u_cli11_schema.cpp
+set(SOURCES f1u_schema.cpp
             f1u_appconfig_validator.cpp
             f1u_config_yaml_writer.cpp
 )

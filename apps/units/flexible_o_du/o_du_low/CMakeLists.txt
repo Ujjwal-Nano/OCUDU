@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-            du_low_config_cli11_schema.cpp
+            du_low_config_schema.cpp
             du_low_config_translator.cpp
             du_low_config_validator.cpp
             du_low_config_yaml_writer.cpp
@@ -18,7 +18,7 @@ set(DU_LOW_UNIT_HELPERS_LIBRARIES ocudu_upper_phy ocudu_cpu_affinities_helper oc
 # Hardware acceleration for both PUSCH and PDSCH is enabled by default when using DPDK.
 if (DPDK_FOUND)
    set_source_files_properties(
-           du_low_config_cli11_schema.cpp
+           du_low_config_schema.cpp
            du_low_hal_factory.cpp
            PROPERTIES COMPILE_DEFINITIONS "DPDK_FOUND; HWACC_PDSCH_ENABLED; HWACC_PUSCH_ENABLED")
    list(APPEND DU_LOW_UNIT_HELPERS_LIBRARIES ocudu_hal_pusch

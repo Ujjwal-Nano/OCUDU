@@ -6,12 +6,12 @@
 add_subdirectory(metrics)
 
 set(SOURCES
-        du_high_config_cli11_schema.cpp
+        du_high_config_schema.cpp
         du_high_config_translators.cpp
         du_high_config_validator.cpp
         du_high_config_yaml_writer.cpp
         commands/du_high_remote_commands.cpp
-        ntn/du_high_ntn_config_cli11_schema.cpp
+        ntn/du_high_ntn_config_schema.cpp
         ntn/du_high_ntn_config_yaml_writer.h
         ntn/du_high_ntn_config_yaml_writer.cpp
         ntn/du_high_ntn_config_translators.h

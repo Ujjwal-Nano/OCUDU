@@ -8,7 +8,7 @@ if (DPDK_FOUND)
 endif (DPDK_FOUND)
 
 set(SOURCES
-        ru_ofh_config_cli11_schema.cpp
+        ru_ofh_config_schema.cpp
         ru_ofh_factories.cpp
         ru_ofh_config_translator.cpp
         ru_ofh_config_validator.cpp

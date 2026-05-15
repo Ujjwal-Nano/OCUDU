@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-        tracer_appconfig_cli11_schema.cpp
+        tracer_appconfig_schema.cpp
         tracer_appconfig_yaml_writer.cpp)
 
 add_library(ocudu_tracing_app_helpers STATIC ${SOURCES})

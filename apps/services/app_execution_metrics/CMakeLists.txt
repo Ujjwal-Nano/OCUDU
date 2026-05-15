@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-        executor_metrics_config_cli11_schema.cpp
+        executor_metrics_config_schema.cpp
         executor_metrics_config_yaml_writer.cpp
         metrics/app_execution_metrics_builder.cpp)
 

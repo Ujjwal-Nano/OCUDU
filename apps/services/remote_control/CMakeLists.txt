@@ -6,7 +6,7 @@
 add_definitions(-DUWS_NO_ZLIB)
 
 set(SOURCES
-        remote_control_appconfig_cli11_schema.cpp
+        remote_control_appconfig_schema.cpp
         remote_server.cpp)
 
 add_library(ocudu_remote_control_app_service STATIC ${SOURCES})

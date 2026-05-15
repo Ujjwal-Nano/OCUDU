@@ -8,7 +8,7 @@ set(SOURCES
         split6_o_du_application_unit_impl.cpp
         split6_o_du_factory.cpp
         split6_o_du_impl.cpp
-        split6_o_du_unit_cli11_schema.cpp
+        split6_o_du_unit_schema.cpp
         split6_o_du_unit_config_validator.cpp)
 
 add_library(ocudu_split6_plugin STATIC split6_plugin_dummy.cpp)

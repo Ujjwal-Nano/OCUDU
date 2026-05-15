@@ -7,7 +7,7 @@ set(SOURCES
         dynamic_o_du_application_unit_impl.cpp
         dynamic_o_du_factory.cpp
         dynamic_o_du_translators.cpp
-        dynamic_o_du_unit_cli11_schema.cpp
+        dynamic_o_du_unit_schema.cpp
         dynamic_o_du_unit_config_validator.cpp
         dynamic_o_du_unit_config_yaml_writer.cpp)
 

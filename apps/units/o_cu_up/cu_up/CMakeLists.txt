@@ -6,7 +6,7 @@
 add_subdirectory(metrics)
 
 set(SOURCES
-        cu_up_unit_config_cli11_schema.cpp
+        cu_up_unit_config_schema.cpp
         cu_up_unit_config_translators.cpp
         cu_up_unit_config_validator.cpp
         cu_up_unit_config_yaml_writer.cpp)

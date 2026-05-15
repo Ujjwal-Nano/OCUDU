@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-        logger_appconfig_cli11_schema.cpp
+        logger_appconfig_schema.cpp
         logger_appconfig_validator.cpp
         logger_appconfig_yaml_writer.cpp)
 

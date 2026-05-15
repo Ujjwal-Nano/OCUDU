@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-        ru_sdr_config_cli11_schema.cpp
+        ru_sdr_config_schema.cpp
         ru_sdr_config_translator.cpp
         ru_sdr_config_validator.cpp
         ru_sdr_config_yaml_writer.cpp

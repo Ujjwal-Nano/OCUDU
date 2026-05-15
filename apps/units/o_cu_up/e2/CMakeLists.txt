@@ -4,7 +4,7 @@
 
 
 set(SOURCES
-        o_cu_up_e2_config_cli11_schema.cpp
+        o_cu_up_e2_config_schema.cpp
         o_cu_up_e2_config_translators.cpp
         o_cu_up_e2_config_yaml_writer.cpp)
 

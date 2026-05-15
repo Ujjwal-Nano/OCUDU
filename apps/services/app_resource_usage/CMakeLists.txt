@@ -5,7 +5,7 @@
 
 set(SOURCES
         app_resource_usage.cpp
-        app_resource_usage_config_cli11_schema.cpp
+        app_resource_usage_config_schema.cpp
         app_resource_usage_config_yaml_writer.cpp
         metrics/app_resource_usage_metrics_consumer.cpp)
 

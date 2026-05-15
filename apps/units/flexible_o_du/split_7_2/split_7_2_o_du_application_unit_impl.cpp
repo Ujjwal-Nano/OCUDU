@@ -7,7 +7,7 @@
 #include "apps/units/flexible_o_du/o_du_low/du_low_config_translator.h"
 #include "apps/units/flexible_o_du/split_7_2/helpers/ru_ofh_config_translator.h"
 #include "split_7_2_o_du_factory.h"
-#include "split_7_2_o_du_unit_cli11_schema.h"
+#include "split_7_2_o_du_unit_schema.h"
 #include "split_7_2_o_du_unit_config_validator.h"
 #include "split_7_2_o_du_unit_config_yaml_writer.h"
 #include "split_7_2_o_du_unit_logger_registrator.h"
@@ -48,7 +48,7 @@ void split_7_2_o_du_application_unit_impl::on_parsing_configuration_registration
 {
   schema_root.body = config::group_node{};
   config::config_builder b(app, schema_root);
-  configure_cli11_with_split_7_2_o_du_unit_config_schema(b, unit_cfg);
+  declare_split_7_2_o_du_unit_config_schema(b, unit_cfg);
 }
 
 o_du_unit split_7_2_o_du_application_unit_impl::create_flexible_o_du_unit(const o_du_unit_dependencies& dependencies)

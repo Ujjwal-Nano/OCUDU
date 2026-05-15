@@ -31,7 +31,7 @@
 #include "apps/units/o_cu_up/o_cu_up_unit_config.h"
 #include "apps/units/o_cu_up/pcap_factory.h"
 #include "gnb_appconfig.h"
-#include "gnb_appconfig_cli11_schema.h"
+#include "gnb_appconfig_schema.h"
 #include "gnb_appconfig_translators.h"
 #include "gnb_appconfig_validators.h"
 #include "gnb_appconfig_yaml_writer.h"

@@ -4,11 +4,11 @@
 
 #include "o_cu_up_application_unit_impl.h"
 #include "cu_up/cu_up_logger_registrator.h"
-#include "cu_up/cu_up_unit_config_cli11_schema.h"
+#include "cu_up/cu_up_unit_config_schema.h"
 #include "cu_up/cu_up_unit_config_translators.h"
 #include "cu_up/cu_up_unit_config_validator.h"
 #include "cu_up/cu_up_unit_config_yaml_writer.h"
-#include "e2/o_cu_up_e2_config_cli11_schema.h"
+#include "e2/o_cu_up_e2_config_schema.h"
 #include "e2/o_cu_up_e2_config_translators.h"
 #include "e2/o_cu_up_e2_config_yaml_writer.h"
 #include "o_cu_up_builder.h"
@@ -27,8 +27,8 @@ void o_cu_up_application_unit_impl::on_parsing_configuration_registration(CLI::A
 {
   schema_root.body = config::group_node{};
   config::config_builder b(app, schema_root);
-  configure_cli11_with_cu_up_unit_config_schema(b, unit_cfg.cu_up_cfg);
-  configure_cli11_with_o_cu_up_e2_config_schema(b, unit_cfg.e2_cfg);
+  declare_cu_up_unit_config_schema(b, unit_cfg.cu_up_cfg);
+  declare_o_cu_up_e2_config_schema(b, unit_cfg.e2_cfg);
 }
 
 void o_cu_up_application_unit_impl::on_configuration_parameters_autoderivation(CLI::App& app)
