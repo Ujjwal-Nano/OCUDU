@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "dynamic_o_du_unit_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/metrics/metrics_config_cli11_schema.h"
 #include "apps/services/worker_manager/cli11_cpu_affinities_parser_helper.h"
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_config_cli11_schema.h"
@@ -10,8 +11,10 @@
 #include "apps/units/flexible_o_du/split_7_2/helpers/ru_ofh_config_cli11_schema.h"
 #include "apps/units/flexible_o_du/split_8/helpers/ru_sdr_config_cli11_schema.h"
 #include "dynamic_o_du_unit_config.h"
-#include "ocudu/support/cli11_utils.h"
-#include "ocudu/support/config_parsers.h"
+#include "ocudu/adt/span.h"
+#include "ocudu/support/error_handling.h"
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 using namespace ocudu;
 
@@ -19,28 +22,28 @@ static ru_ofh_unit_parsed_config ofh_cfg;
 static ru_sdr_unit_config        sdr_cfg;
 static ru_dummy_unit_config      dummy_cfg;
 
-static void configure_cli11_ru_dummy_args(CLI::App& app, ru_dummy_unit_config& config)
+static void declare_ru_dummy_args(config::config_builder& b, ru_dummy_unit_config& config)
 {
-  add_option(app, "--dl_processing_delay", config.dl_processing_delay, "DL processing processing delay in slots")
-      ->capture_default_str();
-  add_option(app,
-             "--time_scaling",
-             config.time_scaling,
-             "Time scaling factor applied to the slot duration. Must be greater than zero. "
-             "A value greater than one slows down the RU, while a value between zero and one speeds it up.")
-      ->capture_default_str()
-      ->check(CLI::NonNegativeNumber);
+  b.option("--dl_processing_delay", config.dl_processing_delay, "DL processing processing delay in slots");
+  b.option("--time_scaling",
+           config.time_scaling,
+           "Time scaling factor applied to the slot duration. Must be greater than zero. "
+           "A value greater than one slows down the RU, while a value between zero and one speeds it up.")
+      .min_value(0.0);
 }
 
-static void configure_cli11_cell_affinity_args(CLI::App& app, ru_dummy_cpu_affinities_cell_unit_config& config)
+static void declare_cell_affinity_args(config::config_builder& b, ru_dummy_cpu_affinities_cell_unit_config& config)
 {
-  add_option_function<std::string>(
-      app,
+  b.string_action(
       "--ru_cpus",
       [&config](const std::string& value) { parse_affinity_mask(config.ru_cpu_cfg.mask, value, "ru_cpus"); },
-      "Number of CPUs used for the Radio Unit tasks");
+      [&config]() -> std::string {
+        return fmt::format("{:,}", span<const size_t>(config.ru_cpu_cfg.mask.get_cpu_ids()));
+      },
+      "CPU cores used for the Radio Unit tasks",
+      "comma-separated CPU ids or ranges, e.g. \"0-3,5\"");
 
-  app.add_option_function<std::string>(
+  b.string_action(
       "--ru_pinning",
       [&config](const std::string& value) {
         config.ru_cpu_cfg.pinning_policy = to_affinity_mask_policy(value);
@@ -48,55 +51,50 @@ static void configure_cli11_cell_affinity_args(CLI::App& app, ru_dummy_cpu_affin
           report_error("Incorrect value={} used in {} property", value, "ru_pinning");
         }
       },
-      "Policy used for assigning CPU cores to the Radio Unit tasks");
+      [&config]() -> std::string { return to_string(config.ru_cpu_cfg.pinning_policy); },
+      "Policy used for assigning CPU cores to the Radio Unit tasks",
+      "one of: mask, round-robin");
 }
 
-static void configure_cli11_expert_execution_args(CLI::App& app, ru_dummy_unit_config& config)
+static void declare_metrics_args(config::config_builder& b, ru_dummy_unit_metrics_config& config)
 {
-  // Cell affinity section.
-  add_option_cell(
-      app,
-      "--cell_affinities",
-      [&config](const std::vector<std::string>& values) {
-        config.cell_affinities.resize(values.size());
-
-        for (unsigned i = 0, e = values.size(); i != e; ++i) {
-          CLI::App subapp("Dummy RU expert execution cell CPU affinities",
-                          "Dummy RUexpert execution cell CPU affinities config, item #" + std::to_string(i));
-          subapp.config_formatter(create_yaml_config_parser());
-          subapp.allow_config_extras();
-          configure_cli11_cell_affinity_args(subapp, config.cell_affinities[i]);
-          std::istringstream ss(values[i]);
-          subapp.parse_from_stream(ss);
-        }
-      },
-      "Sets the cell CPU affinities configuration on a per cell basis");
+  b.group("layers", "Layer basis metrics configuration", [&](config::config_builder& l) {
+    l.option("--enable_ru", config.enable_ru_metrics, "Enable Radio Unit metrics");
+  });
 }
 
-static void configure_cli11_metrics_args(CLI::App& app, ru_dummy_unit_metrics_config& config)
+void ocudu::configure_cli11_with_dynamic_o_du_unit_config_schema(config::config_builder&   b,
+                                                                 dynamic_o_du_unit_config& parsed_cfg)
 {
-  CLI::App* layers_subcmd = add_subcommand(app, "layers", "Layer basis metrics configuration")->configurable();
-  add_option(*layers_subcmd, "--enable_ru", config.enable_ru_metrics, "Enable Radio Unit metrics");
+  configure_cli11_with_o_du_high_config_schema(b, parsed_cfg.odu_high_cfg);
+  configure_cli11_with_du_low_config_schema(b, parsed_cfg.du_low_cfg);
+  configure_cli11_with_ru_ofh_config_schema(b, ofh_cfg);
+  configure_cli11_with_ru_sdr_config_schema(b, sdr_cfg);
+
+  b.group("ru_dummy", "Dummy Radio Unit configuration",
+          [&](config::config_builder& ru) { declare_ru_dummy_args(ru, dummy_cfg); });
+
+  // Common metrics options (enable_json/log/verbose) under "metrics".
+  app_helpers::configure_cli11_with_metrics_appconfig_schema(b, dummy_cfg.metrics_cfg.metrics_cfg);
+  b.group("metrics", "Metrics configuration",
+          [&](config::config_builder& m) { declare_metrics_args(m, dummy_cfg.metrics_cfg); });
+
+  b.group("expert_execution", "Expert execution configuration", [&](config::config_builder& exec) {
+    exec.array_of("--cell_affinities",
+                  dummy_cfg.cell_affinities,
+                  "Sets the cell CPU affinities configuration on a per cell basis",
+                  [](config::config_builder& el, ru_dummy_cpu_affinities_cell_unit_config& c) {
+                    declare_cell_affinity_args(el, c);
+                  });
+  });
 }
 
 void ocudu::configure_cli11_with_dynamic_o_du_unit_config_schema(CLI::App& app, dynamic_o_du_unit_config& parsed_cfg)
 {
-  configure_cli11_with_o_du_high_config_schema(app, parsed_cfg.odu_high_cfg);
-  configure_cli11_with_du_low_config_schema(app, parsed_cfg.du_low_cfg);
-  configure_cli11_with_ru_ofh_config_schema(app, ofh_cfg);
-  configure_cli11_with_ru_sdr_config_schema(app, sdr_cfg);
-
-  CLI::App* ru_dummy_subcmd = add_subcommand(app, "ru_dummy", "Dummy Radio Unit configuration")->configurable();
-  configure_cli11_ru_dummy_args(*ru_dummy_subcmd, dummy_cfg);
-
-  // Metrics section.
-  app_helpers::configure_cli11_with_metrics_appconfig_schema(app, dummy_cfg.metrics_cfg.metrics_cfg);
-  CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, dummy_cfg.metrics_cfg);
-
-  // Expert execution section.
-  CLI::App* expert_subcmd = add_subcommand(app, "expert_execution", "Expert execution configuration")->configurable();
-  configure_cli11_expert_execution_args(*expert_subcmd, dummy_cfg);
+  config::schema_node discard;
+  discard.body = config::group_node{};
+  config::config_builder b(app, discard);
+  configure_cli11_with_dynamic_o_du_unit_config_schema(b, parsed_cfg);
 }
 
 static void manage_ru(CLI::App& app, dynamic_o_du_unit_config& parsed_cfg)

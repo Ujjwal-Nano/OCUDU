@@ -60,7 +60,9 @@ dynamic_o_du_application_unit_impl::dynamic_o_du_application_unit_impl(std::stri
 
 void dynamic_o_du_application_unit_impl::on_parsing_configuration_registration(CLI::App& app)
 {
-  configure_cli11_with_dynamic_o_du_unit_config_schema(app, unit_cfg);
+  schema_root.body = config::group_node{};
+  config::config_builder b(app, schema_root);
+  configure_cli11_with_dynamic_o_du_unit_config_schema(b, unit_cfg);
 }
 
 o_du_unit dynamic_o_du_application_unit_impl::create_flexible_o_du_unit(const o_du_unit_dependencies& dependencies)

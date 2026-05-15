@@ -64,7 +64,9 @@ bool split6_o_du_application_unit_impl::on_configuration_validation() const
 
 void split6_o_du_application_unit_impl::on_parsing_configuration_registration(CLI::App& app)
 {
-  configure_cli11_with_split6_o_du_unit_config_schema(app, unit_cfg);
+  schema_root.body = config::group_node{};
+  config::config_builder b(app, schema_root);
+  configure_cli11_with_split6_o_du_unit_config_schema(b, unit_cfg);
   plugin->on_parsing_configuration_registration(app);
 }
 

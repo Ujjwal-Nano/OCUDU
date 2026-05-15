@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+#include "apps/helpers/config/config_builder.h"
+#include "apps/helpers/config/docs_emitter.h"
+#include "apps/helpers/config/schema_emitter.h"
+#include "apps/helpers/config/yaml_writer.h"
+#include "apps/helpers/config/yang_emitter.h"
 #include "apps/helpers/e2/e2_config_translators.h"
 #include "apps/helpers/metrics/metrics_helpers.h"
 #include "apps/helpers/network/sctp_config_translators.h"
@@ -214,9 +219,23 @@ int main(int argc, char** argv)
   // Fill the generic application arguments to parse.
   populate_cli11_generic_args(app);
 
-  gnb_appconfig gnb_cfg;
-  // Configure CLI11 with the gNB application configuration schema.
-  configure_cli11_with_gnb_appconfig_schema(app, gnb_cfg);
+  // Declare the gNB configuration schema. The builder wires CLI11 under the
+  // hood and accumulates the metadata tree consumed by the --dump-* flags.
+  gnb_appconfig          gnb_cfg;
+  config::schema_node    gnb_schema;
+  gnb_schema.body = config::group_node{};
+  config::config_builder root_builder(app, gnb_schema);
+  declare_gnb_appconfig_schema(root_builder, gnb_cfg);
+
+  // Schema-dump flags. Cover the full gNB + units surface.
+  bool dump_schema = false;
+  bool dump_docs   = false;
+  bool dump_yang   = false;
+  bool dump_yaml   = false;
+  app.add_flag("--dump-schema", dump_schema, "Emit JSON Schema for the full config tree and exit");
+  app.add_flag("--dump-docs", dump_docs, "Emit Markdown reference for the full config tree and exit");
+  app.add_flag("--dump-yang", dump_yang, "Emit YANG 1.1 module for the full config tree and exit");
+  app.add_flag("--dump-yaml", dump_yaml, "Emit YAML config dump for the full config tree and exit");
 
   auto o_cu_cp_app_unit = create_o_cu_cp_application_unit("gnb");
   o_cu_cp_app_unit->on_parsing_configuration_registration(app);
@@ -255,6 +274,41 @@ int main(int argc, char** argv)
 
   // Parse arguments.
   CLI11_PARSE(app, argc, argv);
+
+  // Compose the full schema: gnb appconfig tree + each unit's contribution.
+  config::merge_into(gnb_schema, config::schema_node{o_cu_cp_app_unit->get_schema()});
+  config::merge_into(gnb_schema, config::schema_node{o_cu_up_app_unit->get_schema()});
+  config::merge_into(gnb_schema, config::schema_node{o_du_app_unit->get_schema()});
+
+  if (dump_schema) {
+    config::json_schema_options sopts;
+    sopts.title                        = "OCUDU gNB configuration";
+    sopts.strict_additional_properties = false; // log-level enums and affinity options not yet schematized end-to-end
+    fmt::println("{}", config::emit_json_schema(gnb_schema, sopts));
+    return 0;
+  }
+  if (dump_docs) {
+    config::markdown_options dopts;
+    dopts.title = "gNB configuration reference";
+    fmt::println("{}", config::emit_markdown(gnb_schema, dopts));
+    return 0;
+  }
+  if (dump_yang) {
+    config::yang_options yopts;
+    yopts.module_name   = "ocudu-gnb";
+    yopts.namespace_uri = "urn:ocudu:gnb";
+    yopts.prefix        = "gnb";
+    yopts.revision      = "2026-05-11";
+    yopts.description   = "OCUDU gNB configuration model.";
+    fmt::println("{}", config::emit_yang(gnb_schema, yopts));
+    return 0;
+  }
+  if (dump_yaml) {
+    YAML::Node node;
+    config::emit_yaml(node, gnb_schema);
+    fmt::println("{}", YAML::Dump(node));
+    return 0;
+  }
 
   // Dry run mode, exit.
   if (gnb_cfg.enable_dryrun) {

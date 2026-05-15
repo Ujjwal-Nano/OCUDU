@@ -44,9 +44,13 @@ public:
   // See interface for documentation.
   void fill_worker_manager_config(worker_manager_config& config) override;
 
+  // See interface for documentation.
+  const config::schema_node& get_schema() const override { return schema_root; }
+
 private:
   split6_o_du_unit_config        unit_cfg;
   std::unique_ptr<split6_plugin> plugin;
+  config::schema_node            schema_root;
 };
 
 } // namespace ocudu

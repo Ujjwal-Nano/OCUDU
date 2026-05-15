@@ -10,4 +10,4 @@ set(SOURCES
 
 add_library(ocudu_o_du_high_app_unit_e2 STATIC ${SOURCES})
 target_include_directories(ocudu_o_du_high_app_unit_e2 PRIVATE ${CMAKE_SOURCE_DIR})
-target_link_libraries(ocudu_o_du_high_app_unit_e2 ocudu_e2_app_helpers)
+target_link_libraries(ocudu_o_du_high_app_unit_e2 ocudu_e2_app_helpers ocudu_config_app_helpers)

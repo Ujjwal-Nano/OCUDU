@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "gnb_appconfig_cli11_schema.h"
+#include "apps/helpers/config/config_builder.h"
 #include "apps/helpers/hal/hal_cli11_schema.h"
 #include "apps/helpers/logger/logger_appconfig_cli11_schema.h"
 #include "apps/helpers/tracing/tracer_appconfig_cli11_schema.h"
@@ -16,17 +17,8 @@
 #include "apps/units/o_cu_cp/cu_cp/cu_cp_unit_config.h"
 #include "gnb_appconfig.h"
 #include "ocudu/ocudulog/ocudulog.h"
-#include "ocudu/support/cli11_utils.h"
-#include "CLI/CLI11.hpp"
 
 using namespace ocudu;
-
-static void configure_cli11_metrics_args(CLI::App& app, metrics_appconfig& metrics_params)
-{
-  add_option(
-      app, "--autostart_stdout_metrics", metrics_params.autostart_stdout_metrics, "Autostart stdout metrics reporting")
-      ->capture_default_str();
-}
 
 #ifdef DPDK_FOUND
 static void manage_hal_optional(CLI::App& app, gnb_appconfig& gnb_cfg)
@@ -37,54 +29,42 @@ static void manage_hal_optional(CLI::App& app, gnb_appconfig& gnb_cfg)
 }
 #endif
 
-void ocudu::configure_cli11_with_gnb_appconfig_schema(CLI::App& app, gnb_appconfig& gnb_parsed_cfg)
+void ocudu::declare_gnb_appconfig_schema(config::config_builder& root, gnb_appconfig& gnb_parsed_cfg)
 {
   gnb_appconfig& gnb_cfg = gnb_parsed_cfg;
-  app.add_flag("--dryrun", gnb_cfg.enable_dryrun, "Enable application dry run mode")->capture_default_str();
 
-  add_option(app, "--gnb_id", gnb_cfg.gnb_id.id, "gNodeB identifier")->capture_default_str();
-  add_option(app, "--gnb_id_bit_length", gnb_cfg.gnb_id.bit_length, "gNodeB identifier length in bits")
-      ->capture_default_str()
-      ->check(CLI::Range(22, 32));
-  add_option(app, "--ran_node_name", gnb_cfg.ran_node_name, "RAN node name")->capture_default_str();
+  root.flag("--dryrun", gnb_cfg.enable_dryrun, "Enable application dry run mode");
 
-  // Loggers section.
-  configure_cli11_with_logger_appconfig_schema(app, gnb_cfg.log_cfg);
+  root.option("--gnb_id", gnb_cfg.gnb_id.id, "gNodeB identifier");
+  root.option("--gnb_id_bit_length", gnb_cfg.gnb_id.bit_length, "gNodeB identifier length in bits").range(22, 32);
+  root.option("--ran_node_name", gnb_cfg.ran_node_name, "RAN node name");
 
-  // Tracers section.
-  configure_cli11_with_tracer_appconfig_schema(app, gnb_cfg.trace_cfg);
-
-  // Buffer pool section.
-  configure_cli11_with_buffer_pool_appconfig_schema(app, gnb_cfg.buffer_pool_config);
-
-  // Expert execution section.
-  configure_cli11_with_worker_manager_appconfig_schema(app, gnb_cfg.expert_execution_cfg);
+  configure_cli11_with_logger_appconfig_schema(root, gnb_cfg.log_cfg);
+  configure_cli11_with_tracer_appconfig_schema(root, gnb_cfg.trace_cfg);
+  app_services::configure_cli11_with_buffer_pool_appconfig_schema(root, gnb_cfg.buffer_pool_config);
+  configure_cli11_with_worker_manager_appconfig_schema(root, gnb_cfg.expert_execution_cfg);
 
   // Metrics section.
-  CLI::App* metrics_subcmd = add_subcommand(app, "metrics", "Metrics configuration")->configurable();
-  configure_cli11_metrics_args(*metrics_subcmd, gnb_cfg.metrics_cfg);
-  app_services::configure_cli11_with_executor_metrics_appconfig_schema(app, gnb_cfg.metrics_cfg.executors_metrics_cfg);
-  app_services::configure_cli11_with_app_resource_usage_config_schema(app, gnb_cfg.metrics_cfg.rusage_config);
-  app_services::configure_cli11_with_metrics_appconfig_schema(app, gnb_cfg.metrics_cfg.metrics_service_cfg);
+  root.group("metrics", "Metrics configuration", [&](config::config_builder& m) {
+    m.option("--autostart_stdout_metrics",
+             gnb_cfg.metrics_cfg.autostart_stdout_metrics,
+             "Autostart stdout metrics reporting");
+  });
+  app_services::configure_cli11_with_executor_metrics_appconfig_schema(root, gnb_cfg.metrics_cfg.executors_metrics_cfg);
+  app_services::configure_cli11_with_app_resource_usage_config_schema(root, gnb_cfg.metrics_cfg.rusage_config);
+  app_services::configure_cli11_with_metrics_appconfig_schema(root, gnb_cfg.metrics_cfg.metrics_service_cfg);
 
 #ifdef DPDK_FOUND
-  // HAL section.
   gnb_cfg.hal_config.emplace();
-  configure_cli11_with_hal_appconfig_schema(app, *gnb_cfg.hal_config);
+  configure_cli11_with_hal_appconfig_schema(root, *gnb_cfg.hal_config);
 #else
-  app.failure_message([](const CLI::App* application, const CLI::Error& e) -> std::string {
-    if (std::string(e.what()).find("INI was not able to parse hal.++") == std::string::npos) {
-      return CLI::FailureMessage::simple(application, e);
-    }
-
-    return "Invalid configuration detected, 'hal' section is present but the application was built without DPDK "
-           "support\n" +
-           CLI::FailureMessage::simple(application, e);
-  });
+  // When built without DPDK, the hal section is not declared at all — the
+  // CLI11 parse-error message used to be customized in the legacy path; with
+  // the builder we drop the custom failure_message and rely on CLI11's
+  // default behaviour. Re-introducing it would need a builder-level hook.
 #endif
 
-  // Remote control section.
-  configure_cli11_with_remote_control_appconfig_schema(app, gnb_cfg.remote_control_config);
+  configure_cli11_with_remote_control_appconfig_schema(root, gnb_cfg.remote_control_config);
 }
 
 void ocudu::autoderive_gnb_parameters_after_parsing(CLI::App& app, gnb_appconfig& config)

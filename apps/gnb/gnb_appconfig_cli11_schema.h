@@ -8,12 +8,18 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct gnb_appconfig;
 struct cu_cp_unit_config;
 struct du_high_unit_config;
 
-/// Configures the given CLI11 application with the gNB application configuration schema.
-void configure_cli11_with_gnb_appconfig_schema(CLI::App& app, gnb_appconfig& gnb_parsed_cfg);
+/// Declares the gNB application configuration schema on the given builder.
+/// CLI11 wiring and metadata-tree population are side effects of the builder
+/// internals.
+void declare_gnb_appconfig_schema(config::config_builder& b, gnb_appconfig& gnb_parsed_cfg);
 
 /// Auto derive gNB parameters after the parsing.
 void autoderive_gnb_parameters_after_parsing(CLI::App& app, gnb_appconfig& parsed_cfg);

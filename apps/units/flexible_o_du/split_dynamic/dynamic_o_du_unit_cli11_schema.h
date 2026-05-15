@@ -8,9 +8,16 @@
 
 namespace ocudu {
 
+namespace config {
+class config_builder;
+}
+
 struct dynamic_o_du_unit_config;
 
-/// Configures the given CLI11 application with the dynamic O-RAN DU unit configuration schema.
+/// Builder-based primary entry point.
+void configure_cli11_with_dynamic_o_du_unit_config_schema(config::config_builder& b, dynamic_o_du_unit_config& parsed_cfg);
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 void configure_cli11_with_dynamic_o_du_unit_config_schema(CLI::App& app, dynamic_o_du_unit_config& parsed_cfg);
 
 /// Auto derive dynamic O-RAN DU parameters after the parsing.

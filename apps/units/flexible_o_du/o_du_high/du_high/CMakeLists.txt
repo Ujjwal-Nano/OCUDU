@@ -23,6 +23,7 @@ target_include_directories(ocudu_du_high_unit_helpers PRIVATE ${CMAKE_SOURCE_DIR
 target_link_libraries(ocudu_du_high_unit_helpers
         sched_config
         ocudu_app_helpers
+        ocudu_config_app_helpers
         ocudu_cpu_affinities_helper
         ocudu_du_high_unit_metrics_helpers
         ocudu_yaml_util

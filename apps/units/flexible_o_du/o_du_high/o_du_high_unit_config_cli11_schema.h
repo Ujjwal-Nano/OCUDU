@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/helpers/config/config_builder.h"
 #include "du_high/du_high_config_cli11_schema.h"
 #include "e2/o_du_high_e2_config_cli11_schema.h"
 #include "fapi/fapi_config_cli11_schema.h"
@@ -12,7 +13,15 @@
 
 namespace ocudu {
 
-/// Configures the given CLI11 application with the O-DU high configuration schema.
+/// Builder-based primary entry point.
+inline void configure_cli11_with_o_du_high_config_schema(config::config_builder& b, o_du_high_unit_config& unit_cfg)
+{
+  configure_cli11_with_du_high_config_schema(b, unit_cfg.du_high_cfg);
+  configure_cli11_with_fapi_config_schema(b, unit_cfg.fapi_cfg);
+  configure_cli11_with_o_du_high_e2_config_schema(b, unit_cfg.e2_cfg);
+}
+
+/// Legacy CLI::App-based wrapper for unmigrated callers.
 inline void configure_cli11_with_o_du_high_config_schema(CLI::App& app, o_du_high_unit_config& unit_cfg)
 {
   configure_cli11_with_du_high_config_schema(app, unit_cfg.du_high_cfg);
