@@ -35,19 +35,5 @@ inline config::option_handle add_log_option(config::config_builder& b,
   return b.enum_option(name, target, description, basic_levels_mapping());
 }
 
-/// Transitional CLI::App-based overload. Existing call sites that haven't been
-/// migrated to config_builder route through a throwaway schema_node. To be
-/// removed once every caller is on the builder API.
-inline void add_log_option(CLI::App&               app,
-                           ocudulog::basic_levels& target,
-                           const std::string&      name,
-                           const std::string&      description)
-{
-  config::schema_node    discard;
-  discard.body = config::group_node{};
-  config::config_builder b(app, discard);
-  add_log_option(b, target, name, description);
-}
-
 } // namespace app_helpers
 } // namespace ocudu
