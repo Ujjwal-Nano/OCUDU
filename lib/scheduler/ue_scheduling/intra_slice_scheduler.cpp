@@ -768,7 +768,7 @@ unsigned intra_slice_scheduler::max_pdschs_to_alloc(const dl_ran_slice_candidate
   // Determine how many PDCCHs can be allocated in this slot.
   const auto& pdcch_res  = cell_alloc[pdcch_slot].result;
   const int   max_pdcchs = std::min(static_cast<int>(MAX_DL_PDCCH_PDUS_PER_SLOT - pdcch_res.dl.dl_pdcchs.size()),
-                                  static_cast<int>(expert_cfg.max_pdcch_alloc_attempts_per_slot - dl_attempts_count));
+                                    static_cast<int>(expert_cfg.max_pdcch_alloc_attempts_per_slot - dl_attempts_count));
   pdschs_to_alloc        = std::min(pdschs_to_alloc, max_pdcchs);
   if (pdschs_to_alloc <= 0) {
     return 0;
@@ -779,7 +779,7 @@ unsigned intra_slice_scheduler::max_pdschs_to_alloc(const dl_ran_slice_candidate
       std::min(static_cast<int>(MAX_PDSCH_PDUS_PER_SLOT), static_cast<int>(expert_cfg.max_pdschs_per_slot));
   int allocated_pdschs = pdsch_res.dl.ue_grants.size() + pdsch_res.dl.bc.sibs.size() + pdsch_res.dl.rar_grants.size() +
                          pdsch_res.dl.paging_grants.size();
-  pdschs_to_alloc = std::min(pdschs_to_alloc, max_pdschs - allocated_pdschs);
+  pdschs_to_alloc      = std::min(pdschs_to_alloc, max_pdschs - allocated_pdschs);
   if (pdschs_to_alloc <= 0) {
     return 0;
   }
@@ -820,7 +820,7 @@ unsigned intra_slice_scheduler::max_puschs_to_alloc(const ul_ran_slice_candidate
   // Determine how many PDCCHs can be allocated in this slot.
   const auto& pdcch_res  = cell_alloc[pdcch_slot].result;
   const auto  max_pdcchs = std::min(static_cast<int>(MAX_UL_PDCCH_PDUS_PER_SLOT - pdcch_res.dl.ul_pdcchs.size()),
-                                   static_cast<int>(expert_cfg.max_pdcch_alloc_attempts_per_slot - ul_attempts_count));
+                                    static_cast<int>(expert_cfg.max_pdcch_alloc_attempts_per_slot - ul_attempts_count));
   puschs_to_alloc        = std::min(puschs_to_alloc, max_pdcchs);
   if (puschs_to_alloc <= 0) {
     return 0;
