@@ -7,6 +7,7 @@
 #include "../support/sched_result_helpers.h"
 #include "uci_allocator.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/pucch/pucch_resource_formatter.h"
 
 using namespace ocudu;
 
@@ -129,6 +130,32 @@ void uci_scheduler_impl::add_ue_to_grid(const ue_cell_configuration& ue_cfg, boo
   if (ue_ul_cfg->periodic_csi_report.has_value()) {
     const unsigned csi_period_slots = csi_resource_periodicity_to_uint(cell_cfg.params.init_bwp.csi->csi_rs_period);
     add_resource(ue_cfg.crnti, ue_ul_cfg->periodic_csi_report->offset, csi_period_slots, false);
+  }
+
+  if (logger.info.enabled()) {
+    const auto& cell_pucch_params = cell_cfg.params.init_bwp.pucch.resources;
+    const auto& cell_pucch_res    = cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources;
+
+    const pucch_resource& sr_res = cell_pucch_res[cell_pucch_params.get_sr_cell_res_idx(ue_ul_cfg->pucch.sr_res_id)];
+    if (ue_ul_cfg->periodic_csi_report.has_value()) {
+      const pucch_resource& csi_res =
+          cell_pucch_res[cell_pucch_params.get_csi_cell_res_idx(ue_ul_cfg->periodic_csi_report->pucch_res_id)];
+      logger.info("cell={} c-rnti={}: {} periodic UCI on PUCCH: SR={{{} offset={}}}, CSI={{{} offset={}}}",
+                  fmt::underlying(cell_cfg.cell_index),
+                  ue_cfg.crnti,
+                  is_reconf ? "Reconfigured" : "Configured",
+                  sr_res,
+                  ue_ul_cfg->pucch.sr_offset,
+                  csi_res,
+                  ue_ul_cfg->periodic_csi_report->offset);
+    } else {
+      logger.info("cell={} c-rnti={}: {} periodic UCI on PUCCH: SR={{{} offset={}}}",
+                  fmt::underlying(cell_cfg.cell_index),
+                  ue_cfg.crnti,
+                  is_reconf ? "Reconfigured" : "Configured",
+                  sr_res,
+                  ue_ul_cfg->pucch.sr_offset);
+    }
   }
 
   // Register the UE in the list of recently configured UEs.
