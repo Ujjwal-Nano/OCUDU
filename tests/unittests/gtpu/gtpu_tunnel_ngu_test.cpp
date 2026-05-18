@@ -186,7 +186,7 @@ TEST_F(gtpu_tunnel_ngu_test, tx_pdu)
   byte_buffer sdu = byte_buffer::create(gtpu_ping_sdu).value();
   byte_buffer pdu = byte_buffer::create(gtpu_ping_vec_teid_2_qfi_1_ul).value();
 
-  gtpu_tunnel_ngu_tx_lower_layer_interface* tx = gtpu->get_tx_lower_layer_interface();
+  gtpu_tunnel_ngu_tx_lower_data_interface* tx = gtpu->get_tx_lower_layer_interface();
   tx->handle_sdu(std::move(sdu), uint_to_qos_flow_id(1));
   ASSERT_EQ(pdu, gtpu_tx.last_tx);
 }

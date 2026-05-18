@@ -24,7 +24,7 @@ public:
 
   virtual void                                         stop()                         = 0;
   virtual gtpu_tunnel_common_rx_upper_layer_interface* get_rx_upper_layer_interface() = 0;
-  virtual gtpu_tunnel_ngu_tx_lower_layer_interface*    get_tx_lower_layer_interface() = 0;
+  virtual gtpu_tunnel_ngu_tx_lower_data_interface*     get_tx_lower_layer_interface() = 0;
 };
 
 } // namespace ocudu

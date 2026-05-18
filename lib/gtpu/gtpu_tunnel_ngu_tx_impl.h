@@ -17,7 +17,9 @@
 namespace ocudu {
 
 /// Class used for transmitting GTP-U NGU bearers, e.g. on N3 interface.
-class gtpu_tunnel_ngu_tx_impl final : public gtpu_tunnel_base_tx, public gtpu_tunnel_ngu_tx_lower_layer_interface
+class gtpu_tunnel_ngu_tx_impl final : public gtpu_tunnel_base_tx,
+                                      public gtpu_tunnel_ngu_tx_lower_data_interface,
+                                      public gtpu_tunnel_ngu_tx_upper_control_interface
 {
 public:
   gtpu_tunnel_ngu_tx_impl(cu_up_ue_index_t                                         ue_index,
@@ -80,6 +82,8 @@ public:
     logger.log_info(buf.begin(), buf.end(), "TX PDU. pdu_len={} teid={} qfi={}", buf.length(), hdr.teid, qfi);
     send_pdu(std::move(buf), peer_sockaddr);
   }
+
+  void update_tx_endpoint(const std::string& new_addr, uint16_t new_port, uint32_t new_teid) override {}
 
 private:
   const gtpu_tunnel_ngu_config::gtpu_tunnel_ngu_tx_config cfg;
