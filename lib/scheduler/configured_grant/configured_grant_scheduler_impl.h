@@ -14,11 +14,14 @@
 namespace ocudu {
 
 struct cell_slot_resource_allocator;
+class uci_allocator;
 
 class configured_grant_scheduler_impl : public configured_grant_scheduler
 {
 public:
-  explicit configured_grant_scheduler_impl(const cell_configuration& cell_cfg_, ue_repository& ues_);
+  explicit configured_grant_scheduler_impl(const cell_configuration& cell_cfg_,
+                                           uci_allocator&            uci_alloc_,
+                                           ue_repository&            ues_);
 
   void run_slot(cell_resource_allocator& res_alloc) override;
 
@@ -36,12 +39,13 @@ private:
   void add_ue_to_wheel(const ue_cell_configuration& ue_cfg);
 
   // Processes all CG PUSCH opportunities for the given slot.
-  void allocate_slot_cg_opportunities(cell_slot_resource_allocator& slot_alloc);
+  void allocate_slot_cg_opportunities(cell_slot_resource_allocator& slot_alloc) const;
 
   // Allocates a single CG PUSCH opportunity for the given RNTI.
-  bool allocate_cg_opportunity(cell_slot_resource_allocator& slot_alloc, rnti_t rnti);
+  bool allocate_cg_opportunity(cell_slot_resource_allocator& slot_alloc, rnti_t rnti) const;
 
   const cell_configuration& cell_cfg;
+  uci_allocator&            uci_alloc;
   ue_repository&            ues;
   ocudulog::basic_logger&   logger;
 

@@ -6,6 +6,7 @@
 
 #include "ocudu/ran/pusch/tx_scheme_configuration.h"
 #include "ocudu/ran/resource_allocation/rb_interval.h"
+#include "ocudu/ran/rnti.h"
 #include "ocudu/ran/srs/srs_configuration.h"
 #include "ocudu/scheduler/config/pucch_resource_builder_params.h"
 #include <optional>
@@ -44,6 +45,7 @@ struct ue_pusch_config {
 };
 
 struct ue_cg_config {
+  rnti_t       cs_rnti;
   unsigned     cg_offset;
   vrb_interval vrbs;
 

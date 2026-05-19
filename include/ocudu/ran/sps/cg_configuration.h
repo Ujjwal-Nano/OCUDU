@@ -40,78 +40,34 @@ struct cg_configuration {
   /// \remark See TS 38.331, "ConfiguredGrantConfig" field \c repK-RV.
   enum class rep_k_rv { s1_0231, s2_0303, s3_0000 };
 
-  /// \brief Periodicity of the Configured Grant resource.
-  ///
-  /// Each value encodes the period in OFDM symbols, with the suffix indicating the numerology:
-  ///   - \c x14 variants: normal cyclic prefix (14 symbols/slot).
-  ///   - \c x12 variants: extended cyclic prefix (12 symbols/slot).
-  ///
-  /// \remark See TS 38.331, "ConfiguredGrantConfig" field \c periodicity.
+  /// \brief Periodicity of the Configured Grant resource, in slots, as per available values in TS 38.331,
+  /// "ConfiguredGrantConfig" field \c periodicity.
+  /// \remark Sub-slot periodicities are not yet suppoted.
+  /// \remark For 12-symbol slots, \ref sl1024 and sl5120 are not suppoted.
   enum class periodicity_t {
     /// Normal CP (14 symbols/slot).
-    sym2,
-    sym7,
-    sym1x14,
-    sym2x14,
-    sym4x14,
-    sym5x14,
-    sym8x14,
-    sym10x14,
-    sym16x14,
-    sym20x14,
-    sym32x14,
-    sym40x14,
-    sym64x14,
-    sym80x14,
-    sym128x14,
-    sym160x14,
-    sym256x14,
-    sym320x14,
-    sym512x14,
-    sym640x14,
-    sym1024x14,
-    sym1280x14,
-    sym2560x14,
-    sym5120x14,
-    /// Extended CP (12 symbols/slot).
-    sym6,
-    sym1x12,
-    sym2x12,
-    sym4x12,
-    sym5x12,
-    sym8x12,
-    sym10x12,
-    sym16x12,
-    sym20x12,
-    sym32x12,
-    sym40x12,
-    sym64x12,
-    sym80x12,
-    sym128x12,
-    sym160x12,
-    sym256x12,
-    sym320x12,
-    sym512x12,
-    sym640x12,
-    sym1280x12,
-    sym2560x12,
-  };
-
-  /// \brief UCI-on-PUSCH beta offset configuration for CG transmissions.
-  ///
-  /// Encodes \c CG-UCI-OnPUSCH from TS 38.331, which is a choice between:
-  ///   - \c dynamic: up to 4 sets of beta offsets selected via DCI.
-  ///   - \c semi_static: a single fixed set of beta offsets.
-  struct cg_uci_on_pusch {
-    static constexpr size_t max_nof_beta_offsets = 4;
-
-    using beta_offsets_semi_static = beta_offsets;
-    using beta_offsets_dynamic     = static_vector<beta_offsets, max_nof_beta_offsets>;
-
-    std::variant<beta_offsets_dynamic, beta_offsets_semi_static> beta_offsets_cfg;
-
-    bool operator==(const cg_uci_on_pusch& rhs) const { return beta_offsets_cfg == rhs.beta_offsets_cfg; }
-    bool operator!=(const cg_uci_on_pusch& rhs) const { return !(rhs == *this); }
+    sl1    = 1,
+    sl2    = 2,
+    sl4    = 4,
+    sl5    = 5,
+    sl8    = 8,
+    sl10   = 10,
+    sl16   = 16,
+    sl20   = 20,
+    sl32   = 32,
+    sl40   = 40,
+    sl64   = 64,
+    sl80   = 80,
+    sl128  = 128,
+    sl160  = 160,
+    sl256  = 256,
+    sl320  = 320,
+    sl512  = 512,
+    sl640  = 640,
+    sl1024 = 1024,
+    sl1280 = 1280,
+    sl2560 = 2560,
+    sl5120 = 5160,
   };
 
   struct repetitions_t {
@@ -180,8 +136,10 @@ struct cg_configuration {
   std::optional<bool> trans_precoder;
   /// Defines the MCS table to be used with transform precoder.
   pusch_mcs_table mcs_table_transform_precoder;
-  /// UCI-on-PUSCH beta offset configuration. When absent, the UE does not multiplex UCI on CG PUSCH.
-  std::optional<cg_uci_on_pusch> uci_on_pusch_cfg;
+  /// UCI-on-PUSCH beta offset configuration.
+  /// \remark We reuse the same struct as for PUSCH-Config, although \ref alpha_scaling_opt is not used for Configured
+  /// Grant.
+  uci_on_pusch uci_on_pusch_cfg;
   /// Frequency domain resource allocation type.
   res_allocation res_alloc;
   /// Sets RBG size configuration 2 for PUSCH's RBG size; otherwise, UE defaults to RBG size configuration 1.

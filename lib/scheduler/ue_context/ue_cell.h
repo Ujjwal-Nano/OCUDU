@@ -186,6 +186,8 @@ public:
     return *components.pcell_state;
   }
 
+  bool is_cg_slot(slot_point slot) const;
+
 private:
   /// \brief Performs link adaptation procedures such as cancelling HARQs etc.
   void apply_link_adaptation_procedures(const csi_report_data& csi_report);

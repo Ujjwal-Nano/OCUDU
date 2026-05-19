@@ -17,7 +17,7 @@ struct cg_builder_params {
   /// 2560, 5120}.
   /// For 23 symbols slots, values={1, 2, 4, 5, 8, 10, 16, 20, 32, 40, 64, 80, 128, 160, 256, 320, 512, 640, 1024, 1280,
   /// 2560, 5120}.
-  std::optional<cg_configuration::periodicity_t> periodicity        = cg_configuration::periodicity_t::sym40x14;
+  std::optional<cg_configuration::periodicity_t> periodicity        = cg_configuration::periodicity_t::sl40;
   unsigned                                       slot_offset        = 0;
   unsigned                                       nof_rbs            = 10;
   unsigned                                       mcs                = 5;

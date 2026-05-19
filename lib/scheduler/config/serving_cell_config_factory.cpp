@@ -114,6 +114,17 @@ static std::optional<radio_link_monitoring_config> make_default_rlm_config(const
   return rlm_cfg;
 }
 
+static beta_offsets make_default_uci_on_pusch()
+{
+  return beta_offsets{.beta_offset_ack_idx_1    = 9,
+                      .beta_offset_ack_idx_2    = 9,
+                      .beta_offset_ack_idx_3    = 9,
+                      .beta_offset_csi_p1_idx_1 = 9,
+                      .beta_offset_csi_p1_idx_2 = 9,
+                      .beta_offset_csi_p2_idx_1 = 9,
+                      .beta_offset_csi_p2_idx_2 = 9};
+}
+
 static pusch_config make_default_pusch_config(const ran_cell_config& cell_cfg, const ue_bwp_config& ue_bwp_cfg)
 {
   pusch_config cfg{};
@@ -143,16 +154,8 @@ static pusch_config make_default_pusch_config(const ran_cell_config& cell_cfg, c
   if (cell_pusch_cfg.uci_beta_offsets.has_value()) {
     uci_cfg.beta_offsets_cfg = uci_on_pusch::beta_offsets_semi_static{cell_pusch_cfg.uci_beta_offsets.value()};
   } else {
-    uci_cfg.scaling = alpha_scaling_opt::f1;
-    beta_offsets b_offset{};
-    b_offset.beta_offset_ack_idx_1    = 9;
-    b_offset.beta_offset_ack_idx_2    = 9;
-    b_offset.beta_offset_ack_idx_3    = 9;
-    b_offset.beta_offset_csi_p1_idx_1 = 9;
-    b_offset.beta_offset_csi_p1_idx_2 = 9;
-    b_offset.beta_offset_csi_p2_idx_1 = 9;
-    b_offset.beta_offset_csi_p2_idx_2 = 9;
-    uci_cfg.beta_offsets_cfg          = uci_on_pusch::beta_offsets_semi_static{b_offset};
+    uci_cfg.scaling          = alpha_scaling_opt::f1;
+    uci_cfg.beta_offsets_cfg = make_default_uci_on_pusch();
   }
 
   // > PUSCH power control config.
@@ -265,13 +268,18 @@ static cg_configuration make_default_cg_config(const cg_builder_params& cg_param
   cfg.mcs_table                    = pusch_mcs_table::qam64;
   cfg.trans_precoder               = std::nullopt;
   cfg.mcs_table_transform_precoder = pusch_mcs_table::qam64;
-  cfg.uci_on_pusch_cfg             = std::nullopt;
-  cfg.res_alloc                    = cg_configuration::res_allocation::type_1;
-  cfg.enable_rbg_size_cfg_2        = false;
-  cfg.enable_pwr_ctrl_loop_n1      = false;
-  cfg.p0_pusch_alpha               = MIN_P0_PUSCH_ALPHASET_ID;
-  cfg.rep                          = cg_configuration::repetitions_t{};
-  cfg.configured_grant_timer       = 8;
+
+  // > UCI on PUSCH config.
+  auto& uci_cfg            = cfg.uci_on_pusch_cfg;
+  uci_cfg.scaling          = alpha_scaling_opt::f1;
+  uci_cfg.beta_offsets_cfg = make_default_uci_on_pusch();
+
+  cfg.res_alloc               = cg_configuration::res_allocation::type_1;
+  cfg.enable_rbg_size_cfg_2   = false;
+  cfg.enable_pwr_ctrl_loop_n1 = false;
+  cfg.p0_pusch_alpha          = MIN_P0_PUSCH_ALPHASET_ID;
+  cfg.rep                     = cg_configuration::repetitions_t{};
+  cfg.configured_grant_timer  = 8;
 
   // > RRC-configured uplink grant (Type 1 CG).
   cg_configuration::rrc_configured_ul_grant grant{};

@@ -188,7 +188,7 @@ ue_scheduler_impl::cell_context::cell_context(ue_scheduler_impl&                
                     *params.cell_metrics,
                     ocudulog::fetch_basic_logger("SCHED")),
   srs_sched(params.cell_res_alloc->cfg, parent.ue_db),
-  cg_sched(params.cell_res_alloc->cfg, parent.ue_db),
+  cg_sched(params.cell_res_alloc->cfg, *params.uci_alloc, parent.ue_db),
   uci_selector(*this)
 {
 }

@@ -8,92 +8,12 @@
 #include "../support/dmrs_helpers.h"
 #include "../support/mcs_tbs_calculator.h"
 #include "../support/sch_pdu_builder.h"
+#include "../uci_scheduling/uci_allocator_impl.h"
+#include "ocudu/ran/csi_report/csi_report_config_helpers.h"
 #include "ocudu/ran/direct_current_offset.h"
 #include <optional>
 
 using namespace ocudu;
-
-/// Converts a CG periodicity enum value to a number of slots.
-/// Returns std::nullopt for sub-slot periodicities (sym2, sym7, sym6), which are not supported.
-static unsigned cg_periodicity_to_slots(cg_configuration::periodicity_t period)
-{
-  switch (period) {
-    // Sub-slot periodicities — not supported.
-    case cg_configuration::periodicity_t::sym2:
-    case cg_configuration::periodicity_t::sym7:
-    case cg_configuration::periodicity_t::sym6:
-      ocudu_assertion_failure("CG period less than 1 slot is not supported");
-      return 0;
-    // Normal CP (14 symbols/slot).
-    case cg_configuration::periodicity_t::sym1x14:
-    case cg_configuration::periodicity_t::sym1x12:
-      return 1U;
-    case cg_configuration::periodicity_t::sym2x14:
-    case cg_configuration::periodicity_t::sym2x12:
-      return 2U;
-    case cg_configuration::periodicity_t::sym4x14:
-    case cg_configuration::periodicity_t::sym4x12:
-      return 4U;
-    case cg_configuration::periodicity_t::sym5x14:
-    case cg_configuration::periodicity_t::sym5x12:
-      return 5U;
-    case cg_configuration::periodicity_t::sym8x14:
-    case cg_configuration::periodicity_t::sym8x12:
-      return 8U;
-    case cg_configuration::periodicity_t::sym10x14:
-    case cg_configuration::periodicity_t::sym10x12:
-      return 10U;
-    case cg_configuration::periodicity_t::sym16x14:
-    case cg_configuration::periodicity_t::sym16x12:
-      return 16U;
-    case cg_configuration::periodicity_t::sym20x14:
-    case cg_configuration::periodicity_t::sym20x12:
-      return 20U;
-    case cg_configuration::periodicity_t::sym32x14:
-    case cg_configuration::periodicity_t::sym32x12:
-      return 32U;
-    case cg_configuration::periodicity_t::sym40x14:
-    case cg_configuration::periodicity_t::sym40x12:
-      return 40U;
-    case cg_configuration::periodicity_t::sym64x14:
-    case cg_configuration::periodicity_t::sym64x12:
-      return 64U;
-    case cg_configuration::periodicity_t::sym80x14:
-    case cg_configuration::periodicity_t::sym80x12:
-      return 80U;
-    case cg_configuration::periodicity_t::sym128x14:
-    case cg_configuration::periodicity_t::sym128x12:
-      return 128U;
-    case cg_configuration::periodicity_t::sym160x14:
-    case cg_configuration::periodicity_t::sym160x12:
-      return 160U;
-    case cg_configuration::periodicity_t::sym256x14:
-    case cg_configuration::periodicity_t::sym256x12:
-      return 256U;
-    case cg_configuration::periodicity_t::sym320x14:
-    case cg_configuration::periodicity_t::sym320x12:
-      return 320U;
-    case cg_configuration::periodicity_t::sym512x14:
-    case cg_configuration::periodicity_t::sym512x12:
-      return 512U;
-    case cg_configuration::periodicity_t::sym640x14:
-    case cg_configuration::periodicity_t::sym640x12:
-      return 640U;
-    case cg_configuration::periodicity_t::sym1024x14:
-      return 1024U;
-    case cg_configuration::periodicity_t::sym1280x14:
-    case cg_configuration::periodicity_t::sym1280x12:
-      return 1280U;
-    case cg_configuration::periodicity_t::sym2560x14:
-    case cg_configuration::periodicity_t::sym2560x12:
-      return 2560U;
-    case cg_configuration::periodicity_t::sym5120x14:
-      return 5120U;
-    default:
-      ocudu_assertion_failure("CG periodicity is not valid");
-  }
-  return 0;
-}
 
 static unsigned rep_to_rv(const cg_configuration::repetitions_t& reps, unsigned rep_idx)
 {
@@ -120,13 +40,14 @@ static harq_id_t get_harq_id(slot_point                      pusch_slot,
   // As per TS 38.321, Section 5.4.1.
   const unsigned current_symbol =
       static_cast<unsigned>(pusch_slot.system_slot()) * NOF_OFDM_SYM_PER_SLOT_NORMAL_CP + symbol;
-  const unsigned periodicity_sym = cg_periodicity_to_slots(periodicity) * NOF_OFDM_SYM_PER_SLOT_NORMAL_CP;
+  const unsigned periodicity_sym = static_cast<unsigned>(periodicity) * NOF_OFDM_SYM_PER_SLOT_NORMAL_CP;
   return to_harq_id((current_symbol / periodicity_sym) % nof_harq_processes);
 }
 
 configured_grant_scheduler_impl::configured_grant_scheduler_impl(const cell_configuration& cell_cfg_,
+                                                                 uci_allocator&            uci_alloc_,
                                                                  ue_repository&            ues_) :
-  cell_cfg(cell_cfg_), ues(ues_), logger(ocudulog::fetch_basic_logger("SCHED"))
+  cell_cfg(cell_cfg_), uci_alloc(uci_alloc_), ues(ues_), logger(ocudulog::fetch_basic_logger("SCHED"))
 {
   periodic_pusch_slot_wheel.resize(max_cg_slot_periodicity);
 }
@@ -161,7 +82,7 @@ void configured_grant_scheduler_impl::add_ue_to_wheel(const ue_cell_configuratio
   }
   const auto& ul_grant = cg_cfg.rrc_configured_ul_grant_cfg.value();
 
-  const auto period_slots = cg_periodicity_to_slots(cg_cfg.periodicity);
+  const auto period_slots = static_cast<unsigned>(cg_cfg.periodicity);
 
   // Fill the slot wheel at every slot where a CG PUSCH opportunity occurs.
   for (unsigned wheel_offset = ul_grant.time_domain_offset; wheel_offset < max_cg_slot_periodicity;
@@ -188,7 +109,7 @@ void configured_grant_scheduler_impl::rem_ue(const ue_cell_configuration& ue_cfg
   }
   const auto& ul_grant = cg_cfg.rrc_configured_ul_grant_cfg.value();
 
-  const auto period_slots = cg_periodicity_to_slots(cg_cfg.periodicity);
+  const auto period_slots = static_cast<unsigned>(cg_cfg.periodicity);
 
   for (unsigned wheel_offset = ul_grant.time_domain_offset; wheel_offset < max_cg_slot_periodicity;
        wheel_offset += period_slots) {
@@ -227,10 +148,13 @@ void configured_grant_scheduler_impl::reconf_ue(const ue_cell_configuration& new
 
 void configured_grant_scheduler_impl::run_slot(cell_resource_allocator& cell_alloc)
 {
-  allocate_slot_cg_opportunities(cell_alloc[cell_alloc.max_ul_slot_alloc_delay]);
+  // We only allocate CG PUSCH for the current slot; else, we incur the possibility that the PUSCH gets allocated before
+  // the PUCCH.
+  static constexpr unsigned look_ahead_alloc_slots = 0U;
+  allocate_slot_cg_opportunities(cell_alloc[look_ahead_alloc_slots]);
 }
 
-void configured_grant_scheduler_impl::allocate_slot_cg_opportunities(cell_slot_resource_allocator& slot_alloc)
+void configured_grant_scheduler_impl::allocate_slot_cg_opportunities(cell_slot_resource_allocator& slot_alloc) const
 {
   const auto& rnti_list = periodic_pusch_slot_wheel[slot_alloc.slot.to_uint() % max_cg_slot_periodicity];
   for (const rnti_t rnti : rnti_list) {
@@ -238,7 +162,8 @@ void configured_grant_scheduler_impl::allocate_slot_cg_opportunities(cell_slot_r
   }
 }
 
-bool configured_grant_scheduler_impl::allocate_cg_opportunity(cell_slot_resource_allocator& slot_alloc, rnti_t rnti)
+bool configured_grant_scheduler_impl::allocate_cg_opportunity(cell_slot_resource_allocator& slot_alloc,
+                                                              rnti_t                        rnti) const
 {
   // Fetch UE and its cell context.
   auto* u = ues.find_by_rnti(rnti);
@@ -316,6 +241,9 @@ bool configured_grant_scheduler_impl::allocate_cg_opportunity(cell_slot_resource
   pusch_params.nof_oh_prb = ue_cfg.pusch_serving_cell_cfg() != nullptr
                                 ? static_cast<unsigned>(ue_cfg.pusch_serving_cell_cfg()->x_ov_head)
                                 : static_cast<unsigned>(x_overhead::not_set);
+  // If aperiodic CSI is configured, it is assumed that it will be carried by dynamic grants.
+  pusch_params.aperiodic_csi     = false;
+  pusch_params.nof_harq_ack_bits = uci_alloc.get_scheduled_pdsch_counter_in_ue_uci(pusch_slot, u->crnti);
 
   // Compute CRBs: CG PUSCH uses non-interleaved VRB-to-PRB mapping, so VRBs = PRBs.
   const bwp_configuration& ul_bwp_cfg = cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params;
@@ -340,11 +268,10 @@ bool configured_grant_scheduler_impl::allocate_cg_opportunity(cell_slot_resource
   const units::bytes tbs = compute_ul_tbs_unsafe(pusch_params, mcs_idx, ul_grant.vrbs.length());
 
   // Fill UL scheduling result.
-  ul_sched_info&     sched_info = slot_alloc.result.ul.puschs.emplace_back();
-  pusch_information& pusch_info = sched_info.pusch_cfg;
+  ul_sched_info& sched_info = slot_alloc.result.ul.puschs.emplace_back();
 
   constexpr unsigned rep_idx = 0U;
-  build_pusch_cs_rnti(pusch_info,
+  build_pusch_cs_rnti(sched_info.pusch_cfg,
                       cg_cfg.cs_rnti,
                       pusch_params,
                       {mcs_idx, tbs},
@@ -353,6 +280,12 @@ bool configured_grant_scheduler_impl::allocate_cg_opportunity(cell_slot_resource
                       ul_grant.vrbs,
                       rep_to_rv(cg_cfg.rep, rep_idx),
                       h_ul.value().id());
+
+  // Check if there is any UCI grant allocated on the PUCCH that can be moved to the PUSCH.
+  // NOTE: aperiodic
+  constexpr bool configured_grant = true;
+  uci_alloc.multiplex_uci_on_pusch(
+      sched_info, slot_alloc, ue_cfg, u->crnti, pusch_params.aperiodic_csi, configured_grant);
 
   // Fill decision context (informational; not forwarded to the PHY).
   sched_info.context.ue_index = u->ue_index;
@@ -366,6 +299,8 @@ bool configured_grant_scheduler_impl::allocate_cg_opportunity(cell_slot_resource
 
   // Mark resources as allocated in the UL resource grid.
   slot_alloc.ul_res_grid.fill(grant);
+
+  logger.debug("CG PUSCH allocated for UE={} for slot={}", rnti, pusch_slot);
 
   return true;
 }

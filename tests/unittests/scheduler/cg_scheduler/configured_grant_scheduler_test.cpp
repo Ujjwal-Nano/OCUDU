@@ -9,10 +9,13 @@
 
 #include "tests/test_doubles/scheduler/scheduler_config_helper.h"
 #include "tests/test_doubles/scheduler/scheduler_result_finder.h"
+#include "tests/test_doubles/utils/test_rng_seed.h"
+#include "tests/unittests/scheduler/test_utils/result_test_helpers.h"
 #include "tests/unittests/scheduler/test_utils/scheduler_test_simulator.h"
 #include "ocudu/ran/du_types.h"
-#include "ocudu/scheduler/config/cg_builder_params.h"
+#include "ocudu/ran/logical_channel/lcid.h"
 #include "ocudu/ran/sps/cg_configuration.h"
+#include "ocudu/scheduler/config/cg_builder_params.h"
 #include "ocudu/scheduler/resource_grid_util.h"
 #include <gtest/gtest.h>
 
@@ -20,12 +23,12 @@ using namespace ocudu;
 
 /// Helper struct that holds parameters for a single CG test scenario.
 struct cg_test_params {
-  cg_configuration::periodicity_t periodicity      = cg_configuration::periodicity_t::sym40x14;
-  unsigned                        period_slots      = 40;
-  unsigned                        slot_offset       = 0;
-  unsigned                        nof_rbs           = 10;
-  unsigned                        mcs               = 5;
-  unsigned                        nof_harq_procs    = 4;
+  cg_configuration::periodicity_t periodicity    = cg_configuration::periodicity_t::sl40;
+  unsigned                        period_slots   = 40;
+  unsigned                        slot_offset    = 0;
+  unsigned                        nof_rbs        = 10;
+  unsigned                        mcs            = 5;
+  unsigned                        nof_harq_procs = 4;
 };
 
 /// Base class for all configured_grant_scheduler tests. Provides cell + UE setup with CG enabled and
@@ -37,18 +40,18 @@ protected:
   /// CS-RNTI assigned to the test UE. Matches the temporary value used in du_cg_res_mng.cpp.
   static constexpr rnti_t cs_rnti = to_rnti(0xe0ef);
 
-  cg_test_params                             cg_params;
-  sched_cell_configuration_request_message   cell_req;
+  cg_test_params                           cg_params;
+  sched_cell_configuration_request_message cell_req;
 
   explicit configured_grant_scheduler_test(const cg_test_params& params_ = {}) :
     scheduler_test_simulator(/*tx_rx_delay=*/4), cg_params(params_)
   {
-    cell_req              = sched_config_helper::make_default_sched_cell_configuration_request();
+    cell_req                     = sched_config_helper::make_default_sched_cell_configuration_request();
     cell_req.ran.init_bwp.cg_cfg = cg_builder_params{
-        .periodicity       = cg_params.periodicity,
-        .slot_offset       = cg_params.slot_offset,
-        .nof_rbs           = cg_params.nof_rbs,
-        .mcs               = cg_params.mcs,
+        .periodicity        = cg_params.periodicity,
+        .slot_offset        = cg_params.slot_offset,
+        .nof_rbs            = cg_params.nof_rbs,
+        .mcs                = cg_params.mcs,
         .nof_harq_processes = cg_params.nof_harq_procs,
     };
     add_cell(cell_req);
@@ -57,7 +60,7 @@ protected:
   /// Adds the test UE to the scheduler with CG configuration.
   void add_cg_ue(du_ue_index_t ue_idx = to_du_ue_index(0))
   {
-    auto ue_req  = sched_config_helper::create_default_sched_ue_creation_request(cell_req.ran);
+    auto ue_req     = sched_config_helper::create_default_sched_ue_creation_request(cell_req.ran);
     ue_req.ue_index = ue_idx;
     ue_req.crnti    = ue_crnti;
     // The UE config was generated from the cell RAN config, so cg_cfg is already set.
@@ -77,7 +80,7 @@ protected:
       // The CG PUSCH is booked max_ul_slot_alloc_delay slots ahead, so the first grant appears in last_sched_result()
       // max_ul_slot_alloc_delay + (period - 1) steps after UE creation. Add extra margin for safety.
       const unsigned ul_delay = get_max_slot_ul_alloc_delay(/*ntn_cs_koffset=*/0);
-      max_slots = ul_delay + cg_params.period_slots + 20;
+      max_slots               = ul_delay + cg_params.period_slots + 20;
     }
     for (unsigned i = 0; i < max_slots; ++i) {
       run_slot();
@@ -180,8 +183,7 @@ TEST_F(configured_grant_scheduler_test, after_ue_removal_no_more_cg_grants)
   // Run 2 periods and verify no more CG grants.
   for (unsigned i = 0; i < 2 * cg_params.period_slots + 10; ++i) {
     run_slot();
-    EXPECT_EQ(find_ue_pusch(cs_rnti, *last_sched_result()), nullptr)
-        << "Unexpected CG PUSCH after UE removal";
+    EXPECT_EQ(find_ue_pusch(cs_rnti, *last_sched_result()), nullptr) << "Unexpected CG PUSCH after UE removal";
   }
 }
 
@@ -190,7 +192,7 @@ TEST_F(configured_grant_scheduler_test, after_ue_removal_no_more_cg_grants)
 TEST_F(configured_grant_scheduler_test, ue_with_no_cg_config_produces_no_cg_grants)
 {
   // Add a UE but intentionally leave cs_rnti unset (zero / invalid).
-  auto ue_req = sched_config_helper::create_default_sched_ue_creation_request(cell_req.ran);
+  auto ue_req     = sched_config_helper::create_default_sched_ue_creation_request(cell_req.ran);
   ue_req.ue_index = to_du_ue_index(0);
   ue_req.crnti    = ue_crnti;
   // Do NOT set cs_rnti — leave cg_cfg->cs_rnti at its default (zero / INVALID_RNTI).
@@ -216,11 +218,11 @@ class cg_period_test : public configured_grant_scheduler_test,
 protected:
   cg_period_test() :
     configured_grant_scheduler_test(cg_test_params{
-        .periodicity   = GetParam().periodicity,
-        .period_slots  = GetParam().period_slots,
-        .slot_offset   = 0,
-        .nof_rbs       = 10,
-        .mcs           = 5,
+        .periodicity    = GetParam().periodicity,
+        .period_slots   = GetParam().period_slots,
+        .slot_offset    = 0,
+        .nof_rbs        = 10,
+        .mcs            = 5,
         .nof_harq_procs = 8,
     })
   {
@@ -244,8 +246,82 @@ TEST_P(cg_period_test, period_is_honoured)
 
 INSTANTIATE_TEST_SUITE_P(cg_periods,
                          cg_period_test,
-                         ::testing::Values(
-                             cg_period_test_params{cg_configuration::periodicity_t::sym10x14, 10},
-                             cg_period_test_params{cg_configuration::periodicity_t::sym20x14, 20},
-                             cg_period_test_params{cg_configuration::periodicity_t::sym40x14, 40},
-                             cg_period_test_params{cg_configuration::periodicity_t::sym80x14, 80}));
+                         ::testing::Values(cg_period_test_params{cg_configuration::periodicity_t::sl10, 10},
+                                           cg_period_test_params{cg_configuration::periodicity_t::sl20, 20},
+                                           cg_period_test_params{cg_configuration::periodicity_t::sl40, 40},
+                                           cg_period_test_params{cg_configuration::periodicity_t::sl80, 80}));
+
+/// Test: when a PUCCH HARQ-ACK falls in the same slot as a CG PUSCH, the UCI is moved to the PUSCH and the PUCCH
+/// is removed.
+TEST_F(configured_grant_scheduler_test, cg_pusch_absorbs_pucch_harq_ack)
+{
+  auto_uci = true;
+  auto_crc = true;
+  add_cg_ue();
+
+  bool found = false;
+  for (unsigned i = 0; i != static_cast<unsigned>(cg_params.periodicity) * 5; ++i) {
+    // Keep DL buffer non-empty so the scheduler generates PDSCHs → PUCCH HARQ-ACK reports.
+    push_dl_buffer_state(dl_buffer_state_indication_message{to_du_ue_index(0), LCID_SRB1, 10000});
+    run_slot();
+
+    const sched_result&  res      = *last_sched_result();
+    const ul_sched_info* cg_pusch = find_ue_pusch_with_harq_ack(cs_rnti, res);
+    if (cg_pusch == nullptr) {
+      continue;
+    }
+    found = true;
+    // The PUSCH UCI should carry at least one HARQ-ACK bit.
+    EXPECT_GT(cg_pusch->uci->harq->harq_ack_nof_bits, 0U);
+    // The PUCCH with HARQ-ACK for this UE must have been removed after the mux.
+    EXPECT_EQ(find_ue_pucch_with_harq_ack(ue_crnti, res.ul.pucchs), nullptr)
+        << "PUCCH HARQ-ACK should be absent after UCI mux onto CG PUSCH";
+    break;
+  }
+  EXPECT_TRUE(found) << "No CG PUSCH with muxed HARQ-ACK UCI was observed within 200 slots";
+}
+
+/// Fixture for the CSI mux test. The default CSI report slot offset is 9 (from du_csi_params), so the CG
+/// slot_offset is set to 9 as well. This guarantees that every other CG PUSCH slot (period=40) coincides
+/// with a CSI PUCCH slot (period=80, offset=9): overlaps at slots 9, 89, 169, ...
+class cg_csi_mux_test : public configured_grant_scheduler_test
+{
+protected:
+  static constexpr unsigned csi_report_slot_offset = 9; ///< Matches du_csi_params default.
+
+  cg_csi_mux_test() : configured_grant_scheduler_test(cg_test_params{.slot_offset = csi_report_slot_offset}) {}
+};
+
+/// Test: when a PUCCH CSI report falls in the same slot as a CG PUSCH, the CSI is moved to the PUSCH and the
+/// PUCCH is removed.
+TEST_F(cg_csi_mux_test, cg_pusch_absorbs_pucch_csi)
+{
+  auto_uci = true;
+  auto_crc = true;
+  add_cg_ue();
+
+  // With CG offset=9 and CSI period=80/offset=9, overlaps occur every 80 slots: at slots 9, 89, 169, ...
+  // Run for 3 CSI periods to ensure at least two overlap opportunities.
+  bool found = false;
+  for (unsigned i = 0; i != 300; ++i) {
+    push_dl_buffer_state(dl_buffer_state_indication_message{to_du_ue_index(0), LCID_SRB1, 10000});
+    run_slot();
+
+    const sched_result&  res      = *last_sched_result();
+    const ul_sched_info* cg_pusch = find_ue_pusch(cs_rnti, res);
+    if (cg_pusch == nullptr or not cg_pusch->uci.has_value()) {
+      continue;
+    }
+    if (not cg_pusch->uci->csi.has_value() or cg_pusch->uci->csi->csi_part1_nof_bits == 0) {
+      continue;
+    }
+    found = true;
+    // The PUSCH UCI should carry at least one CSI Part 1 bit.
+    EXPECT_GT(cg_pusch->uci->csi->csi_part1_nof_bits, 0U);
+    // The PUCCH carrying CSI for this UE must have been removed after the mux.
+    EXPECT_EQ(find_ue_pucch_with_csi(ue_crnti, res.ul.pucchs), nullptr)
+        << "PUCCH CSI should be absent after UCI mux onto CG PUSCH";
+    break;
+  }
+  EXPECT_TRUE(found) << "No CG PUSCH with muxed CSI was observed within 300 slots";
+}
