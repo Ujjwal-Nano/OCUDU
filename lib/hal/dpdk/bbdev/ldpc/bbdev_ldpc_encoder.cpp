@@ -88,8 +88,9 @@ bool dpdk::set_ldpc_enc_bbdev_data(bbdev_pdsch_encoder_configuration& op_cfg,
   m_head_in->data_len = 0;
 
   // Set the memory pointers for the input data.
-  op_cfg.op->ldpc_enc.input.data   = m_head_in;
-  op_cfg.op->ldpc_enc.input.offset = 0; // Note that a dedicated mbuf is used per operation.
+  op_cfg.op->ldpc_enc.input.data = m_head_in;
+  // Note that a dedicated mbuf is used per operation.
+  op_cfg.op->ldpc_enc.input.offset = 0;
   op_cfg.op->ldpc_enc.input.length = 0;
 
   // Get the mbuf data-start memory pointers.
@@ -123,8 +124,9 @@ bool dpdk::set_ldpc_enc_bbdev_data(bbdev_pdsch_encoder_configuration& op_cfg,
   m_head_out->data_len = 0;
 
   // Set the memory pointers for the output data.
-  op_cfg.op->ldpc_enc.output.data   = m_head_out;
-  op_cfg.op->ldpc_enc.output.offset = 0; // Note that a dedicated mbuf is used per operation.
+  op_cfg.op->ldpc_enc.output.data = m_head_out;
+  // Note that a dedicated mbuf is used per operation.
+  op_cfg.op->ldpc_enc.output.offset = 0;
   op_cfg.op->ldpc_enc.output.length = 0;
 
   return true;

@@ -114,8 +114,9 @@ bool dpdk::set_ldpc_dec_bbdev_data(bbdev_pusch_decoder_configuration& op_cfg,
   m_head_in->data_len = 0;
 
   // Set the memory pointers for the input data, accounting for the offset of the current segment.
-  op_cfg.op->ldpc_dec.input.data   = m_head_in;
-  op_cfg.op->ldpc_dec.input.offset = 0; // Note that a dedicated mbuf is used per CB.
+  op_cfg.op->ldpc_dec.input.data = m_head_in;
+  // Note that a dedicated mbuf is used per CB.
+  op_cfg.op->ldpc_dec.input.offset = 0;
   op_cfg.op->ldpc_dec.input.length = 0;
 
   // Get the mbuf data-start memory pointers.
@@ -207,8 +208,9 @@ bool dpdk::set_ldpc_dec_bbdev_data(bbdev_pusch_decoder_configuration& op_cfg,
   m_head_out->data_len = 0;
 
   // Set the memory pointers for the output data, accounting for the offset of the current segment.
-  op_cfg.op->ldpc_dec.hard_output.data   = m_head_out;
-  op_cfg.op->ldpc_dec.hard_output.offset = 0; // Note that a dedicated mbuf is used per segment.
+  op_cfg.op->ldpc_dec.hard_output.data = m_head_out;
+  // Note that a dedicated mbuf is used per segment.
+  op_cfg.op->ldpc_dec.hard_output.offset = 0;
   op_cfg.op->ldpc_dec.hard_output.length = 0;
 
   // Update the HARQ output memory offset and length.
@@ -328,10 +330,14 @@ dpdk::read_ldpc_dec_bbdev_data(span<uint8_t> data, span<int8_t> soft_data, bbdev
   return new_soft_data_len;
 }
 
-uint16_t dpdk::compute_softdata_len(::rte_bbdev_op_ldpc_dec& dec_cfg)
+uint16_t dpdk::compute_softdata_len(const ::rte_bbdev_op_ldpc_dec& dec_cfg)
 {
-  uint16_t k0 = 0, n = 0, parity_offset = 0, full_len = 0, rm_out_len = 0;
-  uint8_t  max_rv_ix = dec_cfg.rv_index == 1 ? 3 : dec_cfg.rv_index;
+  uint16_t k0            = 0;
+  uint16_t n             = 0;
+  uint16_t parity_offset = 0;
+  uint16_t full_len      = 0;
+  uint16_t rm_out_len    = 0;
+  uint8_t  max_rv_ix     = dec_cfg.rv_index == 1 ? 3 : dec_cfg.rv_index;
 
   // Compute k0 (TS38.212 Table 5.4.2.1-2).
   n = (dec_cfg.basegraph == 1 ? 66 : 50) * dec_cfg.z_c;

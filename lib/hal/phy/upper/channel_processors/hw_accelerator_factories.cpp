@@ -13,7 +13,6 @@ namespace {
 
 class hw_accelerator_pdsch_enc_factory_bbdev : public hw_accelerator_pdsch_enc_factory
 {
-private:
   /// Accelerator type.
   std::string acc_type;
   /// Interfacing to a bbdev-based hardware-accelerator.
@@ -26,7 +25,6 @@ private:
   bool dedicated_queue = true;
 
 public:
-  // Default constructor.
   explicit hw_accelerator_pdsch_enc_factory_bbdev(
       const bbdev_hwacc_pdsch_enc_factory_configuration& accelerator_config) :
     acc_type(accelerator_config.acc_type),

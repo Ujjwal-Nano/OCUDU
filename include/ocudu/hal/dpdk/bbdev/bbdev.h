@@ -17,17 +17,20 @@ namespace ocudu {
 namespace dpdk {
 
 /// \brief bbdev initialization.
+///
 /// \param[in]  cfg    Configuration of the bbdev-based hardware-accelerator.
 /// \param[in]  logger OCUDU logger.
-/// \return BBDEV device information if successful, otherwise \c std::nullopt.
+/// \return BBDEV device information if successful, otherwise returns an empty structure.
 expected<::rte_bbdev_info> bbdev_start(const bbdev_acc_configuration& cfg, ocudulog::basic_logger& logger);
 
 /// \brief bbdev shutdown management.
+///
 /// \param[in]  dev_id ID of the bbdev-based hardware-accelerator.
 /// \param[in]  logger OCUDU logger.
 bool bbdev_stop(unsigned dev_id, ocudulog::basic_logger& logger);
 
-/// Creates a new op pool for a given hardware-accelerator device.
+/// \brief Creates a new op pool for a given hardware-accelerator device.
+///
 /// \param[in]  pool_name     Unique ID for the new mbuf pool.
 /// \param[in]  op_type       Type of bbdev op.
 /// \param[in]  nof_elements  Number of elements in the op pool.

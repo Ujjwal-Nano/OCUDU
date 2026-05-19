@@ -43,7 +43,6 @@ class hw_accelerator_pusch_dec_acc100_impl : public hw_accelerator_pusch_dec_imp
   /// Allocate the required resources from the bbdev-based hardware-accelerator.
   void allocate_resources();
 
-  /// \file
   /// \brief Members specific to bbdev-accelerated LDPC decoder functions.
 
   /// Unique ID of the current hardware-accelerated function.
@@ -91,7 +90,6 @@ class hw_accelerator_pusch_dec_acc100_impl : public hw_accelerator_pusch_dec_imp
   /// Structure of HARQ output-data mbuf pointers.
   ::rte_mbuf* harq_out_mbuf_vec[MAX_NOF_SEGMENTS];
 
-  /// \file
   /// \brief Common members to all hardware-accelerated LDPC decoder functions.
 
   /// Private member to store the configuration of the current operation.
