@@ -71,6 +71,8 @@ static meas_gap_config create_meas_gap(subcarrier_spacing scs, const ssb_mtc_s& 
       report_fatal_error("Invalid SSB MTC periodicity_and_offset");
   }
 
+  meas_gap.offset = 10;
+
   return meas_gap;
 }
 
