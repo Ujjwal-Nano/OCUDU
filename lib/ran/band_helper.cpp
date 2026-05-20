@@ -1547,15 +1547,16 @@ unsigned ocudu::band_helper::get_nof_coreset0_rbs_not_intersecting_ssb(coreset0_
 
 n_ta_offset ocudu::band_helper::get_ta_offset(nr_band band)
 {
-  return get_ta_offset(get_freq_range(band));
-}
-
-n_ta_offset ocudu::band_helper::get_ta_offset(frequency_range freq_range)
-{
-  if (freq_range == frequency_range::FR1) {
-    // Assume no LTE-NR coexistence.
-    return n_ta_offset::n25600;
+  if (get_freq_range(band) == frequency_range::FR1) {
+    if (get_duplex_mode(band) == duplex_mode::FDD) {
+      // No buffer for Tx/Rx switch needed.
+      return n_ta_offset::n0;
+    } else {
+      // Sub-6 TDD bands to allow for guard time for Tx/Rx switch, as per TS 38.213, Section 4.2.2.
+      return n_ta_offset::n25600;
+    }
   }
+  // FR2 bands, regardless of duplex mode.
   return n_ta_offset::n13792;
 }
 
