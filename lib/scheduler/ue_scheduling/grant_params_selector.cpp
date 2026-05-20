@@ -227,18 +227,14 @@ static std::optional<unsigned> compute_retx_nof_rbs(const pdsch_config_params&  
 }
 
 static std::optional<std::pair<unsigned, sch_mcs_index>>
-compute_retx_nof_rbs_mcs(const search_space_info&                    ss,
+compute_retx_nof_rbs_mcs(const pdsch_config_params&                  pdsch_cfg,
                          const dl_harq_process_handle::grant_params& prev_h_params,
                          const ue_link_adaptation_controller&        la,
-                         const interval<unsigned>&                   rb_lims,
-                         unsigned                                    pdsch_td_index)
+                         const interval<unsigned>&                   rb_lims)
 {
-  const unsigned                               nof_layers   = prev_h_params.nof_layers;
-  const pdsch_time_domain_resource_allocation& pdsch_td_res = ss.pdsch_time_domain_list[pdsch_td_index];
-
-  if (pdsch_td_res.symbols.length() == prev_h_params.nof_symbols) {
+  if (pdsch_cfg.symbols.length() == prev_h_params.nof_symbols) {
     // Number of symbols did not change. Reuse the same MCS and TBS of previous HARQ transmission.
-    unsigned nof_rbs = prev_h_params.rbs.type1().length();
+    const unsigned nof_rbs = prev_h_params.rbs.type1().length();
     if (nof_rbs > rb_lims.stop()) {
       return std::nullopt;
     }
@@ -248,8 +244,7 @@ compute_retx_nof_rbs_mcs(const search_space_info&                    ss,
   // Number of symbols changed. Recompute MCS and TBS.
   // Note: While the previous MCS could be used, the fact that the recommended MCS increased since the last tx
   // can give the scheduler more margin to adapt to the different number of symbols.
-  const pdsch_config_params& pdsch_cfg       = ss.get_pdsch_config(pdsch_td_index, nof_layers);
-  const auto                 recommended_mcs = la.calculate_dl_mcs(pdsch_cfg.mcs_table);
+  const auto recommended_mcs = la.calculate_dl_mcs(pdsch_cfg.mcs_table);
   if (not recommended_mcs.has_value()) {
     return std::nullopt;
   }
@@ -302,61 +297,67 @@ static std::optional<dl_sched_context> get_dl_sched_context(const slice_ue&     
     return std::nullopt;
   }
 
+  // Find best PDSCH time-domain resource candidate.
+  std::optional<unsigned> selected_pdsch_td_index;
   for (unsigned pdsch_td_index = 0, e = ss.pdsch_time_domain_list.size(); pdsch_td_index != e; ++pdsch_td_index) {
     const pdsch_time_domain_resource_allocation& pdsch_td_res = ss.pdsch_time_domain_list[pdsch_td_index];
 
-    // Check that k0 matches the chosen PDSCH slot
-    if (pdcch_slot + pdsch_td_res.k0 != pdsch_slot) {
+    // Check whether:
+    // - k0 matches the chosen PDSCH slot
+    // - PDSCH time domain resource last symbol is lower than the total number of DL symbols of the slot.
+    // - PDSCH time domain resource does not overlap with CORESET.
+    if ((pdcch_slot + pdsch_td_res.k0 != pdsch_slot) or (slot_nof_symbols < pdsch_td_res.symbols.stop()) or
+        (pdsch_td_res.symbols.start() < ss.cfg->get_first_symbol_index() + ss.coreset->cfg().duration())) {
       continue;
     }
 
-    // Check whether PDSCH time domain resource last symbol is lower than the total number of DL symbols of the slot.
-    if (slot_nof_symbols < pdsch_td_res.symbols.stop()) {
-      continue;
+    if (not selected_pdsch_td_index.has_value() or
+        ss.pdsch_time_domain_list[*selected_pdsch_td_index].symbols.length() < pdsch_td_res.symbols.length()) {
+      // A better PDSCH time-domain resource candidate was found.
+      selected_pdsch_td_index = pdsch_td_index;
     }
-
-    // Check whether PDSCH time domain resource does not overlap with CORESET.
-    if (pdsch_td_res.symbols.start() < ss.cfg->get_first_symbol_index() + ss.coreset->cfg().duration()) {
-      continue;
-    }
-
-    // Compute recommended number of layers, MCS and PRBs.
-    unsigned      nof_layers;
-    unsigned      nof_rbs;
-    sch_mcs_index mcs;
-    if (h_dl == nullptr) {
-      // NewTx Case.
-      nof_layers                           = ue_cc.channel_state_manager().get_nof_dl_layers();
-      const pdsch_config_params& pdsch_cfg = ss.get_pdsch_config(pdsch_td_index, nof_layers);
-      auto mcs_prbs_sel = compute_newtx_required_mcs_and_prbs(pdsch_cfg, ue_cc, pending_bytes, nof_rb_lims);
-      if (not mcs_prbs_sel.has_value()) {
-        // Note: No point in carrying on.
-        return std::nullopt;
-      }
-      mcs     = mcs_prbs_sel.value().mcs;
-      nof_rbs = mcs_prbs_sel.value().nof_prbs;
-    } else {
-      // ReTx Case.
-      const auto& prev_params = h_dl->get_grant_params();
-      auto        result =
-          compute_retx_nof_rbs_mcs(ss, prev_params, ue_cc.link_adaptation_controller(), nof_rb_lims, pdsch_td_index);
-      if (not result.has_value()) {
-        continue;
-      }
-      nof_layers = prev_params.nof_layers;
-      nof_rbs    = result.value().first;
-      mcs        = result.value().second;
-    }
-
-    dl_sched_context ctxt;
-    ctxt.ss_id              = ss.cfg->get_id();
-    ctxt.pdsch_td_res_index = pdsch_td_index;
-    ctxt.recommended_mcs    = mcs;
-    ctxt.recommended_ri     = nof_layers;
-    ctxt.expected_nof_rbs   = nof_rbs;
-    ctxt.pending_bytes      = units::bytes{pending_bytes};
-    return ctxt;
   }
+  if (not selected_pdsch_td_index.has_value()) {
+    // No adequate PDSCH time-domain resource candidate was found.
+    return std::nullopt;
+  }
+
+  // Compute recommended number of layers, MCS and PRBs.
+  unsigned      nof_layers;
+  unsigned      nof_rbs;
+  sch_mcs_index mcs;
+  if (h_dl == nullptr) {
+    // NewTx Case.
+    nof_layers                           = ue_cc.channel_state_manager().get_nof_dl_layers();
+    const pdsch_config_params& pdsch_cfg = ss.get_pdsch_config(*selected_pdsch_td_index, nof_layers);
+    auto mcs_prbs_sel = compute_newtx_required_mcs_and_prbs(pdsch_cfg, ue_cc, pending_bytes, nof_rb_lims);
+    if (not mcs_prbs_sel.has_value()) {
+      // Note: No point in carrying on.
+      return std::nullopt;
+    }
+    mcs     = mcs_prbs_sel.value().mcs;
+    nof_rbs = mcs_prbs_sel.value().nof_prbs;
+  } else {
+    // ReTx Case.
+    const auto&                prev_params = h_dl->get_grant_params();
+    const pdsch_config_params& pdsch_cfg   = ss.get_pdsch_config(*selected_pdsch_td_index, prev_params.nof_layers);
+    auto result = compute_retx_nof_rbs_mcs(pdsch_cfg, prev_params, ue_cc.link_adaptation_controller(), nof_rb_lims);
+    if (not result.has_value()) {
+      return std::nullopt;
+    }
+    nof_layers = prev_params.nof_layers;
+    nof_rbs    = result.value().first;
+    mcs        = result.value().second;
+  }
+
+  dl_sched_context ctxt;
+  ctxt.ss_id              = ss.cfg->get_id();
+  ctxt.pdsch_td_res_index = *selected_pdsch_td_index;
+  ctxt.recommended_mcs    = mcs;
+  ctxt.recommended_ri     = nof_layers;
+  ctxt.expected_nof_rbs   = nof_rbs;
+  ctxt.pending_bytes      = units::bytes{pending_bytes};
+  return ctxt;
 
   return std::nullopt;
 }
@@ -454,26 +455,25 @@ static std::optional<unsigned> compute_retx_nof_rbs(const pusch_config_params&  
   return std::nullopt;
 }
 
-static std::optional<std::pair<unsigned, sch_mcs_index>> compute_retx_nof_rbs_mcs(const pusch_config_params& pusch_cfg,
-                                                                                  const ul_harq_process_handle& h_ul,
-                                                                                  const ue_cell&                ue_cc,
-                                                                                  const interval<unsigned>&     rb_lims)
+static std::optional<std::pair<unsigned, sch_mcs_index>>
+compute_retx_nof_rbs_mcs(const pusch_config_params&                  pusch_cfg,
+                         const ul_harq_process_handle::grant_params& prev_h_params,
+                         const ue_cell&                              ue_cc,
+                         const interval<unsigned>&                   rb_lims)
 {
-  const auto& prev_params = h_ul.get_grant_params();
-
-  if (pusch_cfg.symbols.length() == prev_params.nof_symbols) {
+  if (pusch_cfg.symbols.length() == prev_h_params.nof_symbols) {
     // Number of symbols did not change. Reuse the same MCS and TBS of previous HARQ transmission.
-    const unsigned nof_rbs = prev_params.rbs.type1().length();
+    const unsigned nof_rbs = prev_h_params.rbs.type1().length();
     if (nof_rbs > rb_lims.stop()) {
       return std::nullopt;
     }
     // Re-validate TBS: UCI overhead can change across retransmissions.
     static constexpr bool contains_dc = true;
-    const auto            tbs = compute_ul_tbs(pusch_cfg, ue_cc.active_bwp(), prev_params.mcs, nof_rbs, contains_dc);
-    if (not tbs.has_value() or tbs.value() != prev_params.tbs) {
+    const auto            tbs = compute_ul_tbs(pusch_cfg, ue_cc.active_bwp(), prev_h_params.mcs, nof_rbs, contains_dc);
+    if (not tbs.has_value() or tbs.value() != prev_h_params.tbs) {
       return std::nullopt;
     }
-    return std::make_pair(nof_rbs, prev_params.mcs);
+    return std::make_pair(nof_rbs, prev_h_params.mcs);
   }
 
   // Number of symbols changed. Recompute MCS and RBs.
@@ -483,7 +483,7 @@ static std::optional<std::pair<unsigned, sch_mcs_index>> compute_retx_nof_rbs_mc
       ue_cc.link_adaptation_controller().calculate_ul_mcs(pusch_cfg.mcs_table, pusch_cfg.use_transform_precoder);
 
   // Compute number of RBs.
-  const auto nof_rbs_opt = compute_retx_nof_rbs(pusch_cfg, ue_cc.active_bwp(), mcs, prev_params, rb_lims);
+  const auto nof_rbs_opt = compute_retx_nof_rbs(pusch_cfg, ue_cc.active_bwp(), mcs, prev_h_params, rb_lims);
   if (not nof_rbs_opt.has_value()) {
     return std::nullopt;
   }
@@ -590,7 +590,7 @@ static std::optional<ul_sched_context> get_ul_sched_context(const slice_ue&     
       // ReTx Case.
       // Compute if effective code rate does not go over the limit for this reTx, for instance, due to presence of UCI.
       pusch_cfg         = compute_retx_pusch_config_params(ue_cc, *h_ul, pusch_td_res, uci_nof_harq_bits, include_csi);
-      const auto result = compute_retx_nof_rbs_mcs(pusch_cfg, *h_ul, ue_cc, nof_rb_lims);
+      const auto result = compute_retx_nof_rbs_mcs(pusch_cfg, h_ul->get_grant_params(), ue_cc, nof_rb_lims);
       if (not result.has_value()) {
         continue;
       }
