@@ -38,10 +38,9 @@ public:
   /// \brief Toggle delivery of slot indications to the MAC.
   ///
   /// Default is active=true so the cell's first activation at DU init does not require the FAPI
-  /// START handshake to flip a gate that's currently closed — see mac_cell_processor::start() and
-  /// the init-bypass note in cns-ocudu-changes.md (Change 7) for why a default of false would
-  /// deadlock during DU.start() in the monolithic deployment. Runtime cell lock/unlock toggles
-  /// this normally via the controller chain.
+  /// START handshake to flip a gate that's currently closed — see mac_cell_processor::start() for
+  /// why a default of false would deadlock during DU.start() in the monolithic deployment.
+  /// Runtime cell lock/unlock toggles this normally via the controller chain.
   void set_active(bool a) { active.store(a, std::memory_order_relaxed); }
 
 private:

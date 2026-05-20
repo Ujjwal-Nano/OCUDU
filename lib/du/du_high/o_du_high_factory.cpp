@@ -146,8 +146,9 @@ std::unique_ptr<o_du_high> ocudu::odu::make_o_du_high(const o_du_high_config&  c
   // o_du_high_impl and outlives the du_high, so a non-owning pointer is safe here.
   odu_dependencies.du_hi.phy_cell_op_controllers.reserve(config.du_hi.ran.cells.size());
   for (unsigned i = 0, e = config.du_hi.ran.cells.size(); i != e; ++i) {
+    auto& sector_adaptor = odu->get_mac_fapi_fastpath_adaptor().get_sector_adaptor(i);
     odu_dependencies.du_hi.phy_cell_op_controllers.push_back(
-        &odu->get_mac_fapi_fastpath_adaptor().get_sector_adaptor(i).get_p5_sector_fastpath_adaptor().get_operation_controller());
+        &sector_adaptor.get_p5_sector_fastpath_adaptor().get_operation_controller());
   }
 
   if (!odu_dependencies.e2_client) {

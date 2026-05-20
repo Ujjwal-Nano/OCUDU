@@ -78,12 +78,9 @@ async_task<void> mac_cell_processor::start()
     // when the FAPI control executors are not yet draining their queues. Awaiting the FAPI START
     // transaction here deadlocks for the full 5-second timeout window — DU.start() blocks on this
     // coroutine, this coroutine blocks on a deferred outcome, the executor that would fire the
-    // outcome is held back by DU.start() not yet returning. Pre-Change-5 this was hidden because
-    // phy_cell_op_controller was always null and MAC bypassed the await entirely. Change 5 wired
-    // the controller and surfaced the deadlock; Change 6 implemented the PHY-side controller; this
-    // (Change 7) handles the init case by skipping only the FIRST await per cell. Subsequent
-    // activations (runtime cell unlock, NRCell add at runtime, etc.) all hit the proper FAPI path
-    // because by then DU.start() has returned and executors are pumping normally.
+    // outcome is held back by DU.start() not yet returning. The first activation per cell skips the
+    // FAPI await; subsequent activations (runtime cell unlock, NRCell add at runtime, etc.) hit the
+    // proper FAPI path because by then DU.start() has returned and executors are pumping normally.
     //
     // Why this is safe: the FAPI P7 slot-indication gate defaults to active=true, so SSB starts
     // broadcasting as soon as the slot machinery comes online — no FAPI handshake required to get

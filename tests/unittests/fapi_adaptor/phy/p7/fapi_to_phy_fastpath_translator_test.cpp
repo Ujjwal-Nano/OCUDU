@@ -457,15 +457,12 @@ TEST_F(fapi_to_phy_translator_fixture, empty_ul_tti_generates_request_when_allow
   ASSERT_TRUE(ul_request_processor.has_uplink_been_requested());
 }
 
-// =============================================================================
-// phy_to_fapi_time_event_fastpath_translator gate tests.
-//
-// These exercise the FAPI cell lifecycle gate added to suppress slot indication
-// delivery to MAC when a cell is in the inactive state. The gate is the
-// receiving end of upper_phy_operation_controller::start()/stop() that gets
-// driven by FAPI P5 START.request / STOP.request from MAC. See
-// docs/cns/cns-ocudu-changes.md Change 6 for context.
-// =============================================================================
+/// phy_to_fapi_time_event_fastpath_translator gate tests.
+///
+/// These exercise the FAPI cell lifecycle gate added to suppress slot indication delivery to MAC
+/// when a cell is in the inactive state. The gate is the receiving end of
+/// upper_phy_operation_controller::start()/stop() that gets driven by FAPI P5 START.request /
+/// STOP.request from MAC.
 
 namespace {
 

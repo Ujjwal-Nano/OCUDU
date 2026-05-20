@@ -232,21 +232,17 @@ TEST_F(mac_cell_processor_ue_update_test, ues_created_and_removed_in_batches)
   }
 }
 
-// =============================================================================
-// FAPI cell lifecycle init bypass (Change 7).
-//
-// In monolithic OCUDU, mac_cell_processor::start() is invoked inside DU.start()
-// during initial cell bring-up — at a moment when the FAPI executors that
-// would respond to a START.request are not yet pumping their queues. Awaiting
-// the FAPI START transaction would deadlock for the full 5-second timeout.
-// To avoid this, the very first activation per cell skips the FAPI await; all
-// subsequent activations (runtime cell unlock, runtime add) go through the
-// full FAPI path so the spec-correct lifecycle is honored everywhere it is
-// operationally meaningful.
-//
-// These tests pin that contract: the controller is NOT invoked on the first
-// start(), but IS invoked on subsequent starts and on every stop().
-// =============================================================================
+/// FAPI cell lifecycle init bypass.
+///
+/// In monolithic OCUDU, mac_cell_processor::start() is invoked inside DU.start() during initial
+/// cell bring-up — at a moment when the FAPI executors that would respond to a START.request are
+/// not yet pumping their queues. Awaiting the FAPI START transaction would deadlock for the full
+/// 5-second timeout. To avoid this, the very first activation per cell skips the FAPI await; all
+/// subsequent activations (runtime cell unlock, runtime add) go through the full FAPI path so the
+/// spec-correct lifecycle is honored everywhere it is operationally meaningful.
+///
+/// These tests pin that contract: the controller is NOT invoked on the first start(), but IS
+/// invoked on subsequent starts and on every stop().
 
 namespace {
 
@@ -301,7 +297,7 @@ protected:
   {
     mac_cell_config_dependencies deps{timer_ctrl.add_cell(to_du_cell_index(0))};
     deps.phy_cell_op_controller = &phy_spy;
-    mac_cell                    = std::make_unique<mac_cell_processor>(test_helpers::make_default_mac_cell_config(builder_params),
+    mac_cell = std::make_unique<mac_cell_processor>(test_helpers::make_default_mac_cell_config(builder_params),
                                                     sched_adapter,
                                                     sfn_time_adapter,
                                                     rnti_table,

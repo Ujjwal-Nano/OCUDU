@@ -128,8 +128,7 @@ private:
   /// True until start() has run once. The very first activation happens during DU.start() while
   /// FAPI executors are not yet pumping their queues, so awaiting the FAPI START handshake would
   /// deadlock. On the first call we skip the await and rely on the gate defaulting to active.
-  /// Subsequent activations (runtime lock/unlock) take the full FAPI path. See Change 7 in
-  /// docs/cns/cns-ocudu-changes.md.
+  /// Subsequent activations (runtime lock/unlock) take the full FAPI path.
   bool is_first_activation = true;
 
   mac_pcap& pcap;
