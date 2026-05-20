@@ -11,7 +11,7 @@
 namespace ocudu {
 namespace ocucp {
 
-/// \brief Result of a cell-level command issued via cu_cp_cell_command_handler.
+/// Result of a cell-level command issued via cu_cp_cell_command_handler.
 struct cu_cp_cell_command_response {
   /// Whether the command completed successfully from CU-CP's point of view (the DU accepted the F1AP update).
   bool success = false;
@@ -58,8 +58,7 @@ public:
   /// stop, completes asynchronously.
   virtual bool dispatch_deactivate_cell(const nr_cell_global_id_t& cgi) = 0;
 
-  /// \brief Fire-and-forget synchronous variant of activate_cell. See dispatch_deactivate_cell for
-  /// the rationale.
+  /// Fire-and-forget synchronous variant of activate_cell. See dispatch_deactivate_cell for the rationale.
   virtual bool dispatch_activate_cell(const nr_cell_global_id_t& cgi) = 0;
 };
 

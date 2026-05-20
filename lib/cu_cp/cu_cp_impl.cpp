@@ -1795,10 +1795,6 @@ void cu_cp_impl::on_statistics_report_timer_expired()
   statistics_report_timer.run();
 }
 
-// =============================================================================
-// cu_cp_cell_command_handler implementation
-// =============================================================================
-
 // Helper that builds and dispatches an F1AP gNB-CU Configuration Update for a single-cell activation or
 // deactivation. Encapsulated here to avoid variable declarations crossing CORO_AWAIT case labels.
 namespace {

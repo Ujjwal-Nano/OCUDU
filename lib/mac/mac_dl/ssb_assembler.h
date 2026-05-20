@@ -43,9 +43,11 @@ private:
   const ssb_configuration ssb_cfg;
   uint8_t                 pdcch_config_sib1;
   dmrs_typeA_position     dmrs_typeA_pos;
-  /// MIB cellBarred. Read on cell executor in assemble_ssb(); written on control executor via set_cell_barred().
+  /// MIB cellBarred. Read on cell executor in assemble_ssb(); written on control executor via
+  /// set_cell_barred().
   std::atomic<bool> cell_barred;
-  /// MIB intraFreqReselection. Read on cell executor in assemble_ssb(); written on control executor via set_intra_freq_reselection().
+  /// MIB intraFreqReselection. Read on cell executor in assemble_ssb(); written on control executor
+  /// via set_intra_freq_reselection().
   std::atomic<bool> intra_freq_reselection;
 
   /// Other derived SSB parameters.
