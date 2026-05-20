@@ -19,12 +19,14 @@ inter_cu_handover_execution_target_routine::inter_cu_handover_execution_target_r
     e1ap_bearer_context_manager&                                 e1ap_,
     ngap_interface&                                              ngap_,
     xnap_interface*                                              xnap_,
+    f1ap_ue_context_manager&                                     f1ap_,
     ocudulog::basic_logger&                                      logger_) :
   ue(ue_),
   xnap_ho_target_execution_ctxt(xnap_ho_target_execution_ctxt_),
   e1ap(e1ap_),
   ngap(ngap_),
   xnap(xnap_),
+  f1ap(f1ap_),
   logger(logger_)
 {
 }
@@ -88,6 +90,12 @@ void inter_cu_handover_execution_target_routine::operator()(coro_context<async_t
                      ngap.get_ngap_control_message_handler().handle_path_switch_request_required(path_switch_request));
     if (std::holds_alternative<cu_cp_path_switch_request_failure>(path_switch_response)) {
       logger.warning("ue={}: \"{}\" failed. Cause: Path Switch Request rejected by AMF", ue->get_ue_index(), name());
+      // Request UE release on path switch failure.
+      ue_context_release_request = cu_cp_ue_context_release_request{
+          .ue_index                         = ue->get_ue_index(),
+          .pdu_session_res_list_cxt_rel_req = ue->get_up_resource_manager().get_pdu_sessions(),
+          .cause = ngap_cause_radio_network_t::ho_fail_in_target_5_gc_ngran_node_or_target_sys};
+      CORO_AWAIT(ngap.handle_ue_context_release_request(ue_context_release_request));
       CORO_EARLY_RETURN();
     }
 
@@ -104,8 +112,14 @@ void inter_cu_handover_execution_target_routine::operator()(coro_context<async_t
       logger.warning("ue={}: \"{}\" failed. Cause: Failed to transmit UE Context Release", ue->get_ue_index(), name());
       CORO_EARLY_RETURN();
     }
+  }
 
-    CORO_EARLY_RETURN();
+  // Send Reconfiguration Complete Indicator to DU.
+  {
+    ue_context_mod_request.ue_index               = ue->get_ue_index();
+    ue_context_mod_request.rrc_recfg_complete_ind = f1ap_rrc_recfg_complete_ind::true_value;
+
+    CORO_AWAIT(f1ap.handle_ue_context_modification_request(ue_context_mod_request));
   }
 
   CORO_RETURN();

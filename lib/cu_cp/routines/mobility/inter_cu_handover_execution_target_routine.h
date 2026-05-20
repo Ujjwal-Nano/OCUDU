@@ -26,6 +26,7 @@ public:
       e1ap_bearer_context_manager&                                 e1ap_,
       ngap_interface&                                              ngap_,
       xnap_interface*                                              xnap_,
+      f1ap_ue_context_manager&                                     f1ap_,
       ocudulog::basic_logger&                                      logger_);
 
   void operator()(coro_context<async_task<void>>& ctx);
@@ -48,6 +49,8 @@ private:
   e1ap_bearer_context_modification_request bearer_context_modification_request;
   e1ap_bearer_context_modification_request tunnel_context_modification_request;
   cu_cp_path_switch_request                path_switch_request;
+  cu_cp_ue_context_release_request         ue_context_release_request;
+  f1ap_ue_context_modification_request     ue_context_mod_request;
 
   // (sub-)routine results
   expected<cu_cp_status_transfer>           sn_status;
@@ -60,6 +63,7 @@ private:
   e1ap_bearer_context_manager&                                e1ap;
   ngap_interface&                                             ngap;
   xnap_interface*                                             xnap = nullptr;
+  f1ap_ue_context_manager&                                    f1ap;
   ocudulog::basic_logger&                                     logger;
 
   std::chrono::milliseconds reconf_timeout;
