@@ -1895,7 +1895,7 @@ bool cu_cp_impl::dispatch_deactivate_cell(const nr_cell_global_id_t& cgi)
   // the caller without waiting for the async procedure.
   single_cell_f1ap_ctx prep = prepare_single_cell_update(du_db, cfg.node.ran_node_name, cgi, /* activate */ false);
   if (prep.invalid) {
-    logger.warning("Dispatch deactivate_cell failed: {}", prep.error_message);
+    logger.warning("Dispatch deactivate_cell failed. Cause: {}", prep.error_message);
     return false;
   }
 
@@ -1912,7 +1912,7 @@ bool cu_cp_impl::dispatch_activate_cell(const nr_cell_global_id_t& cgi)
 {
   single_cell_f1ap_ctx prep = prepare_single_cell_update(du_db, cfg.node.ran_node_name, cgi, /* activate */ true);
   if (prep.invalid) {
-    logger.warning("Dispatch activate_cell failed: {}", prep.error_message);
+    logger.warning("Dispatch activate_cell failed. Cause: {}", prep.error_message);
     return false;
   }
 

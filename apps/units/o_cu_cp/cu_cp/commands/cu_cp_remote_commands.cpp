@@ -25,18 +25,18 @@ error_type<std::string> parse_cgi(const nlohmann::json& json, nr_cell_global_id_
 
   auto plmn_key = cgi_key->find("plmn");
   if (plmn_key == cgi_key->end()) {
-    return make_unexpected("'cgi.plmn' is missing and it is mandatory");
+    return make_unexpected("'cgi.plmn' object is missing and it is mandatory");
   }
   if (!plmn_key->is_string()) {
-    return make_unexpected("'cgi.plmn' value type should be a string");
+    return make_unexpected("'cgi.plmn' object value type should be a string");
   }
 
   auto nci_key = cgi_key->find("nci");
   if (nci_key == cgi_key->end()) {
-    return make_unexpected("'cgi.nci' is missing and it is mandatory");
+    return make_unexpected("'cgi.nci' object is missing and it is mandatory");
   }
   if (!nci_key->is_number_unsigned()) {
-    return make_unexpected("'cgi.nci' value type should be an unsigned integer");
+    return make_unexpected("'cgi.nci' object value type should be an unsigned integer");
   }
 
   auto plmn = plmn_identity::parse(plmn_key.value().get_ref<const nlohmann::json::string_t&>());

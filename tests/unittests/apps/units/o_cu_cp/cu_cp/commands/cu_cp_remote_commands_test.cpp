@@ -188,7 +188,7 @@ TEST(cu_cp_cell_lock_remote_command_test, plmn_not_string_returns_error)
 
   error_type<std::string> result = cmd.execute(req);
   ASSERT_FALSE(result.has_value());
-  EXPECT_NE(result.error().find("'cgi.plmn' value type"), std::string::npos) << result.error();
+  EXPECT_NE(result.error().find("'cgi.plmn' object value type"), std::string::npos) << result.error();
 }
 
 TEST(cu_cp_cell_lock_remote_command_test, invalid_plmn_string_returns_error)
@@ -229,7 +229,7 @@ TEST(cu_cp_cell_lock_remote_command_test, nci_not_unsigned_returns_error)
 
   error_type<std::string> result = cmd.execute(req);
   ASSERT_FALSE(result.has_value());
-  EXPECT_NE(result.error().find("'cgi.nci' value type"), std::string::npos) << result.error();
+  EXPECT_NE(result.error().find("'cgi.nci' object value type"), std::string::npos) << result.error();
 }
 
 TEST(cu_cp_cell_lock_remote_command_test, invalid_nci_value_returns_error)
