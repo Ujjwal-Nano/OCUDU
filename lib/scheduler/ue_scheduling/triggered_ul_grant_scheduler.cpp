@@ -14,7 +14,8 @@ using namespace ocudu;
 triggered_ul_grant_scheduler::triggered_ul_grant_scheduler(ue_repository& ues_, du_cell_index_t cell_index_) :
   ues(ues_), cell_index(cell_index_)
 {
-  pending_grants.reserve(MAX_NOF_DU_UES);
+  // It's reserved for 10 slots, as maximum gonfigurable delay
+  pending_grants.reserve(MAX_UE_PDUS_PER_SLOT * 10U);
 }
 
 void triggered_ul_grant_scheduler::process_dl_results(slot_point sl_tx, const sched_result& sched_result)

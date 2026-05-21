@@ -129,8 +129,8 @@ struct mac_lc_config {
     units::bytes grant_size = units::bytes{512};
 
     // This user provided constructor is added here to fix a Clang compilation error related to the use of nested types
-    // with std::optional.
-    triggered_ul_grant_cfg() {}
+    // with std::optional. It must be constexpr so that std::optional<triggered_ul_grant_cfg> remains a literal type.
+    constexpr triggered_ul_grant_cfg() {}
 
     bool operator==(const triggered_ul_grant_cfg& rhs) const
     {
