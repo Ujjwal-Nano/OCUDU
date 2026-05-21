@@ -3,7 +3,9 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ocudu/scheduler/config/pucch_resource_generator.h"
+#include "../support/pucch/pucch_default_resource.h"
 #include "ocudu/adt/expected.h"
+#include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/ran/pucch/pucch_info.h"
 #include "ocudu/ran/pucch/pucch_mapping.h"
 #include "ocudu/scheduler/config/pucch_resource_builder_params.h"
@@ -190,12 +192,13 @@ static bool validate_generated_list(const std::vector<pucch_resource>&   res_lis
 
   std::array<unsigned, 5> res_count_by_format{0, 0, 0, 0, 0};
   for (const auto& res : res_list) {
-    if (res.res_id.cell_res_id >= res_list.size()) {
-      ocudu_assertion_failure("Invalid cell resource ID {} in the generated resource list", res.res_id.cell_res_id);
+    if (res.res_id.ded().cell_res_id >= res_list.size()) {
+      ocudu_assertion_failure("Invalid cell resource ID {} in the generated resource list",
+                              res.res_id.ded().cell_res_id);
       return false;
     }
 
-    switch (res.format) {
+    switch (res.format()) {
       case pucch_format::FORMAT_0:
         ++res_count_by_format[0];
         break;
@@ -262,18 +265,16 @@ public:
   pucch_resource get(unsigned bwp_size_rbs) const
   {
     pucch_resource res{};
-    // Format and resource ID will be set later, assign invalid values to avoid uninitialized variable warnings.
-    res.format                               = pucch_format::NOF_FORMATS;
+    // Resource ID will be set later, assign an invalid value to avoid uninitialized variable warnings.
     static constexpr unsigned invalid_res_id = std::numeric_limits<unsigned>::max();
-    res.res_id                               = {invalid_res_id, invalid_res_id};
-    res.starting_sym_idx                     = state.start_sym;
-    res.nof_symbols                          = nof_syms;
+    res.res_id                               = pucch_res_id_t::make_ded(invalid_res_id, invalid_res_id);
+    res.syms = {static_cast<uint8_t>(state.start_sym), static_cast<uint8_t>(state.start_sym + nof_syms)};
+    const unsigned starting_prb =
+        state.high_start_prb ? bwp_size_rbs - state.prb_high_off - nof_prbs : state.prb_low_off;
+    res.starting_prb = starting_prb;
     if (intraslot_freq_hop) {
-      res.starting_prb = state.high_start_prb ? bwp_size_rbs - state.prb_high_off - nof_prbs : state.prb_low_off;
       res.second_hop_prb.emplace(state.high_start_prb ? state.prb_low_off
                                                       : bwp_size_rbs - state.prb_high_off - nof_prbs);
-    } else {
-      res.starting_prb = state.high_start_prb ? bwp_size_rbs - state.prb_high_off - nof_prbs : state.prb_low_off;
     }
     return res;
   }
@@ -385,6 +386,39 @@ private:
 };
 
 } // namespace
+  //
+
+std::array<pucch_resource, pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES>
+config_helpers::generate_cell_common_pucch_res_list(unsigned pucch_res_common, unsigned bwp_size_rbs)
+{
+  const pucch_default_resource default_res = get_pucch_default_resource(pucch_res_common, bwp_size_rbs);
+  const unsigned               nof_cs      = default_res.cs_indexes.size();
+
+  std::array<pucch_resource, pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES> out;
+  for (unsigned r_pucch = 0; r_pucch != out.size(); ++r_pucch) {
+    const auto     prbs = get_pucch_default_prb_index(r_pucch, default_res.rb_bwp_offset, nof_cs, bwp_size_rbs);
+    const uint8_t  cs   = default_res.cs_indexes[get_pucch_default_cyclic_shift(r_pucch, nof_cs)];
+    pucch_resource res;
+    res.res_id         = pucch_res_id_t::make_cmn(r_pucch);
+    res.starting_prb   = prbs.first;
+    res.second_hop_prb = prbs.second;
+    res.syms           = ofdm_symbol_range::start_and_len(default_res.first_symbol_index, default_res.nof_symbols);
+    res.rep_factor     = pucch_repetition_factor::n1;
+    switch (default_res.format) {
+      case pucch_format::FORMAT_0:
+        res.format_params = pucch_resource::f0_config{.initial_cyclic_shift = cs};
+        break;
+      case pucch_format::FORMAT_1:
+        res.format_params = pucch_resource::f1_config{.initial_cyclic_shift = cs, .time_domain_occ = 0};
+        break;
+      default:
+        ocudu_assertion_failure("Unexpected PUCCH format in default common table.");
+        break;
+    }
+    out[r_pucch] = res;
+  }
+  return out;
+}
 
 std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const pucch_resource_builder_params& params,
                                                                          unsigned bwp_size_rbs)
@@ -417,9 +451,8 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
       state, nof_prbs_01, nof_syms_01, mux_capacity_01, params.max_nof_symbols.value(), intraslot_freq_hop_01);
   for (unsigned i = 0; i != nof_res_01; ++i, cur01.next()) {
     pucch_resource res = cur01.get(bwp_size_rbs);
-    res.format         = params.format_01();
     if (params.format_01() == pucch_format::FORMAT_0) {
-      res.format_params.emplace<pucch_format_0_cfg>(pucch_format_0_cfg{.initial_cyclic_shift = 0U});
+      res.format_params.emplace<pucch_resource::f0_config>(pucch_resource::f0_config{.initial_cyclic_shift = 0U});
     } else {
       // [Implementation-defined] For PUCCH Format 1, the map mux_idx -> (CS, OCC) is defined as follows:
       // - mux_idx = 0, 1, 2, ...                  => (CS=0, OCC=0), (CS=cs_step, OCC=0), (CS=2*cs_step, OCC=0), ...
@@ -429,7 +462,7 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
       const auto&               f1_params   = std::get<pucch_f1_params>(params.f0_or_f1_params);
       static constexpr unsigned max_nof_css = to_uint(pucch_nof_cyclic_shifts::twelve);
       const unsigned            cs_step     = max_nof_css / to_uint(f1_params.nof_cyc_shifts);
-      res.format_params.emplace<pucch_format_1_cfg>(pucch_format_1_cfg{
+      res.format_params.emplace<pucch_resource::f1_config>(pucch_resource::f1_config{
           .initial_cyclic_shift = static_cast<uint8_t>((state.mux_idx * cs_step) % max_nof_css),
           .time_domain_occ      = static_cast<uint8_t>(state.mux_idx / to_uint(f1_params.nof_cyc_shifts)),
       });
@@ -446,16 +479,22 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
       state, nof_prbs_234, nof_syms_234, mux_capacity_234, params.max_nof_symbols.value(), intraslot_freq_hop_234);
   for (unsigned i = 0; i != nof_res_234; ++i, cur234.next()) {
     pucch_resource res = cur234.get(bwp_size_rbs);
-    res.format         = params.format_234();
-    if (params.format_234() == pucch_format::FORMAT_2 or params.format_234() == pucch_format::FORMAT_3) {
-      res.format_params.emplace<pucch_format_2_3_cfg>(
-          pucch_format_2_3_cfg{.nof_prbs = static_cast<uint8_t>(nof_prbs_234)});
+    if (params.format_234() == pucch_format::FORMAT_2) {
+      res.format_params.emplace<pucch_resource::f2_config>(
+          pucch_resource::f2_config{.nof_prbs = static_cast<uint8_t>(nof_prbs_234)});
+    } else if (params.format_234() == pucch_format::FORMAT_3) {
+      const auto& f3_params = std::get<pucch_f3_params>(params.f2_or_f3_or_f4_params);
+      res.format_params.emplace<pucch_resource::f3_config>(
+          pucch_resource::f3_config{.nof_prbs        = static_cast<uint8_t>(nof_prbs_234),
+                                    .pi_2_bpsk       = f3_params.pi2_bpsk,
+                                    .additional_dmrs = f3_params.additional_dmrs});
     } else {
       const auto& f4_params = std::get<pucch_f4_params>(params.f2_or_f3_or_f4_params);
-      res.format_params.emplace<pucch_format_4_cfg>(pucch_format_4_cfg{
-          .occ_length = f4_params.occ_length,
-          .occ_index  = static_cast<pucch_f4_occ_idx>(state.mux_idx),
-      });
+      res.format_params.emplace<pucch_resource::f4_config>(
+          pucch_resource::f4_config{.occ_index       = static_cast<pucch_f4_occ_idx>(state.mux_idx),
+                                    .occ_length      = f4_params.occ_length,
+                                    .pi_2_bpsk       = f4_params.pi2_bpsk,
+                                    .additional_dmrs = f4_params.additional_dmrs});
     }
     resources.emplace_back(res);
   }
@@ -463,14 +502,14 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
   for (unsigned res_set_cfg_id = 0; res_set_cfg_id != params.nof_cell_res_set_configs; ++res_set_cfg_id) {
     for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
       unsigned cell_res_id = params.get_res_set_cell_res_idx<0>(pucch_resource_set_config_id(res_set_cfg_id), pri);
-      resources[cell_res_id].res_id = {cell_res_id, params.get_res_set_ue_res_idx<0>(pri)};
+      resources[cell_res_id].res_id = pucch_res_id_t::make_ded(cell_res_id, params.get_res_set_ue_res_idx<0>(pri));
       if (params.harq_ack_rep.has_value()) {
         resources[cell_res_id].rep_factor = params.harq_ack_rep->factors_per_res[pri];
       }
     }
     for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
       unsigned cell_res_id = params.get_res_set_cell_res_idx<1>(pucch_resource_set_config_id(res_set_cfg_id), pri);
-      resources[cell_res_id].res_id = {cell_res_id, params.get_res_set_ue_res_idx<1>(pri)};
+      resources[cell_res_id].res_id = pucch_res_id_t::make_ded(cell_res_id, params.get_res_set_ue_res_idx<1>(pri));
       if (params.harq_ack_rep.has_value()) {
         resources[cell_res_id].rep_factor = params.harq_ack_rep->factors_per_res[pri];
       }
@@ -479,35 +518,33 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
   for (unsigned sr_res_id = 0; sr_res_id != params.nof_cell_sr_resources; ++sr_res_id) {
     unsigned cell_res_id = params.get_sr_cell_res_idx(pucch_sr_resource_id(sr_res_id));
     auto&    sr_res      = resources[cell_res_id];
-    sr_res.res_id        = {cell_res_id, params.get_sr_ue_res_idx()};
+    sr_res.res_id        = pucch_res_id_t::make_ded(cell_res_id, params.get_sr_ue_res_idx());
     if (using_02) {
       // Add SR_F2 resource.
       unsigned cell_res_id_sr_f2 = params.get_sr_f2_cell_res_idx(pucch_sr_resource_id(sr_res_id));
-      resources.emplace_back(pucch_resource{.res_id         = {cell_res_id_sr_f2, params.get_sr_f2_ue_res_idx()},
-                                            .starting_prb   = sr_res.starting_prb,
-                                            .second_hop_prb = sr_res.second_hop_prb,
-                                            // Must overlap in symbols with the SR resource.
-                                            .nof_symbols      = sr_res.nof_symbols,
-                                            .starting_sym_idx = sr_res.starting_sym_idx,
-                                            .format           = pucch_format::FORMAT_2,
-                                            .format_params    = pucch_format_2_3_cfg{.nof_prbs = 1U}});
+      resources.emplace_back(
+          pucch_resource{.res_id       = pucch_res_id_t::make_ded(cell_res_id_sr_f2, params.get_sr_f2_ue_res_idx()),
+                         .starting_prb = sr_res.starting_prb,
+                         // Must overlap in symbols with the SR resource.
+                         .syms           = sr_res.syms,
+                         .second_hop_prb = sr_res.second_hop_prb,
+                         .format_params  = pucch_resource::f2_config{.nof_prbs = 1U}});
     }
   }
   for (unsigned csi_res_id = 0; csi_res_id != params.nof_cell_csi_resources; ++csi_res_id) {
     unsigned cell_res_id = params.get_csi_cell_res_idx(pucch_csi_resource_id(csi_res_id));
     auto&    csi_res     = resources[cell_res_id];
-    csi_res.res_id       = {cell_res_id, params.get_csi_ue_res_idx()};
+    csi_res.res_id       = pucch_res_id_t::make_ded(cell_res_id, params.get_csi_ue_res_idx());
     if (using_02) {
       // Add CSI_F0 resource.
       unsigned cell_res_id_csi_f0 = params.get_csi_f0_cell_res_idx(pucch_csi_resource_id(csi_res_id));
-      resources.emplace_back(pucch_resource{.res_id         = {cell_res_id_csi_f0, params.get_csi_f0_ue_res_idx()},
-                                            .starting_prb   = csi_res.starting_prb,
-                                            .second_hop_prb = csi_res.second_hop_prb,
-                                            // Must overlap in symbols with the CSI resource.
-                                            .nof_symbols      = csi_res.nof_symbols,
-                                            .starting_sym_idx = csi_res.starting_sym_idx,
-                                            .format           = pucch_format::FORMAT_0,
-                                            .format_params    = pucch_format_0_cfg{.initial_cyclic_shift = 0U}});
+      resources.emplace_back(
+          pucch_resource{.res_id       = pucch_res_id_t::make_ded(cell_res_id_csi_f0, params.get_csi_f0_ue_res_idx()),
+                         .starting_prb = csi_res.starting_prb,
+                         // Must overlap in symbols with the CSI resource.
+                         .syms           = csi_res.syms,
+                         .second_hop_prb = csi_res.second_hop_prb,
+                         .format_params  = pucch_resource::f0_config{.initial_cyclic_shift = 0U}});
     }
   }
 

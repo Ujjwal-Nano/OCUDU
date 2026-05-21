@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/ran/pucch/pucch_configuration.h"
+#include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/scheduler/config/ran_cell_config.h"
 #include <vector>
 
@@ -20,10 +21,15 @@ struct cell_dl_bwp_res_config {
 
 /// This structure defines all the PUCCH resources available in a given BWP.
 struct cell_pucch_res_config {
-  /// List of all supported PUCCH resources.
-  std::vector<pucch_resource> resources;
+  /// List of common PUCCH resources, indexed by \f$r_{PUCCH}\f$ (TS 38.213 Section 9.2.1).
+  std::array<pucch_resource, pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES> common;
+  /// List of all supported UE-dedicated PUCCH resources.
+  std::vector<pucch_resource> dedicated;
 
-  bool operator==(const cell_pucch_res_config& other) const { return resources == other.resources; }
+  bool operator==(const cell_pucch_res_config& other) const
+  {
+    return common == other.common and dedicated == other.dedicated;
+  }
 };
 
 /// \brief Cell-wide UL resources available in a given BWP.
