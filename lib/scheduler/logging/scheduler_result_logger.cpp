@@ -25,9 +25,9 @@ static auto make_dl_dci_log_entry(const dci_dl_info& dci)
   std::optional<uint8_t> dai;
   std::optional<bool>    vrb_prb;
 
-  switch (dci.type) {
+  switch (dci.type()) {
     case dci_dl_rnti_config_type::c_rnti_f1_0: {
-      const auto& dci1_0 = dci.c_rnti_f1_0;
+      const auto& dci1_0 = dci.as_c_rnti_f1_0();
       h_id               = dci1_0.harq_process_number;
       ndi                = dci1_0.new_data_indicator;
       rv                 = dci1_0.redundancy_version;
@@ -36,7 +36,7 @@ static auto make_dl_dci_log_entry(const dci_dl_info& dci)
       tpc_cmd            = dci1_0.tpc_command;
     } break;
     case dci_dl_rnti_config_type::tc_rnti_f1_0: {
-      const auto& dci1_0 = dci.tc_rnti_f1_0;
+      const auto& dci1_0 = dci.as_tc_rnti_f1_0();
       h_id               = dci1_0.harq_process_number;
       ndi                = dci1_0.new_data_indicator;
       rv                 = dci1_0.redundancy_version;
@@ -44,7 +44,7 @@ static auto make_dl_dci_log_entry(const dci_dl_info& dci)
       pucch_res_id       = dci1_0.pucch_resource_indicator;
     } break;
     case dci_dl_rnti_config_type::c_rnti_f1_1: {
-      const auto& dci1_1 = dci.c_rnti_f1_1;
+      const auto& dci1_1 = dci.as_c_rnti_f1_1();
       h_id               = dci1_1.harq_process_number;
       ndi                = dci1_1.tb1_new_data_indicator;
       rv                 = dci1_1.tb1_redundancy_version;
@@ -52,8 +52,8 @@ static auto make_dl_dci_log_entry(const dci_dl_info& dci)
       pucch_res_id       = dci1_1.pucch_resource_indicator;
       tpc_cmd            = dci1_1.tpc_command;
       vrb_prb            = dci1_1.vrb_prb_mapping;
-      if (dci.c_rnti_f1_1.downlink_assignment_index.has_value()) {
-        dai = dci.c_rnti_f1_1.downlink_assignment_index;
+      if (dci.as_c_rnti_f1_1().downlink_assignment_index.has_value()) {
+        dai = dci.as_c_rnti_f1_1().downlink_assignment_index;
       }
     } break;
     default:
@@ -90,9 +90,9 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
   int8_t                 ant        = 1;
   std::optional<uint8_t> csi_request;
 
-  switch (dci.type) {
+  switch (dci.type()) {
     case dci_ul_rnti_config_type::c_rnti_f0_0: {
-      const auto& dci0_0 = dci.c_rnti_f0_0;
+      const auto& dci0_0 = dci.as_c_rnti_f0_0();
       h_id               = dci0_0.harq_process_number;
       ndi                = dci0_0.new_data_indicator;
       rv                 = dci0_0.redundancy_version;
@@ -100,7 +100,7 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
       tpc_cmd            = dci0_0.tpc_command;
     } break;
     case dci_ul_rnti_config_type::tc_rnti_f0_0: {
-      const auto& dci0_0 = dci.tc_rnti_f0_0;
+      const auto& dci0_0 = dci.as_tc_rnti_f0_0();
       rv                 = dci0_0.redundancy_version;
       mcs                = dci0_0.modulation_coding_scheme;
       h_id               = 0;
@@ -108,7 +108,7 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
       tpc_cmd            = dci0_0.tpc_command;
     } break;
     case dci_ul_rnti_config_type::c_rnti_f0_1: {
-      const auto& dci0_1 = dci.c_rnti_f0_1;
+      const auto& dci0_1 = dci.as_c_rnti_f0_1();
       h_id               = dci0_1.harq_process_number;
       ndi                = dci0_1.new_data_indicator;
       rv                 = dci0_1.redundancy_version;
@@ -138,7 +138,7 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
 static auto make_dl_pdcch_log_entry(const pdcch_dl_information& pdcch)
 {
   return make_formattable([rnti     = pdcch.ctx.rnti,
-                           dci_type = pdcch.dci.type,
+                           dci_type = pdcch.dci.type(),
                            cs_id    = pdcch.ctx.coreset_cfg->get_id(),
                            ss_id    = pdcch.ctx.context.ss_id,
                            cces     = pdcch.ctx.cces,
@@ -160,7 +160,7 @@ static auto make_dl_pdcch_log_entry(const pdcch_dl_information& pdcch)
 static auto make_ul_pdcch_log_entry(const pdcch_ul_information& pdcch)
 {
   return make_formattable([rnti     = pdcch.ctx.rnti,
-                           dci_type = pdcch.dci.type,
+                           dci_type = pdcch.dci.type(),
                            cid      = pdcch.ctx.coreset_cfg->get_id(),
                            ssid     = pdcch.ctx.context.ss_id,
                            cces     = pdcch.ctx.cces,
