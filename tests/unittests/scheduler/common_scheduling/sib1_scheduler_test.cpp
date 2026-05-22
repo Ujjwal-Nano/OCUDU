@@ -12,6 +12,7 @@
 #include "ocudu/ran/pdcch/pdcch_type0_css_coreset_config.h"
 #include "ocudu/ran/ssb/ssb_mapping.h"
 #include "ocudu/scheduler/config/time_domain_resource_helper.h"
+#include "ocudu/support/enum_utils.h"
 #include "ocudu/support/ocudu_test.h"
 #include <gtest/gtest.h>
 
@@ -310,9 +311,7 @@ void test_sib1_periodicity(sib1_rtx_periodicity sib1_rtx_period, ssb_periodicity
 
   // Determine the expected SIB1 retx periodicity.
   const unsigned expected_sib1_period_ms =
-      sib1_rtx_periodicity_to_value(sib1_rtx_period) > ssb_periodicity_to_value(ssb_period)
-          ? sib1_rtx_periodicity_to_value(sib1_rtx_period)
-          : ssb_periodicity_to_value(ssb_period);
+      to_value(sib1_rtx_period) > to_value(ssb_period) ? to_value(sib1_rtx_period) : to_value(ssb_period);
 
   // SIB1 periodicity in slots.
   const unsigned expected_sib1_period_slots = expected_sib1_period_ms * t_bench.next_slot.nof_slots_per_subframe();
@@ -622,10 +621,9 @@ TEST_P(sib1_tdd_partial_slot_test, successful_sib1_allocation_in_partial_slot)
                                build_sib1_partial_slot_cell_req(params)};
 
   // Determine the expected SIB1 retx periodicity.
-  const unsigned expected_sib1_period_ms =
-      sib1_rtx_periodicity_to_value(params.sib1_rtx_period) > ssb_periodicity_to_value(params.ssb_period)
-          ? sib1_rtx_periodicity_to_value(params.sib1_rtx_period)
-          : ssb_periodicity_to_value(params.ssb_period);
+  const unsigned expected_sib1_period_ms = to_value(params.sib1_rtx_period) > to_value(params.ssb_period)
+                                               ? to_value(params.sib1_rtx_period)
+                                               : to_value(params.ssb_period);
 
   // SIB1 periodicity in slots.
   const unsigned expected_sib1_period_slots = expected_sib1_period_ms * t_bench.next_slot.nof_slots_per_subframe();
