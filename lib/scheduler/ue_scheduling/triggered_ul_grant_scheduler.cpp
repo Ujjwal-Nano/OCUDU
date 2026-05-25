@@ -49,10 +49,10 @@ void triggered_ul_grant_scheduler::run_slot(slot_point pdcch_slot)
     if (g.target_pdcch_slot > pdcch_slot) {
       continue;
     }
+
     ue* u = ues.find(g.ue_index);
-    if (u == nullptr) {
-      continue;
-    }
+    ocudu_assert(u != nullptr, "no UE context found for triggered UL grant");
+
     if (u->logical_channels().pending_bytes(g.lcg_id) >= g.bytes.value()) {
       // UE already has already more data pending than the triggered grant size; skip to avoid shrinking its BSR.
       continue;
