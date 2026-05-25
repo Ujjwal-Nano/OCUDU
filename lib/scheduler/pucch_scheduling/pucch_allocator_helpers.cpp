@@ -22,16 +22,19 @@ pucch_existing_pdus_handler::pucch_existing_pdus_handler(rnti_t                 
 
       if (pucch.uci_bits.harq_ack_nof_bits != 0U) {
         if (pucch.format() == pucch_format::FORMAT_1 and
-            pucch.pdu_context.res_id->ue_res_id == res_params.get_sr_ue_res_idx()) {
+            pucch.pdu_context.res_id->ded().ue_res_id ==
+                res_params.sr_res_id(pucch_sr_resource_id(0)).ded().ue_res_id) {
           // For Format 1, the SR resource can carry HARQ-ACK.
           sr_pdu = &pucch;
         } else {
           harq_pdu = &pucch;
         }
       } else {
-        if (pucch.pdu_context.res_id->ue_res_id == res_params.get_sr_ue_res_idx()) {
+        if (pucch.pdu_context.res_id->ded().ue_res_id ==
+            res_params.sr_res_id(pucch_sr_resource_id(0)).ded().ue_res_id) {
           sr_pdu = &pucch;
-        } else if (pucch.pdu_context.res_id->ue_res_id == res_params.get_csi_ue_res_idx()) {
+        } else if (pucch.pdu_context.res_id->ded().ue_res_id ==
+                   res_params.csi_res_id(pucch_csi_resource_id(0)).ded().ue_res_id) {
           csi_pdu = &pucch;
         } else {
           ocudu_assertion_failure("Unexpected PUCCH resource carrying SR/CSI only");
@@ -121,35 +124,34 @@ void pucch_existing_pdus_handler::update_harq_pdu_bits(unsigned                 
                                                        const pucch_resource_builder_params& res_params,
                                                        const pucch_resource&                pucch_res_cfg)
 {
+  const prb_interval res_prbs = pucch_res_cfg.prbs();
   switch (harq_pdu->format()) {
     case pucch_format::FORMAT_2: {
       harq_pdu->uci_bits.csi_part1_nof_bits = csi_part1_bits;
       // After updating the UCI bits, we need to recompute the number of PRBs for PUCCH format 2, as per TS 38.213,
       // Section 9.2.5.2.
-      const auto&    f2_cfg = std::get<pucch_format_2_3_cfg>(pucch_res_cfg.format_params);
       const unsigned nof_prbs =
           get_pucch_format2_nof_prbs(harq_ack_bits + sr_nof_bits_to_uint(sr_bits) + csi_part1_bits,
-                                     f2_cfg.nof_prbs,
-                                     pucch_res_cfg.nof_symbols,
-                                     to_max_code_rate_float(res_params.max_code_rate_234()));
-      harq_pdu->resources.prbs.set(pucch_res_cfg.starting_prb, pucch_res_cfg.starting_prb + nof_prbs);
+                                     res_prbs.length(),
+                                     pucch_res_cfg.syms.length(),
+                                     to_float(res_params.max_code_rate_234()));
+      harq_pdu->resources.prbs           = {res_prbs.start(), res_prbs.start() + nof_prbs};
       harq_pdu->resources.second_hop_prb = pucch_res_cfg.second_hop_prb;
     } break;
     case pucch_format::FORMAT_3: {
       harq_pdu->uci_bits.csi_part1_nof_bits = csi_part1_bits;
       // After updating the UCI bits, we need to recompute the number of PRBs for PUCCH format 3, as per TS 38.213,
       // Section 9.2.5.2.
-      const auto&    f3_params = std::get<pucch_f3_params>(res_params.f2_or_f3_or_f4_params);
-      const auto&    f3_cfg    = std::get<pucch_format_2_3_cfg>(pucch_res_cfg.format_params);
+      const auto&    f3_cfg = std::get<pucch_resource::f3_config>(pucch_res_cfg.format_params);
       const unsigned nof_prbs =
           get_pucch_format3_nof_prbs(harq_ack_bits + sr_nof_bits_to_uint(sr_bits) + csi_part1_bits,
-                                     f3_cfg.nof_prbs,
-                                     pucch_res_cfg.nof_symbols,
-                                     to_max_code_rate_float(res_params.max_code_rate_234()),
+                                     res_prbs.length(),
+                                     pucch_res_cfg.syms.length(),
+                                     to_float(res_params.max_code_rate_234()),
                                      pucch_res_cfg.second_hop_prb.has_value(),
-                                     f3_params.additional_dmrs,
-                                     f3_params.pi2_bpsk);
-      harq_pdu->resources.prbs.set(pucch_res_cfg.starting_prb, pucch_res_cfg.starting_prb + nof_prbs);
+                                     f3_cfg.additional_dmrs,
+                                     f3_cfg.pi_2_bpsk);
+      harq_pdu->resources.prbs           = {res_prbs.start(), res_prbs.start() + nof_prbs};
       harq_pdu->resources.second_hop_prb = pucch_res_cfg.second_hop_prb;
     } break;
     case pucch_format::FORMAT_4: {

@@ -905,7 +905,7 @@ dl_harq_process_handle ue_fallback_scheduler::fill_dl_srb_grant(ue&             
                                units::bytes{tbs_bytes},
                                u.crnti,
                                cell_cfg,
-                               pdcch.dci.tc_rnti_f1_0,
+                               pdcch.dci.as_tc_rnti_f1_0(),
                                vrbs,
                                not is_retx);
       break;
@@ -917,7 +917,7 @@ dl_harq_process_handle ue_fallback_scheduler::fill_dl_srb_grant(ue&             
                               u.crnti,
                               cell_cfg,
                               u.get_pcell().cfg().search_space(pdcch.ctx.context.ss_id),
-                              pdcch.dci.c_rnti_f1_0,
+                              pdcch.dci.as_c_rnti_f1_0(),
                               vrbs,
                               not is_retx);
       break;
@@ -935,7 +935,7 @@ dl_harq_process_handle ue_fallback_scheduler::fill_dl_srb_grant(ue&             
   }
 
   // Save in HARQ the parameters set for this PDCCH and PDSCH PDUs.
-  dl_harq_alloc_context ctxt{pdcch.dci.type, std::nullopt, std::nullopt, std::nullopt, true};
+  dl_harq_alloc_context ctxt{pdcch.dci.type(), std::nullopt, std::nullopt, std::nullopt, true};
   h_dl->save_grant_params(ctxt, msg);
 
   return *h_dl;
@@ -1309,12 +1309,12 @@ void ue_fallback_scheduler::fill_ul_srb_grant(ue&                               
                           tbs_bytes,
                           cell_cfg,
                           cell_cfg.params.ul_cfg_common.init_ul_bwp,
-                          pdcch.dci.c_rnti_f0_0,
+                          pdcch.dci.as_c_rnti_f0_0(),
                           vrbs,
                           not is_retx);
 
   // Save set PDCCH and PUSCH PDU parameters in HARQ process.
-  h_ul->save_grant_params(ul_harq_alloc_context{pdcch.dci.type}, msg.pusch_cfg);
+  h_ul->save_grant_params(ul_harq_alloc_context{pdcch.dci.type()}, msg.pusch_cfg);
 
   // Notify UL TB scheduling.
   u.logical_channels().handle_ul_grant(msg.pusch_cfg.tb_size_bytes);

@@ -7,6 +7,7 @@
 #include "asn1_ntn_config_helpers.h"
 #include "ocudu/asn1/asn1_diff_utils.h"
 #include "ocudu/ran/band_helper.h"
+#include "ocudu/support/enum_utils.h"
 #include "ocudu/support/error_handling.h"
 #include "ocudu/support/math/math_utils.h"
 
@@ -1397,12 +1398,9 @@ static bool calculate_bwp_dl_dedicated_diff(asn1::rrc_nr::bwp_dl_ded_s&   out,
 asn1::rrc_nr::pucch_res_set_s ocudu::odu::make_asn1_rrc_pucch_resource_set(const pucch_resource_set& cfg)
 {
   pucch_res_set_s pucch_res_set;
-  pucch_res_set.pucch_res_set_id = static_cast<uint8_t>(cfg.pucch_res_set_id);
-  for (const auto& it : cfg.pucch_res_id_list) {
-    pucch_res_set.res_list.push_back(it.ue_res_id);
-  }
-  if (cfg.max_payload_size.has_value()) {
-    pucch_res_set.max_payload_size = cfg.max_payload_size.value();
+  pucch_res_set.pucch_res_set_id = static_cast<uint8_t>(cfg.id);
+  for (const auto& it : cfg.resources) {
+    pucch_res_set.res_list.push_back(it.ded().ue_res_id);
   }
   return pucch_res_set;
 }
@@ -1467,48 +1465,46 @@ static void make_asn1_rrc_pucch_formats_common_param(asn1::rrc_nr::pucch_format_
 asn1::rrc_nr::pucch_res_s ocudu::odu::make_asn1_rrc_pucch_resource(const pucch_resource& cfg)
 {
   pucch_res_s pucch_res;
-  pucch_res.pucch_res_id                = cfg.res_id.ue_res_id;
+  pucch_res.pucch_res_id                = cfg.res_id.ded().ue_res_id;
   pucch_res.start_prb                   = cfg.starting_prb;
   pucch_res.intra_slot_freq_hop_present = cfg.second_hop_prb.has_value();
   pucch_res.second_hop_prb_present      = cfg.second_hop_prb.has_value();
   if (cfg.second_hop_prb.has_value()) {
     pucch_res.second_hop_prb = cfg.second_hop_prb.value();
   }
-  switch (cfg.format) {
+  switch (cfg.format()) {
     case pucch_format::FORMAT_0: {
-      const auto& f0            = std::get<pucch_format_0_cfg>(cfg.format_params);
+      const auto& f0            = std::get<pucch_resource::f0_config>(cfg.format_params);
       auto&       format0       = pucch_res.format.set_format0();
       format0.init_cyclic_shift = f0.initial_cyclic_shift;
-      format0.nrof_symbols      = cfg.nof_symbols;
-      format0.start_symbol_idx  = cfg.starting_sym_idx;
+      format0.start_symbol_idx  = cfg.syms.start();
+      format0.nrof_symbols      = cfg.syms.length();
     } break;
     case pucch_format::FORMAT_1: {
-      const auto& f1            = std::get<pucch_format_1_cfg>(cfg.format_params);
+      const auto& f1            = std::get<pucch_resource::f1_config>(cfg.format_params);
       auto&       format1       = pucch_res.format.set_format1();
       format1.init_cyclic_shift = f1.initial_cyclic_shift;
-      format1.nrof_symbols      = cfg.nof_symbols;
-      format1.start_symbol_idx  = cfg.starting_sym_idx;
+      format1.start_symbol_idx  = cfg.syms.start();
+      format1.nrof_symbols      = cfg.syms.length();
       format1.time_domain_occ   = f1.time_domain_occ;
     } break;
     case pucch_format::FORMAT_2: {
-      const auto& f2           = std::get<pucch_format_2_3_cfg>(cfg.format_params);
-      auto&       format2      = pucch_res.format.set_format2();
-      format2.start_symbol_idx = cfg.starting_sym_idx;
-      format2.nrof_symbols     = cfg.nof_symbols;
-      format2.nrof_prbs        = f2.nof_prbs;
+      auto& format2            = pucch_res.format.set_format2();
+      format2.start_symbol_idx = cfg.syms.start();
+      format2.nrof_symbols     = cfg.syms.length();
+      format2.nrof_prbs        = cfg.prbs().length();
     } break;
     case pucch_format::FORMAT_3: {
-      const auto& f3           = std::get<pucch_format_2_3_cfg>(cfg.format_params);
-      auto&       format3      = pucch_res.format.set_format3();
-      format3.start_symbol_idx = cfg.starting_sym_idx;
-      format3.nrof_symbols     = cfg.nof_symbols;
-      format3.nrof_prbs        = f3.nof_prbs;
+      auto& format3            = pucch_res.format.set_format3();
+      format3.start_symbol_idx = cfg.syms.start();
+      format3.nrof_symbols     = cfg.syms.length();
+      format3.nrof_prbs        = cfg.prbs().length();
     } break;
     case pucch_format::FORMAT_4: {
-      const auto& f4           = std::get<pucch_format_4_cfg>(cfg.format_params);
+      const auto& f4           = std::get<pucch_resource::f4_config>(cfg.format_params);
       auto&       format4      = pucch_res.format.set_format4();
-      format4.start_symbol_idx = cfg.starting_sym_idx;
-      format4.nrof_symbols     = cfg.nof_symbols;
+      format4.start_symbol_idx = cfg.syms.start();
+      format4.nrof_symbols     = cfg.syms.length();
       switch (f4.occ_index) {
         case pucch_f4_occ_idx::n0:
           format4.occ_idx = pucch_format4_s::occ_idx_opts::n0;
@@ -1537,7 +1533,7 @@ asn1::rrc_nr::pucch_res_s ocudu::odu::make_asn1_rrc_pucch_resource(const pucch_r
       }
     } break;
     default:
-      ocudu_assertion_failure("Invalid PDCCH resource format={}", fmt::underlying(cfg.format));
+      ocudu_assertion_failure("Invalid PUCCH resource format={}", fmt::underlying(cfg.format()));
   }
   return pucch_res;
 }
@@ -1549,7 +1545,7 @@ ocudu::odu::make_asn1_rrc_sr_resource(const scheduling_request_resource_config& 
   sr_res_cfg.sched_request_res_id           = cfg.sr_res_id;
   sr_res_cfg.sched_request_id               = cfg.sr_id;
   sr_res_cfg.res_present                    = true;
-  sr_res_cfg.res                            = cfg.pucch_res_id.ue_res_id;
+  sr_res_cfg.res                            = cfg.pucch_res_id.ded().ue_res_id;
   sr_res_cfg.periodicity_and_offset_present = true;
   switch (cfg.period) {
     case sr_periodicity::sym_2:
@@ -1625,7 +1621,7 @@ calculate_pucch_config_diff(asn1::rrc_nr::pucch_cfg_s& out, const pucch_config& 
       src.pucch_res_set,
       dest.pucch_res_set,
       [](const pucch_resource_set& res_set) { return make_asn1_rrc_pucch_resource_set(res_set); },
-      [](const pucch_resource_set& res_set) { return static_cast<uint8_t>(res_set.pucch_res_set_id); });
+      [](const pucch_resource_set& res_set) { return static_cast<uint8_t>(res_set.id); });
 
   // PUCCH Resource.
   calculate_addmodremlist_diff(
@@ -1634,13 +1630,7 @@ calculate_pucch_config_diff(asn1::rrc_nr::pucch_cfg_s& out, const pucch_config& 
       src.pucch_res_list,
       dest.pucch_res_list,
       [](const pucch_resource& res) { return make_asn1_rrc_pucch_resource(res); },
-      [](const pucch_resource& res) {
-        // NOTE: For safety, we use an ID composed of both UE and cell PUCCH resource IDs. We cannot compare
-        // only by using the UE PUCCH resource ID. This is because the UE PUCCH resource ID always uses index {0
-        // , ..., max_UE_PUCCH_resources - 1}; therefore, even if we changed the configuration, this index
-        // wouldn't change and the function would not detect the change of configuration.
-        return (static_cast<uint64_t>(res.res_id.ue_res_id) << 32U) + static_cast<uint64_t>(res.res_id.cell_res_id);
-      });
+      [](const pucch_resource& res) { return res.res_id.ded().ue_res_id; });
 
   // PUCCH Resource extension (\c pucch-RepetitionNrofSlots-r17): mirror res_to_add_mod_list in size and order.
   // Only emit the ext list if at least one resource has a non-default repetition factor.
@@ -1653,7 +1643,7 @@ calculate_pucch_config_diff(asn1::rrc_nr::pucch_cfg_s& out, const pucch_config& 
     for (const auto& asn1_res : out.res_to_add_mod_list) {
       const auto* const it =
           std::find_if(dest.pucch_res_list.begin(), dest.pucch_res_list.end(), [&](const pucch_resource& r) {
-            return r.res_id.ue_res_id == asn1_res.pucch_res_id;
+            return r.res_id.ded().ue_res_id == asn1_res.pucch_res_id;
           });
       pucch_res_ext_v1610_s ext{};
       if (it != dest.pucch_res_list.end() and it->rep_factor != pucch_repetition_factor::n1) {
@@ -3473,7 +3463,7 @@ bool ocudu::odu::calculate_reconfig_with_sync_diff(asn1::rrc_nr::recfg_with_sync
 
   out.sp_cell_cfg_common.ssb_periodicity_serving_cell_present = true;
   asn1::number_to_enum(out.sp_cell_cfg_common.ssb_periodicity_serving_cell,
-                       ssb_periodicity_to_value(du_cell_cfg.ran.ssb_cfg.ssb_period));
+                       to_value(du_cell_cfg.ran.ssb_cfg.ssb_period));
 
   out.sp_cell_cfg_common.dmrs_type_a_position.value = du_cell_cfg.ran.dmrs_typeA_pos == dmrs_typeA_position::pos2
                                                           ? serving_cell_cfg_common_s::dmrs_type_a_position_opts::pos2

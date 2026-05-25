@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include "ocudu/adt/span.h"
 #include "ocudu/ran/csi_rs/csi_meas_config.h"
 #include "ocudu/ran/csi_rs/csi_report_config.h"
 #include "ocudu/ran/pci.h"
 #include "ocudu/ran/pdsch/pdsch_mcs.h"
+#include "ocudu/ran/ssb/ssb_properties.h"
 #include "ocudu/ran/tdd/tdd_ul_dl_config.h"
 #include <array>
 #include <optional>
@@ -83,7 +85,6 @@ csi_resource_periodicity get_max_csi_rs_period(subcarrier_spacing pdsch_scs);
 std::optional<csi_resource_periodicity> find_valid_csi_rs_period(const tdd_ul_dl_config_common& tdd_cfg);
 
 /// \brief Search for valid CSI-RS slot offsets for measurement, tracking and interference management.
-/// \remark TODO: This function assumes that the SSB and SIB1 configs are hardcoded to slot offsets 0 and 1.
 ///
 /// \param csi_params [in/out] Parameters used to generate CSI Meas Config. This function assumes that the CSI-RS
 /// period, is already set.
@@ -95,14 +96,23 @@ std::optional<csi_resource_periodicity> find_valid_csi_rs_period(const tdd_ul_dl
 /// If passed as non-empty, the function will check whether the value is valid.
 /// \param tdd_cfg [in] TDD pattern.
 /// \param max_csi_symbol_index [in] Maximum CSI symbol among those used for CSI-RS.
-/// \param ssb_period_ms [in] SSB period in ms.
+/// \param ssb_period [in] SSB periodicity.
+/// \param ssb_slot_offsets [in] Slot offsets (within one SSB period) that carry SSB transmissions, using SCS common
+/// as reference (not SSB SCS). All listed slots are excluded from CSI-RS placement.
+/// \param sib1_period_slots [in] Period of the SIB1 Type0-CSS monitoring window in \c tdd_cfg SCS slots, as returned
+/// by \c sib_helper::type0_css_occasions::window_period_slots. Derived from the CORESET multiplexing pattern.
+/// \param sib1_slot_offsets [in] Slot offsets (within one SIB1 monitoring window) carrying SIB1 PDSCHs, as returned
+/// by \c sib_helper::type0_css_occasions::slot_offsets. All listed slots are excluded from CSI-RS placement.
 [[nodiscard]] bool derive_valid_csi_rs_slot_offsets(du_csi_params&                 csi_params,
                                                     const std::optional<unsigned>& meas_csi_slot_offset,
                                                     const std::optional<unsigned>& tracking_csi_slot_offset,
                                                     const std::optional<unsigned>& zp_csi_slot_offset,
                                                     const tdd_ul_dl_config_common& tdd_cfg,
                                                     unsigned                       max_csi_symbol_index,
-                                                    unsigned                       ssb_period_ms);
+                                                    ssb_periodicity                ssb_period,
+                                                    span<const unsigned>           ssb_slot_offsets,
+                                                    unsigned                       sib1_period_slots,
+                                                    span<const unsigned>           sib1_slot_offsets);
 
 /// \brief Generate list of zp-CSI-RS Resources.
 std::vector<zp_csi_rs_resource> make_periodic_zp_csi_rs_resource_list(const csi_meas_config_builder_params& params);

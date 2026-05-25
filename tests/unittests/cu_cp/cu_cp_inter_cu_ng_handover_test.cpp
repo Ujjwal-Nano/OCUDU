@@ -151,6 +151,19 @@ public:
     // Inject UL RRC Message (containing RRC Reconfiguration Complete) and wait for Handover Notify.
     get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
         du_ue_id, cu_ue_id, srb_id_t::srb1, make_byte_buffer("800008005b7d9d03").value()));
+    return await_handover_notify_and_ue_context_modification_request();
+  }
+
+  [[nodiscard]] bool send_rrc_reconfiguration_complete()
+  {
+    // Inject UL RRC Message containing RRC Reconfiguration Complete.
+    get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
+        du_ue_id, cu_ue_id, srb_id_t::srb1, make_byte_buffer("800008005b7d9d03").value()));
+    return true;
+  }
+
+  [[nodiscard]] bool await_handover_notify_and_ue_context_modification_request()
+  {
     report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu), "Failed to receive Handover Notify");
     report_fatal_error_if_not(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu),
                               "Failed to receive UE context modification response");
@@ -564,6 +577,25 @@ TEST_F(cu_cp_inter_cu_ng_handover_test, when_handover_request_received_then_hand
   ASSERT_TRUE(test_helpers::is_valid_ul_nas_transport_message(ngap_pdu));
 }
 
+TEST_F(cu_cp_inter_cu_ng_handover_test,
+       when_rrc_reconfiguration_complete_arrives_before_dl_ran_status_transfer_then_handover_notify_is_sent)
+{
+  // Bring handover up to the point where either event can arrive first.
+  ASSERT_TRUE(send_handover_request_and_await_bearer_context_setup_request());
+  ASSERT_TRUE(send_bearer_context_setup_response_and_await_ue_context_setup_request());
+  ASSERT_TRUE(send_ue_context_setup_response_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_handover_request_ack());
+
+  // Inject RRC Reconfiguration Complete first.
+  ASSERT_TRUE(send_rrc_reconfiguration_complete());
+
+  // Inject DL RAN Status Transfer and continue normal execution.
+  ASSERT_TRUE(send_dl_ran_status_transfer_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response());
+  ASSERT_TRUE(await_handover_notify_and_ue_context_modification_request());
+  ASSERT_TRUE(send_ue_context_modification_response_empty(cu_ue_id, du_ue_id));
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //                             ZigZag Handover
 ///////////////////////////////////////////////////////////////////////////////
@@ -633,4 +665,46 @@ TEST_F(cu_cp_inter_cu_ng_handover_test, when_zigzag_handover_is_performed_then_h
   // STATUS: UE should be removed at this stage
   report = this->get_cu_cp().get_metrics_handler().request_metrics_report();
   ASSERT_EQ(report.ues.size(), 0) << "UE should be removed";
+}
+
+TEST_F(
+    cu_cp_inter_cu_ng_handover_test,
+    when_inter_cu_ng_handover_target_receives_rrc_reconfiguration_complete_then_handover_notify_and_rrc_indicator_are_sent)
+{
+  // Inject Handover Request and await Bearer Context Setup Request
+  ASSERT_TRUE(send_handover_request_and_await_bearer_context_setup_request());
+
+  // Inject Bearer Context Setup Response and await UE Context Setup Request
+  ASSERT_TRUE(send_bearer_context_setup_response_and_await_ue_context_setup_request());
+
+  // Inject UE Context Setup Response and await Bearer Context Modification Request
+  ASSERT_TRUE(send_ue_context_setup_response_and_await_bearer_context_modification_request());
+
+  // Inject Bearer Context Modification Response and await Handover Request Ack
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_handover_request_ack());
+
+  // Inject NGAP DL RAN Status Transfer and await Bearer Context Modification Request
+  ASSERT_TRUE(send_dl_ran_status_transfer_and_await_bearer_context_modification_request());
+
+  // Inject Bearer Context Modification Response
+  ASSERT_TRUE(send_bearer_context_modification_response());
+
+  // Inject RRC Reconfiguration Complete and verify Handover Notify and UE Context Modification Request (with RRC
+  // reconfiguration complete indicator) are sent.
+  ASSERT_TRUE(send_rrc_reconfiguration_complete_and_await_handover_notify_and_ue_context_modification_request());
+
+  // Verify the F1AP UE Context Modification Request contains the RRC reconfiguration complete indicator.
+  report_fatal_error_if_not(test_helpers::is_valid_ue_context_modification_request(f1ap_pdu),
+                            "Invalid F1AP UE Context Modification Request");
+
+  // Inject UE Context Modification Response to ACK the RRC reconfiguration complete indicator.
+  ASSERT_TRUE(send_ue_context_modification_response_empty(cu_ue_id, du_ue_id));
+
+  // Verify no unexpected messages remain.
+  report_fatal_error_if_not(not this->get_amf().try_pop_rx_pdu(ngap_pdu),
+                            "Unexpected NGAP message after handover target success");
+  report_fatal_error_if_not(not this->get_du(du_idx).try_pop_dl_pdu(f1ap_pdu),
+                            "Unexpected F1AP message after handover target success");
+  report_fatal_error_if_not(not this->get_cu_up(cu_up_idx).try_pop_rx_pdu(e1ap_pdu),
+                            "Unexpected E1AP message after handover target success");
 }

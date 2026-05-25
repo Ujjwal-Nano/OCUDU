@@ -17,6 +17,8 @@
 #include "ocudu/ran/pucch/pucch_info.h"
 #include "ocudu/ran/pucch/pucch_mapping.h"
 #include "ocudu/ran/sib/cell_reselection.h"
+#include "ocudu/ran/sib/sib_helper.h"
+#include "ocudu/ran/ssb/ssb_helper.h"
 #include "ocudu/rlc/rlc_srb_config_factory.h"
 #include "ocudu/scheduler/config/cell_config_builder_params.h"
 #include "ocudu/scheduler/config/csi_helper.h"
@@ -288,6 +290,14 @@ static void fill_csi_resources(odu::du_cell_config& out_cell, const du_high_unit
   if (cell_cfg.tdd_ul_dl_cfg.has_value()) {
     const unsigned max_csi_symbol_index = *std::max_element(du_csi.tracking_csi_ofdm_symbol_indices.begin(),
                                                             du_csi.tracking_csi_ofdm_symbol_indices.end());
+    const auto&    pdcch_common         = out_cell.ran.dl_cfg_common.init_dl_bwp.pdcch_common;
+    const auto     ssb_slots =
+        ssb_helper::get_occupied_slot_offsets(out_cell.ran.ssb_cfg, out_cell.ran.dl_carrier.band, cell_cfg.common_scs);
+    const auto sib1_occ = sib_helper::get_occupied_slot_offsets(out_cell.ran.ssb_cfg,
+                                                                out_cell.ran.dl_carrier.band,
+                                                                cell_cfg.common_scs,
+                                                                *pdcch_common.get_searchspace0(),
+                                                                pdcch_common.get_coreset0()->value());
     if (not csi_helper::derive_valid_csi_rs_slot_offsets(
             du_csi,
             csi_cfg.meas_csi_slot_offset,
@@ -295,7 +305,10 @@ static void fill_csi_resources(odu::du_cell_config& out_cell, const du_high_unit
             csi_cfg.zp_csi_slot_offset,
             generate_tdd_pattern(cell_cfg.common_scs, *cell_cfg.tdd_ul_dl_cfg),
             max_csi_symbol_index,
-            cell_cfg.ssb_cfg.ssb_period_msec)) {
+            static_cast<ssb_periodicity>(cell_cfg.ssb_cfg.ssb_period_msec),
+            ssb_slots,
+            sib1_occ.window_period_slots,
+            sib1_occ.slot_offsets)) {
       report_error("Unable to derive valid CSI-RS slot offsets and period for cell with pci={}\n", cell_cfg.pci);
     }
   } else {
@@ -853,14 +866,13 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
         constexpr unsigned pucch_f2_nof_symbols = 2U;
         auto&              f2_params            = du_pucch_cfg.f2_or_f3_or_f4_params.emplace<pucch_f2_params>();
         f2_params.max_code_rate                 = user_pucch_cfg.f2_max_code_rate;
-        f2_params.max_nof_rbs =
-            user_pucch_cfg.f2_max_payload_bits.has_value()
-                ? get_pucch_format2_max_nof_prbs(user_pucch_cfg.f2_max_payload_bits.value(),
-                                                 pucch_f2_nof_symbols,
-                                                 to_max_code_rate_float(user_pucch_cfg.f2_max_code_rate))
-                : user_pucch_cfg.f2_max_nof_rbs;
-        f2_params.intraslot_freq_hopping = user_pucch_cfg.f2_intraslot_freq_hopping;
-        f2_params.max_payload_bits       = user_pucch_cfg.f2_max_payload_bits;
+        f2_params.max_nof_rbs                   = user_pucch_cfg.f2_max_payload_bits.has_value()
+                                                      ? get_pucch_format2_max_nof_prbs(user_pucch_cfg.f2_max_payload_bits.value(),
+                                                                     pucch_f2_nof_symbols,
+                                                                     to_float(user_pucch_cfg.f2_max_code_rate))
+                                                      : user_pucch_cfg.f2_max_nof_rbs;
+        f2_params.intraslot_freq_hopping        = user_pucch_cfg.f2_intraslot_freq_hopping;
+        f2_params.max_payload_bits              = user_pucch_cfg.f2_max_payload_bits;
       } break;
       case pucch_format::FORMAT_3: {
         // The number of symbols per PUCCH resource is not exposed to the DU user interface; for PUCCH F3, we use all
@@ -877,7 +889,7 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
                                                    ? get_pucch_format3_max_nof_prbs(
                                           user_pucch_cfg.f3_max_payload_bits.value(),
                                           pucch_f3_nof_symbols,
-                                          to_max_code_rate_float(user_pucch_cfg.f3_max_code_rate),
+                                          to_float(user_pucch_cfg.f3_max_code_rate),
                                           // Since we are forcing 14 symbols intraslot_freq_hopping doesn't matter.
                                           false,
                                           user_pucch_cfg.f3_additional_dmrs,
