@@ -1686,10 +1686,11 @@ static bool validate_qos_config(span<const du_high_unit_qos_config> config)
       return false;
     }
     // delay_slots is capped at 10 slots to bound the pending-grant vector size.
-    if (qos.triggered_ul_grant.has_value() && qos.triggered_ul_grant->delay_slots > 10) {
-      fmt::print("5QI {} triggered_ul_grant delay_slots={} exceeds maximum of 10\n",
+    if (qos.triggered_ul_grant.has_value() && qos.triggered_ul_grant->delay_slots > SCHEDULER_MAX_TRIG_UL_DELAY) {
+      fmt::print("5QI {} triggered_ul_grant delay_slots={} exceeds maximum of {}\n",
                  qos.five_qi,
-                 qos.triggered_ul_grant->delay_slots);
+                 qos.triggered_ul_grant->delay_slots,
+                 SCHEDULER_MAX_TRIG_UL_DELAY);
       return false;
     }
   }

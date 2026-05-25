@@ -12,10 +12,9 @@
 using namespace ocudu;
 
 triggered_ul_grant_scheduler::triggered_ul_grant_scheduler(ue_repository& ues_, du_cell_index_t cell_index_) :
-  ues(ues_), cell_index(cell_index_)
+  logger(ocudulog::fetch_basic_logger("SCHED")), ues(ues_), cell_index(cell_index_)
 {
-  // It's reserved for 10 slots, as maximum gonfigurable delay
-  pending_grants.reserve(MAX_UE_PDUS_PER_SLOT * 10U);
+  pending_grants.reserve(pending_grants_size);
 }
 
 void triggered_ul_grant_scheduler::process_dl_results(slot_point sl_tx, const sched_result& sched_result)
@@ -28,6 +27,12 @@ void triggered_ul_grant_scheduler::process_dl_results(slot_point sl_tx, const sc
 
     for (const dl_msg_tb_info& tb : grant.tb_list) {
       for (const dl_msg_lc_info& lc : tb.lc_chs_to_sched) {
+        if (pending_grants.size() >= pending_grants_size) {
+          logger.warning("triggered UL grant queue full ({} entries) at slot={} — skipping DL results",
+                         pending_grants.size(),
+                         sl_tx);
+          return;
+        }
         if (not lc.lcid.is_sdu()) {
           continue;
         }
@@ -65,7 +70,7 @@ void triggered_ul_grant_scheduler::run_slot(slot_point pdcch_slot)
     bsr.reported_lcgs.push_back({g.lcg_id, g.bytes.value()});
     u->handle_bsr_indication(bsr);
   }
-  // remove all expired pending grants from the list
+  // Remove all expired pending grants from the list.
   clean_pending_grants(pdcch_slot);
 }
 

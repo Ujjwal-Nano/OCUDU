@@ -6,9 +6,11 @@
 
 #include "../ue_context/ue_repository.h"
 #include "ocudu/ran/du_types.h"
+#include "ocudu/ran/slot_pdu_capacity_constants.h"
 #include "ocudu/ran/slot_point.h"
 #include "ocudu/scheduler/config/logical_channel_group.h"
 #include "ocudu/scheduler/result/sched_result.h"
+#include "ocudu/scheduler/sched_consts.h"
 #include "ocudu/support/units.h"
 
 namespace ocudu {
@@ -28,7 +30,7 @@ public:
 
   /// Scans finalized DL grants and enqueues triggered UL grants for UEs whose DL grant included a LCID configured
   /// with triggered_ul_grant. \p pdsch_slot must be valid.
-  void process_dl_results(slot_point slot_tx, const sched_result& cell_alloc);
+  void process_dl_results(slot_point sl_tx, const sched_result& sched_result);
 
   /// Fires triggered UL grants due by \p pdcch_slot by injecting a synthetic BSR into the affected UEs.
   void run_slot(slot_point pdcch_slot);
@@ -46,9 +48,12 @@ private:
     units::bytes  bytes;
   };
 
+  ocudulog::basic_logger&    logger;
   ue_repository&             ues;
   const du_cell_index_t      cell_index;
   std::vector<pending_grant> pending_grants;
+  // It's reserved for SCHEDULER_MAX_TRIG_UL_DELAY slots, as maximum configurable delay.
+  const unsigned pending_grants_size = MAX_UE_PDUS_PER_SLOT * SCHEDULER_MAX_TRIG_UL_DELAY;
 
   void clean_pending_grants(slot_point pdcch_slot);
 };
