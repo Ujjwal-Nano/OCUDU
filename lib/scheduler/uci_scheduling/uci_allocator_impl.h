@@ -42,7 +42,8 @@ public:
                               cell_slot_resource_allocator& slot_alloc,
                               const ue_cell_configuration&  ue_cell_cfg,
                               rnti_t                        crnti,
-                              bool                          include_aperiodic_csi) override;
+                              bool                          include_aperiodic_csi,
+                              bool                          configured_grant = false) override;
 
   uint8_t get_scheduled_pdsch_counter_in_ue_uci(slot_point uci_slot, rnti_t crnti) override;
 

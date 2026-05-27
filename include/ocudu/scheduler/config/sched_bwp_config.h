@@ -119,6 +119,11 @@ public:
            ue_ul_bwp_cfg == other.ue_ul_bwp_cfg;
   }
 
+  const cg_configuration* cg_cfg() const
+  {
+    return bwp_ul_ded != nullptr and bwp_ul_ded->cg_cfg.has_value() ? &*bwp_ul_ded->cg_cfg : nullptr;
+  }
+
 private:
   const bwp_uplink_common*            bwp_ul_common = nullptr;
   const bwp_uplink_dedicated*         bwp_ul_ded    = nullptr;
