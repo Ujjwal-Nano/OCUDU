@@ -158,7 +158,7 @@ void inter_slice_scheduler::slot_indication(slot_point slot_tx, const cell_resou
       // dedicated-PRB ratio between slices.
       const unsigned cell_nof_rbs    = cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params.crbs.length();
       const unsigned pusch_avail_rbs = cell_nof_rbs - pusch_used_crbs.count();
-
+      // TODO: Refactor to use slice ratios from config to avoid conversation from ratio to PRBs and again to ratio.
       const unsigned scaled_max = slice.inst.cfg.rbs.max() * pusch_avail_rbs / cell_nof_rbs;
       if (scaled_max <= pusch_rb_count) {
         // Slice already has at or above its proportional share of available RBs; skip.

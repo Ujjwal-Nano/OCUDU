@@ -298,12 +298,6 @@ TEST_F(single_slice_limited_max_rbs_scheduler_test, single_ue_ul_gets_scheduled)
   ASSERT_GT(ul_rbs, 0U) << "Single UE never got UL grant";
 }
 
-// Tests that UL dedicated PRB ratios are respected when two slices together cover 100% of the cell bandwidth.
-// Regression test for: slicing: dedicated UL proportion not following config and DL (issue #383).
-// Slice config mirrors the original bug report:
-//   sst=2, sd=42 → 25% dedicated/min/max PRBs
-//   sst=1, sd=1  → 75% dedicated/min/max PRBs
-// TDD DDDSU pattern, 30kHz SCS, 20MHz (51 PRBs). Both DL and UL traffic present.
 class multi_slice_dedicated_ul_rbs_test : public scheduler_test_simulator, public ::testing::Test
 {
 protected:
@@ -350,6 +344,12 @@ protected:
   }
 };
 
+// Tests that UL dedicated PRB ratios are respected when two slices together cover 100% of the cell bandwidth.
+// Regression test for: slicing: dedicated UL proportion not following config and DL (issue #383).
+// Slice config mirrors the original bug report:
+//   sst=2, sd=42 → 25% dedicated/min/max PRBs
+//   sst=1, sd=1  → 75% dedicated/min/max PRBs
+// TDD DDDSU pattern, 30kHz SCS, 20MHz (51 PRBs). Both DL and UL traffic present.
 TEST_F(multi_slice_dedicated_ul_rbs_test, ul_dedicated_rbs_ratio_is_respected)
 {
   // UE0 in the 75% slice (sst=1,sd=1), UE1 in the 25% slice (sst=2,sd=42).
