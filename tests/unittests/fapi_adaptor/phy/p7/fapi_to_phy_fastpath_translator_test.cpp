@@ -7,12 +7,16 @@
 #include "../../../phy/upper/uplink_request_processor_test_doubles.h"
 #include "fapi_to_phy_fastpath_translator.h"
 #include "message_builder_helpers.h"
+#include "phy_to_fapi_time_event_fastpath_translator.h"
+#include "ocudu/fapi/p7/builders/slot_indication_builder.h"
+#include "ocudu/fapi/p7/p7_slot_indication_notifier.h"
 #include "ocudu/fapi_adaptor/precoding_matrix_table_generator.h"
 #include "ocudu/fapi_adaptor/uci_part2_correspondence_generator.h"
 #include "ocudu/phy/support/resource_grid_pool.h"
 #include "ocudu/phy/upper/downlink_processor.h"
 #include "ocudu/phy/upper/uplink_pdu_slot_repository.h"
 #include "ocudu/phy/upper/uplink_pdu_validator.h"
+#include "ocudu/phy/upper/upper_phy_timing_context.h"
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <gtest/gtest.h>
 
@@ -451,4 +455,88 @@ TEST_F(fapi_to_phy_translator_fixture, empty_ul_tti_generates_request_when_allow
   translator_allow.send_ul_tti_request(msg);
 
   ASSERT_TRUE(ul_request_processor.has_uplink_been_requested());
+}
+
+/// phy_to_fapi_time_event_fastpath_translator gate tests.
+///
+/// These exercise the FAPI cell lifecycle gate added to suppress slot indication delivery to MAC
+/// when a cell is in the inactive state. The gate is the receiving end of
+/// upper_phy_operation_controller::start()/stop() that gets driven by FAPI P5 START.request /
+/// STOP.request from MAC.
+
+namespace {
+
+/// Spy implementation of fapi::p7_slot_indication_notifier that records
+/// every on_slot_indication invocation.
+class p7_slot_indication_notifier_spy : public fapi::p7_slot_indication_notifier
+{
+  unsigned call_count = 0;
+
+public:
+  void     on_slot_indication(const fapi::slot_indication& msg) override { ++call_count; }
+  unsigned get_call_count() const { return call_count; }
+};
+
+} // namespace
+
+class phy_to_fapi_time_event_translator_gate_fixture : public fapi_to_phy_translator_fixture
+{
+protected:
+  p7_slot_indication_notifier_spy            slot_notifier_spy;
+  phy_to_fapi_time_event_fastpath_translator time_translator;
+
+public:
+  phy_to_fapi_time_event_translator_gate_fixture() : time_translator(translator)
+  {
+    time_translator.set_p7_slot_indication_notifier(slot_notifier_spy);
+  }
+
+  upper_phy_timing_context make_context() const
+  {
+    upper_phy_timing_context context;
+    context.slot       = slot_point_extended{slot};
+    context.time_point = {};
+    return context;
+  }
+};
+
+TEST_F(phy_to_fapi_time_event_translator_gate_fixture, default_state_is_active_so_slot_indication_is_delivered)
+{
+  ASSERT_EQ(slot_notifier_spy.get_call_count(), 0u);
+  time_translator.on_tti_boundary(make_context());
+  ASSERT_EQ(slot_notifier_spy.get_call_count(), 1u);
+}
+
+TEST_F(phy_to_fapi_time_event_translator_gate_fixture, set_active_false_suppresses_slot_indication_delivery)
+{
+  time_translator.set_active(false);
+  time_translator.on_tti_boundary(make_context());
+  time_translator.on_tti_boundary(make_context());
+  time_translator.on_tti_boundary(make_context());
+  ASSERT_EQ(slot_notifier_spy.get_call_count(), 0u);
+}
+
+TEST_F(phy_to_fapi_time_event_translator_gate_fixture, set_active_true_after_false_resumes_slot_indication_delivery)
+{
+  time_translator.set_active(false);
+  time_translator.on_tti_boundary(make_context());
+  ASSERT_EQ(slot_notifier_spy.get_call_count(), 0u);
+
+  time_translator.set_active(true);
+  time_translator.on_tti_boundary(make_context());
+  time_translator.on_tti_boundary(make_context());
+  ASSERT_EQ(slot_notifier_spy.get_call_count(), 2u);
+}
+
+TEST_F(phy_to_fapi_time_event_translator_gate_fixture, gate_toggling_under_load_preserves_per_call_decision)
+{
+  // Each on_tti_boundary observes the gate state at that moment.
+  time_translator.on_tti_boundary(make_context()); // active=true → 1
+  time_translator.set_active(false);
+  time_translator.on_tti_boundary(make_context()); // gated     → still 1
+  time_translator.set_active(true);
+  time_translator.on_tti_boundary(make_context()); // active     → 2
+  time_translator.set_active(false);
+  time_translator.on_tti_boundary(make_context()); // gated     → still 2
+  ASSERT_EQ(slot_notifier_spy.get_call_count(), 2u);
 }

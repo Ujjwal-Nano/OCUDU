@@ -47,6 +47,9 @@ public:
   // See interface for documentation.
   fapi::p7_last_request_notifier& get_p7_last_request_notifier() override;
 
+  // See interface for documentation.
+  void set_active(bool active) override { time_translator.set_active(active); }
+
 private:
   /// PHY-to-FAPI uplink results events translator.
   phy_to_fapi_results_event_fastpath_translator results_translator;

@@ -8,6 +8,7 @@
 #include "ocudu/ran/dmrs/dmrs.h"
 #include "ocudu/ran/pci.h"
 #include "ocudu/ran/ssb/ssb_configuration.h"
+#include <atomic>
 #include <cstddef>
 
 namespace ocudu {
@@ -29,6 +30,12 @@ public:
   /// \param[in]  ssb_info SSB scheduling results.
   void assemble_ssb(dl_ssb_pdu& ssb_pdu, const ssb_information& ssb_info);
 
+  /// Update the MIB cellBarred flag at runtime. The new value takes effect on the next SSB assembly.
+  void set_cell_barred(bool value) { cell_barred.store(value, std::memory_order_relaxed); }
+
+  /// Update the MIB intraFreqReselection flag at runtime. The new value takes effect on the next SSB assembly.
+  void set_intra_freq_reselection(bool value) { intra_freq_reselection.store(value, std::memory_order_relaxed); }
+
 private:
   /// Cell PCI.
   pci_t pci;
@@ -36,8 +43,12 @@ private:
   const ssb_configuration ssb_cfg;
   uint8_t                 pdcch_config_sib1;
   dmrs_typeA_position     dmrs_typeA_pos;
-  bool                    cell_barred;
-  bool                    intra_freq_reselection;
+  /// MIB cellBarred. Read on cell executor in assemble_ssb(); written on control executor via
+  /// set_cell_barred().
+  std::atomic<bool> cell_barred;
+  /// MIB intraFreqReselection. Read on cell executor in assemble_ssb(); written on control executor
+  /// via set_intra_freq_reselection().
+  std::atomic<bool> intra_freq_reselection;
 
   /// Other derived SSB parameters.
   ssb_pattern_case ssb_case;

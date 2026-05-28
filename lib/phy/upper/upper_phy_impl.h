@@ -6,6 +6,7 @@
 
 #include "uplink_request_processor_impl.h"
 #include "upper_phy_error_handler_impl.h"
+#include "upper_phy_operation_controller_impl.h"
 #include "upper_phy_pdu_validators.h"
 #include "upper_phy_rx_results_notifier_wrapper.h"
 #include "upper_phy_rx_symbol_handler_impl.h"
@@ -129,6 +130,12 @@ public:
 
   void stop() override;
 
+  // See interface for documentation.
+  void set_operation_controller_active_target(std::function<void(bool)> target) override
+  {
+    operation_controller.set_active_target(std::move(target));
+  }
+
 private:
   /// Upper PHY logger.
   ocudulog::basic_logger& logger;
@@ -156,5 +163,8 @@ private:
   upper_phy_timing_handler_impl timing_handler;
   /// Error events handler.
   upper_phy_error_handler_impl error_handler;
+  /// Operation controller. Activation target wired by the o_du_low factory after FAPI adaptor
+  /// construction; until then start()/stop() are no-ops.
+  upper_phy_operation_controller_impl operation_controller;
 };
 } // namespace ocudu

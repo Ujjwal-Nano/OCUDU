@@ -27,6 +27,8 @@ namespace ocudu {
 
 class timer_manager;
 
+class phy_cell_operation_controller;
+
 namespace odu {
 
 class f1u_du_gateway;
@@ -74,6 +76,14 @@ struct du_high_dependencies {
   rlc_pcap*                rlc_p              = nullptr;
   /// Optional notifier invoked once after a successful F1 Setup.
   du_f1_setup_complete_notifier* f1_setup_notifier = nullptr;
+  /// \brief Optional per-cell PHY operation controllers, indexed by du_cell_index.
+  ///
+  /// Supplied by the layer that owns the FAPI adaptor (typically o_du_high). When non-empty,
+  /// each entry must be either a valid pointer or null; the DU forwards the pointer for cell
+  /// index i into mac_cell_creation_request.phy_cell_op_controller, which lets MAC cell
+  /// start/stop drive FAPI P5 START/STOP. An empty vector preserves the legacy behaviour
+  /// (no PHY notification on MAC cell stop).
+  std::vector<phy_cell_operation_controller*> phy_cell_op_controllers;
 };
 
 } // namespace odu

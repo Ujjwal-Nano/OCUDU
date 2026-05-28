@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/adt/span.h"
+#include "ocudu/cu_cp/cu_cp_cell_command_handler.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ran/pci.h"
 #include "ocudu/ran/rnti.h"
@@ -74,6 +75,9 @@ public:
 
   /// Get handler for UE release commands.
   virtual cu_cp_ue_release_command_handler& get_ue_release_command_handler() = 0;
+
+  /// Get handler for cell-level lifecycle commands (activate, deactivate).
+  virtual cu_cp_cell_command_handler& get_cell_command_handler() = 0;
 };
 
 } // namespace ocucp

@@ -48,6 +48,10 @@ struct mac_cell_reconfig_request {
   std::optional<mac_cell_sys_info_pdu_update> new_si_pdu_info;
   /// If not empty, contains the updates to be applied to the RRM policies.
   std::optional<du_cell_slice_reconfig_request> slice_reconf_req;
+  /// If set, updates the MIB cellBarred flag (TS 38.331). Takes effect on the next SSB build.
+  std::optional<bool> cell_barred_mod;
+  /// If set, updates the MIB intraFreqReselection flag (TS 38.331). Takes effect on the next SSB build.
+  std::optional<bool> intra_freq_reselection_mod;
 };
 
 struct mac_cell_reconfig_response {

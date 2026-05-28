@@ -38,6 +38,19 @@ void du_cell_stop_procedure::operator()(coro_context<async_task<void>>& ctx)
     CORO_EARLY_RETURN();
   }
 
+  // Bar the cell first when the caller asked for a graceful drain. This makes the live MIB advertise
+  // cellBarred=true so idle UEs in the area reselect away (TS 38.304) before we begin draining
+  // connected UEs. Skipped for F1 Reset and silent removal modes, which are reserved for fault and
+  // shutdown paths where graceful UE-side handling is not required.
+  if (mode == ue_removal_mode::trigger_f1_ue_release_request) {
+    CORO_AWAIT(cell_mng.set_cell_barred(cell_index, true));
+
+    // Wait one SI period so the new MIB reaches the air and idle UEs reselect. The 160 ms window
+    // covers an SSB period (20 ms) plus reselection settling at the UE.
+    static constexpr std::chrono::milliseconds bar_settling_window{160};
+    CORO_AWAIT(async_wait_for(timer, bar_settling_window));
+  }
+
   // Check if there are still UEs attached to this cell that need to be released.
   CORO_AWAIT(rem_ues_with_matching_pcell());
 

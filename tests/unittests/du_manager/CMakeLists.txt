@@ -61,6 +61,7 @@ gtest_discover_tests(du_ue_config_test)
 
 add_executable(du_manager_procedure_test
         procedures/du_param_config_procedure_test.cpp
+        procedures/du_cell_stop_procedure_test.cpp
 )
 target_include_directories(du_manager_procedure_test PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(du_manager_procedure_test du_manager_test_helpers gtest ocudu_gtest_main)
