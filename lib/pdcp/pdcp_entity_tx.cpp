@@ -558,6 +558,59 @@ void pdcp_entity_tx::handle_status_report(byte_buffer_chain status)
   dec.unpack(fmc, 32);
   logger.log_info("Status report. fmc={}", fmc);
 
+  // Validate FMC field.
+  if (fmc > st.tx_next) {
+    logger.log_error("Invalid status report, FMC > TX_NEXT. st={} fmc={}", st, fmc);
+    upper_cn.on_protocol_failure();
+    return;
+  }
+
+  // Validate bitmap length.
+  // > If FMC == TX_NEXT, bitmap must be zero length.
+  unsigned bitmap_length = buf.length() - 5;
+  if (fmc == st.tx_next && bitmap_length != 0) {
+    logger.log_error("Invalid status report, bitmap non-zero for equal FMC and TX_NEXT. st={} fmc={} bitmap_length={}",
+                     st,
+                     fmc,
+                     bitmap_length);
+    upper_cn.on_protocol_failure();
+  }
+
+  // > Compute how many bytes the bitmap length can have in the maximum case.
+  uint32_t delta                   = st.tx_next - fmc - 1;
+  uint32_t max_possible_bithlength = (delta + 7) / 8; // round up division by 8.
+  if (bitmap_length > max_possible_bithlength) {
+    logger.log_error("Invalid status report, bitmap length too large. tx_next={} fmc={} bitmap_length={}",
+                     st.tx_next,
+                     fmc,
+                     bitmap_length);
+    upper_cn.on_protocol_failure();
+    return;
+  }
+
+  // Validate tail of bitmap.
+  if (bitmap_length != 0) {
+    uint8_t bitlength_without_padding = delta % 8;
+    uint8_t tail                      = buf.back();
+    uint8_t res                       = (tail << bitlength_without_padding);
+    if (res) {
+      logger.log_error("Invalid status report, bits set in padding of bitmap. tx_next={} fmc={} tail={:b} "
+                       "bitlength={}",
+                       st.tx_next,
+                       fmc,
+                       tail,
+                       bitlength_without_padding);
+      upper_cn.on_protocol_failure();
+      return;
+    }
+  }
+
+  if (fmc < st.tx_next_ack) {
+    // Do not return if FMC < TX_NEXT_ACK.
+    // Perhaps the PDCP status PDU arrived out-of-order and PDUs were acked in the meanttime.
+    logger.log_warning("Invalid status report, FMC < TX_NEXT_ACK. fmc={} st={}", fmc, st);
+  }
+
   // Discard any SDU with COUNT < FMC.
   for (uint32_t count = st.tx_next_ack; count < fmc; count++) {
     discard_pdu(count);
