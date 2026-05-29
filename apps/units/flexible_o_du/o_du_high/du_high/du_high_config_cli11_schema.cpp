@@ -1063,6 +1063,17 @@ static void configure_cli11_pusch_args(CLI::App& app, du_high_unit_pusch_config&
                  "Fractional path-loss compensation factor in PUSCH power control")
       ->capture_default_str()
       ->check(CLI::IsMember({0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}));
+  app.add_option("--ema_alpha_cl_pw_control_sinr",
+                 pusch_params.ema_alpha_cl_pw_control_sinr,
+                 "Smoothing factor alpha for EMA filter of PUSCH closed-loop power control SINR")
+      ->capture_default_str()
+      ->check([](const std::string& value) -> std::string {
+        const float alpha = std::stof(value);
+        if (alpha <= 0.0f or alpha >= 1.0f) {
+          return "Must be in the open interval (0, 1)";
+        }
+        return "";
+      });
   app.add_option("--enable_transform_precoding",
                  pusch_params.enable_transform_precoding,
                  "Enable transform precoding for PUSCH.")
@@ -1263,6 +1274,17 @@ static void configure_cli11_pucch_args(CLI::App& app, du_high_unit_pucch_config&
   app.add_option("--target_sinr_f3", pucch_params.pucch_f3_sinr_target_dB, "Target PUCCH F3 SINR in dB")
       ->capture_default_str()
       ->check(CLI::Range(-15.0, 10.0));
+  app.add_option("--ema_alpha_cl_pw_control_sinr",
+                 pucch_params.ema_alpha_cl_pw_control_sinr,
+                 "Smoothing factor alpha for EMA filter of PUCCH closed-loop power control SINR")
+      ->capture_default_str()
+      ->check([](const std::string& value) -> std::string {
+        const float alpha = std::stof(value);
+        if (alpha <= 0.0f or alpha >= 1.0f) {
+          return "Must be in the open interval (0, 1)";
+        }
+        return "";
+      });
   add_option(
       app,
       "--repetition_sinr_thresholds",

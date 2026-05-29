@@ -1205,6 +1205,7 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
   out_cfg.ue.ul_power_ctrl.enable_phr_bw_adaptation          = pusch.enable_phr_bw_adaptation;
   out_cfg.ue.ul_power_ctrl.target_pusch_sinr                 = pusch.target_pusch_sinr;
   out_cfg.ue.ul_power_ctrl.path_loss_for_target_pusch_sinr   = pusch.path_loss_for_target_pusch_sinr;
+  out_cfg.ue.ul_power_ctrl.ema_alpha_cl_pw_control_sinr      = pusch.ema_alpha_cl_pw_control_sinr;
   out_cfg.ue.ta_control.ta_cmd_offset_threshold              = cell.ta_cfg.ta_cmd_offset_threshold;
   out_cfg.ue.ta_control.target                               = cell.ta_cfg.ta_target;
   out_cfg.ue.ta_control.measurement_period                   = cell.ta_cfg.ta_measurement_slot_period;
@@ -1219,14 +1220,15 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
       cell.srs_cfg.srs_type_enabled == "aperiodic" ? std::optional<srs_periodicity>(srs_prohibit_time) : std::nullopt;
 
   // PUCCH and scheduler expert parameters.
-  out_cfg.ue.max_ul_grants_per_slot                   = cell.ul_common_cfg.max_ul_grants_per_slot;
-  out_cfg.ue.max_pucchs_per_slot                      = cell.ul_common_cfg.max_pucchs_per_slot;
-  out_cfg.ue.min_pucch_pusch_prb_distance             = cell.ul_common_cfg.min_pucch_pusch_prb_distance;
-  const du_high_unit_pucch_config& pucch              = cell.pucch_cfg;
-  out_cfg.ue.ul_power_ctrl.enable_pucch_cl_pw_control = pucch.enable_closed_loop_pw_control;
-  out_cfg.ue.ul_power_ctrl.pucch_f0_sinr_target_dB    = pucch.pucch_f0_sinr_target_dB;
-  out_cfg.ue.ul_power_ctrl.pucch_f2_sinr_target_dB    = pucch.pucch_f2_sinr_target_dB;
-  out_cfg.ue.ul_power_ctrl.pucch_f3_sinr_target_dB    = pucch.pucch_f3_sinr_target_dB;
+  out_cfg.ue.max_ul_grants_per_slot                           = cell.ul_common_cfg.max_ul_grants_per_slot;
+  out_cfg.ue.max_pucchs_per_slot                              = cell.ul_common_cfg.max_pucchs_per_slot;
+  out_cfg.ue.min_pucch_pusch_prb_distance                     = cell.ul_common_cfg.min_pucch_pusch_prb_distance;
+  const du_high_unit_pucch_config& pucch                      = cell.pucch_cfg;
+  out_cfg.ue.ul_power_ctrl.enable_pucch_cl_pw_control         = pucch.enable_closed_loop_pw_control;
+  out_cfg.ue.ul_power_ctrl.pucch_f0_sinr_target_dB            = pucch.pucch_f0_sinr_target_dB;
+  out_cfg.ue.ul_power_ctrl.pucch_f2_sinr_target_dB            = pucch.pucch_f2_sinr_target_dB;
+  out_cfg.ue.ul_power_ctrl.pucch_f3_sinr_target_dB            = pucch.pucch_f3_sinr_target_dB;
+  out_cfg.ue.ul_power_ctrl.ema_alpha_cl_pw_control_pucch_sinr = pucch.ema_alpha_cl_pw_control_sinr;
 
   // RA parameters.
   const du_high_unit_rach_config& prach = cell.prach_cfg;
