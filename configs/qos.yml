@@ -465,7 +465,7 @@ qos:
           t-status-prohibit: 10
   -
     # 5QI = 80 e.g Low latency eMBB applications
-    # PDB = 10ms PER = 10^-3
+    # PDB = 10ms PER = 10^-6
     five_qi: 80
     pdcp:
       tx:
