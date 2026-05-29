@@ -38,8 +38,9 @@ private:
   cu_cp_amf_index_t                                      amf_index = cu_cp_amf_index_t::invalid;
   ngap_interface*                                        ngap      = nullptr;
 
-  ngap_ng_setup_result result_msg = {};
-  bool                 success    = false;
+  ngap_ng_setup_result result_msg    = {};
+  bool                 success       = false;
+  bool                 tnl_connected = false;
 };
 
 } // namespace ocudu::ocucp
