@@ -163,7 +163,15 @@ byte_buffer rrc_du_impl::get_rrc_reject()
 {
   // Pack RRC Reconfig.
   dl_ccch_msg_s dl_ccch_msg;
-  dl_ccch_msg.msg.set_c1().set_rrc_reject().crit_exts.set_rrc_reject();
+  // dl_ccch_msg.msg.set_c1().set_rrc_reject().crit_exts.set_rrc_reject(); //original
+  //  Modification: Send waitTime with RRC Reject IE
+  //  SRB1 was not created, so we create a RRC Container with RRCReject.
+  rrc_reject_ies_s& reject = dl_ccch_msg.msg.set_c1().set_rrc_reject().crit_exts.set_rrc_reject();
+  logger.warning("wait_time_present={}", reject.wait_time_present);
+  // Add waitTime field
+  reject.wait_time_present = true;
+  reject.wait_time =
+      16; // rrc_reject_max_wait_time_s; //rrc_reject_max_wait_time_s is not a member variable in rrc_du_impl.cpp
   return pack_into_pdu(dl_ccch_msg, "RRCReject");
 }
 
