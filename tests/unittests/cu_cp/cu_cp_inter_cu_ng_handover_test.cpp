@@ -125,6 +125,8 @@ public:
     get_cu_up(cu_up_idx).push_tx_pdu(generate_bearer_context_modification_response(cu_cp_e1ap_id, cu_up_e1ap_id));
     report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu), "Failed to receive Handover Request Ack");
     report_fatal_error_if_not(test_helpers::is_valid_handover_request_ack(ngap_pdu), "Invalid Handover Request Ack");
+    report_fatal_error_if_not(test_helpers::handover_request_ack_has_full_cfg(ngap_pdu),
+                              "fullConfig not set in inter-CU HO RRCReconfiguration");
     return true;
   }
 

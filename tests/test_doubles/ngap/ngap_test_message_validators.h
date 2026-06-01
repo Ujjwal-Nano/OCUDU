@@ -69,5 +69,8 @@ bool is_expected_pdu_session_resource_setup_response(
 
 byte_buffer get_rrc_container(const ocucp::ngap_message& msg);
 
+/// \brief Returns true if the HandoverCommand inside a Handover Request Ack has fullConfig set.
+bool handover_request_ack_has_full_cfg(const ocucp::ngap_message& msg);
+
 } // namespace test_helpers
 } // namespace ocudu

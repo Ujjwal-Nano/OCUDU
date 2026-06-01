@@ -4,6 +4,7 @@
 
 #include "rrc_ue_impl.h"
 #include "rrc_asn1_helpers.h"
+#include "rrc_measurement_types_asn1_converters.h"
 #include "ocudu/asn1/rrc_nr/rrc_nr.h"
 #include "ocudu/support/cpu_architecture_info.h"
 #include "ocudu/support/ocudu_assert.h"
@@ -170,7 +171,17 @@ byte_buffer rrc_ue_impl::get_packed_handover_preparation_message()
   }
   ies.ue_cap_rat_list = *context.capabilities_list;
 
-  // TODO fill source and as configs.
+  // Fill AS-Config with current measConfig so the target can generate explicit remove lists
+  // instead of relying on fullConfig. See TS 38.331 clause 6.2.2 (AS-Config / sourceConfig).
+  if (context.meas_cfg.has_value()) {
+    rrc_recfg_s rrc_recfg;
+    rrc_recfg.crit_exts.set_rrc_recfg().meas_cfg_present = true;
+    rrc_recfg.crit_exts.rrc_recfg().meas_cfg             = meas_config_to_rrc_asn1(context.meas_cfg.value());
+    byte_buffer packed                                   = pack_into_pdu(rrc_recfg, "RRCReconfiguration");
+    ies.source_cfg_present                               = true;
+    ies.source_cfg.rrc_recfg                             = std::move(packed);
+  }
+
   return pack_into_pdu(ho_prep, "handover preparation info");
 }
 

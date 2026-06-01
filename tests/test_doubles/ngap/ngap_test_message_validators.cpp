@@ -4,7 +4,10 @@
 
 #include "ngap_test_message_validators.h"
 #include "ocudu/asn1/ngap/common.h"
+#include "ocudu/asn1/ngap/ngap_ies.h"
 #include "ocudu/asn1/ngap/ngap_pdu_contents.h"
+#include "ocudu/asn1/rrc_nr/dl_dcch_msg_ies.h"
+#include "ocudu/asn1/rrc_nr/rrc_nr.h"
 #include "ocudu/ngap/ngap_message.h"
 
 using namespace ocudu;
@@ -247,4 +250,40 @@ byte_buffer ocudu::test_helpers::get_rrc_container(const ocucp::ngap_message& ms
   }
 
   return byte_buffer{};
+}
+
+bool ocudu::test_helpers::handover_request_ack_has_full_cfg(const ngap_message& msg)
+{
+  if (msg.pdu.type() != asn1::ngap::ngap_pdu_c::types_opts::successful_outcome) {
+    return false;
+  }
+  if (msg.pdu.successful_outcome().proc_code != ASN1_NGAP_ID_HO_RES_ALLOC) {
+    return false;
+  }
+
+  // Decode target-to-source transparent container to get the HandoverCommand.
+  const auto& container = msg.pdu.successful_outcome().value.ho_request_ack()->target_to_source_transparent_container;
+  asn1::ngap::target_ngran_node_to_source_ngran_node_transparent_container_s t2s_container;
+  asn1::cbit_ref                                                             bref({container.begin(), container.end()});
+  if (t2s_container.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  // Decode HandoverCommand from rrc_container.
+  asn1::rrc_nr::ho_cmd_s ho_cmd;
+  asn1::cbit_ref         bref2({t2s_container.rrc_container.begin(), t2s_container.rrc_container.end()});
+  if (ho_cmd.unpack(bref2) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  // Decode RRCReconfiguration from HandoverCommand.
+  const auto&               ho_cmd_msg = ho_cmd.crit_exts.c1().ho_cmd().ho_cmd_msg;
+  asn1::rrc_nr::rrc_recfg_s rrc_recfg;
+  asn1::cbit_ref            bref3({ho_cmd_msg.begin(), ho_cmd_msg.end()});
+  if (rrc_recfg.unpack(bref3) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& ies = rrc_recfg.crit_exts.rrc_recfg();
+  return ies.non_crit_ext_present && ies.non_crit_ext.full_cfg_present;
 }

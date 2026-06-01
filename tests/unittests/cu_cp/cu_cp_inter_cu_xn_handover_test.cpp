@@ -145,6 +145,8 @@ public:
     report_fatal_error_if_not(this->wait_for_xnap_tx_pdu(xnc_peer_idx, xnap_pdu),
                               "Failed to receive Handover Request Ack");
     report_fatal_error_if_not(test_helpers::is_valid_handover_request_ack(xnap_pdu), "Invalid Handover Request Ack");
+    report_fatal_error_if_not(test_helpers::handover_request_ack_has_full_cfg(xnap_pdu),
+                              "fullConfig not set in inter-CU HO RRCReconfiguration");
     return true;
   }
 
@@ -243,6 +245,8 @@ public:
     report_fatal_error_if_not(
         test_helpers::is_valid_rrc_handover_preparation_info(test_helpers::get_rrc_container(xnap_pdu)),
         "Invalid Handover Preparation Info");
+    report_fatal_error_if_not(test_helpers::handover_request_has_as_config_meas_cfg(xnap_pdu),
+                              "AS-Config with measConfig missing from HandoverPreparationInfo");
 
     local_xnap_ue_id =
         uint_to_local_xnap_ue_id(xnap_pdu.pdu.init_msg().value.ho_request()->source_ng_ra_nnode_ue_xn_ap_id);

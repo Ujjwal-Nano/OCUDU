@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "xnap_test_message_validators.h"
+#include "ocudu/asn1/rrc_nr/rrc_nr.h"
 #include "ocudu/asn1/xnap/common.h"
 #include "ocudu/asn1/xnap/xnap_pdu_contents.h"
 #include "ocudu/xnap/xnap_message.h"
@@ -93,4 +94,68 @@ byte_buffer ocudu::test_helpers::get_rrc_container(const xnap_message& msg)
   }
 
   return byte_buffer{};
+}
+
+bool ocudu::test_helpers::handover_request_has_as_config_meas_cfg(const xnap_message& msg)
+{
+  if (msg.pdu.type() != asn1::xnap::xn_ap_pdu_c::types_opts::init_msg) {
+    return false;
+  }
+  if (msg.pdu.init_msg().proc_code != ASN1_XNAP_ID_HO_PREP) {
+    return false;
+  }
+
+  // Decode HandoverPreparationInfo from the RRC context.
+  const auto&                  rrc_ctx = msg.pdu.init_msg().value.ho_request()->ue_context_info_ho_request.rrc_context;
+  asn1::rrc_nr::ho_prep_info_s ho_prep;
+  asn1::cbit_ref               bref(rrc_ctx);
+  if (ho_prep.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& ies = ho_prep.crit_exts.c1().ho_prep_info();
+  if (!ies.source_cfg_present) {
+    return false;
+  }
+
+  // Decode AS-Config.rrc-Reconfiguration and verify measConfig is present and non-empty.
+  asn1::rrc_nr::rrc_recfg_s rrc_recfg;
+  asn1::cbit_ref            bref2(ies.source_cfg.rrc_recfg);
+  if (rrc_recfg.unpack(bref2) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& recfg_ies = rrc_recfg.crit_exts.rrc_recfg();
+  return recfg_ies.meas_cfg_present && (recfg_ies.meas_cfg.meas_obj_to_add_mod_list.size() > 0 ||
+                                        recfg_ies.meas_cfg.meas_id_to_add_mod_list.size() > 0);
+}
+
+bool ocudu::test_helpers::handover_request_ack_has_full_cfg(const xnap_message& msg)
+{
+  if (msg.pdu.type() != asn1::xnap::xn_ap_pdu_c::types_opts::successful_outcome) {
+    return false;
+  }
+  if (msg.pdu.successful_outcome().proc_code != ASN1_XNAP_ID_HO_PREP) {
+    return false;
+  }
+
+  // Decode HandoverCommand from target2source transparent container.
+  const auto& container =
+      msg.pdu.successful_outcome().value.ho_request_ack()->target2_source_ng_ra_nnode_transp_container;
+  asn1::rrc_nr::ho_cmd_s ho_cmd;
+  asn1::cbit_ref         bref(container);
+  if (ho_cmd.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  // Decode RRCReconfiguration from HandoverCommand.
+  const auto&               ho_cmd_msg = ho_cmd.crit_exts.c1().ho_cmd().ho_cmd_msg;
+  asn1::rrc_nr::rrc_recfg_s rrc_recfg;
+  asn1::cbit_ref            bref2(ho_cmd_msg);
+  if (rrc_recfg.unpack(bref2) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& ies = rrc_recfg.crit_exts.rrc_recfg();
+  return ies.non_crit_ext_present && ies.non_crit_ext.full_cfg_present;
 }
