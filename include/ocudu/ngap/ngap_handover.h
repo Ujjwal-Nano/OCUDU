@@ -5,8 +5,9 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ngap/ngap_pdu_session.h"
 #include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/cu_cp_pdu_session.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/plmn_identity.h"
@@ -48,8 +49,8 @@ struct ngap_qos_flow_info_item {
 };
 
 struct ngap_drbs_to_qos_flows_map_item {
-  drb_id_t                               drb_id = drb_id_t::invalid;
-  std::vector<cu_cp_associated_qos_flow> associated_qos_flow_list;
+  drb_id_t                              drb_id = drb_id_t::invalid;
+  std::vector<ngap_associated_qos_flow> associated_qos_flow_list;
 };
 
 struct ngap_pdu_session_res_info_item {
@@ -94,7 +95,7 @@ struct ngap_handover_request {
   cu_cp_ue_index_t                                                      ue_index = cu_cp_ue_index_t::invalid;
   ngap_handov_type                                                      handov_type;
   ngap_cause_t                                                          cause;
-  cu_cp_aggregate_maximum_bit_rate                                      ue_aggr_max_bit_rate;
+  aggregate_maximum_bit_rate_t                                          ue_aggr_max_bit_rate;
   std::optional<ngap_core_network_assist_info_for_inactive>             core_network_assist_info_for_inactive;
   security::security_context                                            security_context;
   std::optional<bool>                                                   new_security_context_ind;

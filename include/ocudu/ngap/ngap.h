@@ -11,6 +11,7 @@
 #include "ocudu/ngap/ngap_handover.h"
 #include "ocudu/ngap/ngap_init_context_setup.h"
 #include "ocudu/ngap/ngap_metrics.h"
+#include "ocudu/ngap/ngap_pdu_session.h"
 #include "ocudu/ngap/ngap_rrc_inactive_transition.h"
 #include "ocudu/ngap/ngap_setup.h"
 #include "ocudu/ngap/ngap_ue_context_mod.h"
@@ -131,10 +132,10 @@ public:
 
   /// \brief Set UE AMBR.
   /// \param[in] ue_ambr The AMBR to set for the UE.
-  virtual void set_ue_ambr(cu_cp_aggregate_maximum_bit_rate ue_ambr) = 0;
+  virtual void set_ue_ambr(aggregate_maximum_bit_rate_t ue_ambr) = 0;
 
   /// \brief Get UE AMBR.
-  virtual cu_cp_aggregate_maximum_bit_rate get_ue_ambr() const = 0;
+  virtual aggregate_maximum_bit_rate_t get_ue_ambr() const = 0;
 
   // TODO: should location reporting control and other UE messages be moved here?
 };
@@ -180,20 +181,20 @@ public:
   /// \brief Notify about the reception of a new PDU Session Resource Setup Request.
   /// \param[in] request The received PDU Session Resource Setup Request.
   /// \returns The PDU Session Resource Setup Response.
-  virtual async_task<cu_cp_pdu_session_resource_setup_response>
-  on_new_pdu_session_resource_setup_request(cu_cp_pdu_session_resource_setup_request& request) = 0;
+  virtual async_task<ngap_pdu_session_resource_setup_response>
+  on_new_pdu_session_resource_setup_request(ngap_pdu_session_resource_setup_request& request) = 0;
 
   /// \brief Notify about the reception of a new PDU Session Resource Modify Request.
   /// \param[in] request The received PDU Session Resource Modify Request.
   /// \returns The PDU Session Resource Modify Response.
-  virtual async_task<cu_cp_pdu_session_resource_modify_response>
-  on_new_pdu_session_resource_modify_request(cu_cp_pdu_session_resource_modify_request& request) = 0;
+  virtual async_task<ngap_pdu_session_resource_modify_response>
+  on_new_pdu_session_resource_modify_request(ngap_pdu_session_resource_modify_request& request) = 0;
 
   /// \brief Notify about the reception of a new PDU Session Resource Release Command.
   /// \param[in] command The received PDU Session Resource Release Command.
   /// \returns The PDU Session Resource Release Response.
-  virtual async_task<cu_cp_pdu_session_resource_release_response>
-  on_new_pdu_session_resource_release_command(cu_cp_pdu_session_resource_release_command& command) = 0;
+  virtual async_task<ngap_pdu_session_resource_release_response>
+  on_new_pdu_session_resource_release_command(ngap_pdu_session_resource_release_command& command) = 0;
 
   /// \brief Notify about the reception of a new UE Context Release Command.
   /// \param[in] command the UE Context Release Command.
