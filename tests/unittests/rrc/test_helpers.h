@@ -141,9 +141,11 @@ public:
                                 bool                               cond_meas           = false,
                                 span<const pci_t>                  candidate_pcis      = {}) override
   {
-    std::optional<rrc_meas_cfg> meas_cfg;
-    return meas_cfg;
+    last_current_meas_config = current_meas_config;
+    return std::nullopt;
   }
+
+  std::optional<rrc_meas_cfg> last_current_meas_config;
 
   void on_measurement_report(const rrc_meas_results& meas_results) override {}
 

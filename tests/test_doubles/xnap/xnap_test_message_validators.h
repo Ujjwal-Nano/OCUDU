@@ -35,5 +35,9 @@ bool is_valid_ue_context_release(const ocucp::xnap_message& msg);
 
 byte_buffer get_rrc_container(const ocucp::xnap_message& msg);
 
+/// \brief Returns true if the HandoverRequest contains a HandoverPreparationInfo with AS-Config
+/// carrying a non-empty measConfig (verifies the source packed its meas state for the target).
+bool handover_request_has_as_config_meas_cfg(const ocucp::xnap_message& msg);
+
 } // namespace test_helpers
 } // namespace ocudu

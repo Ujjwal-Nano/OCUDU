@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "xnap_test_message_validators.h"
+#include "ocudu/asn1/rrc_nr/rrc_nr.h"
 #include "ocudu/asn1/xnap/common.h"
 #include "ocudu/asn1/xnap/xnap_pdu_contents.h"
 #include "ocudu/xnap/xnap_message.h"
@@ -93,4 +94,38 @@ byte_buffer ocudu::test_helpers::get_rrc_container(const xnap_message& msg)
   }
 
   return byte_buffer{};
+}
+
+bool ocudu::test_helpers::handover_request_has_as_config_meas_cfg(const xnap_message& msg)
+{
+  if (msg.pdu.type() != asn1::xnap::xn_ap_pdu_c::types_opts::init_msg) {
+    return false;
+  }
+  if (msg.pdu.init_msg().proc_code != ASN1_XNAP_ID_HO_PREP) {
+    return false;
+  }
+
+  // Decode HandoverPreparationInfo from the RRC context.
+  const auto&                  rrc_ctx = msg.pdu.init_msg().value.ho_request()->ue_context_info_ho_request.rrc_context;
+  asn1::rrc_nr::ho_prep_info_s ho_prep;
+  asn1::cbit_ref               bref(rrc_ctx);
+  if (ho_prep.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& ies = ho_prep.crit_exts.c1().ho_prep_info();
+  if (!ies.source_cfg_present) {
+    return false;
+  }
+
+  // Decode AS-Config.rrc-Reconfiguration and verify measConfig is present and non-empty.
+  asn1::rrc_nr::rrc_recfg_s rrc_recfg;
+  asn1::cbit_ref            bref2(ies.source_cfg.rrc_recfg);
+  if (rrc_recfg.unpack(bref2) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& recfg_ies = rrc_recfg.crit_exts.rrc_recfg();
+  return recfg_ies.meas_cfg_present && (recfg_ies.meas_cfg.meas_obj_to_add_mod_list.size() > 0 ||
+                                        recfg_ies.meas_cfg.meas_id_to_add_mod_list.size() > 0);
 }

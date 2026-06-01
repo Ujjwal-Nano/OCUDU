@@ -551,7 +551,38 @@ bool rrc_ue_impl::handle_rrc_handover_preparation_info(byte_buffer pdu)
     }
   }
 
-  // TODO: handle optional fields.
+  // Extract source measConfig from AS-Config so generate_meas_config() can produce explicit
+  // remove lists instead of relying on fullConfig. See TS 38.331 clause 6.2.2 (AS-Config).
+  const auto& ho_prep_ies = ho_prep_info.crit_exts.c1().ho_prep_info();
+  if (ho_prep_ies.source_cfg_present) {
+    asn1::rrc_nr::rrc_recfg_s source_recfg;
+    asn1::cbit_ref            bref2({ho_prep_ies.source_cfg.rrc_recfg.begin(), ho_prep_ies.source_cfg.rrc_recfg.end()});
+    if (source_recfg.unpack(bref2) == asn1::OCUDUASN_SUCCESS && source_recfg.crit_exts.rrc_recfg().meas_cfg_present) {
+      const auto& asn1_meas = source_recfg.crit_exts.rrc_recfg().meas_cfg;
+      // Build a minimal rrc_meas_cfg carrying only the IDs needed for remove-list generation.
+      rrc_meas_cfg source_meas;
+      for (const auto& obj : asn1_meas.meas_obj_to_add_mod_list) {
+        rrc_meas_obj_to_add_mod entry;
+        entry.meas_obj_id = uint_to_meas_obj_id(obj.meas_obj_id);
+        source_meas.meas_obj_to_add_mod_list.push_back(entry);
+      }
+      for (const auto& id : asn1_meas.meas_id_to_add_mod_list) {
+        rrc_meas_id_to_add_mod entry;
+        entry.meas_id = uint_to_meas_id(id.meas_id);
+        source_meas.meas_id_to_add_mod_list.push_back(entry);
+      }
+      for (const auto& rep : asn1_meas.report_cfg_to_add_mod_list) {
+        rrc_report_cfg_to_add_mod entry;
+        entry.report_cfg_id = uint_to_report_cfg_id(rep.report_cfg_id);
+        source_meas.report_cfg_to_add_mod_list.push_back(entry);
+      }
+      context.meas_cfg = std::move(source_meas);
+      logger.log_debug("Stored source measConfig from AS-Config: {} meas objects, {} meas ids, {} report configs",
+                       context.meas_cfg->meas_obj_to_add_mod_list.size(),
+                       context.meas_cfg->meas_id_to_add_mod_list.size(),
+                       context.meas_cfg->report_cfg_to_add_mod_list.size());
+    }
+  }
 
   return true;
 }
@@ -931,8 +962,13 @@ std::optional<rrc_meas_cfg> rrc_ue_impl::generate_meas_config(const std::optiona
                                                               bool                               cond_meas,
                                                               span<const pci_t>                  candidate_pcis)
 {
+  // When no current config is explicitly provided, fall back to the stored context. This enables
+  // the inter-CU HO path to use the source measConfig decoded from AS-Config in
+  // HandoverPreparationInformation, so explicit remove lists are generated instead of fullConfig.
+  const auto& effective_current = current_meas_config.has_value() ? current_meas_config : context.meas_cfg;
+
   auto result = measurement_notifier.on_measurement_config_request(
-      context.cell.cgi.nci, current_meas_config, cond_meas, candidate_pcis);
+      context.cell.cgi.nci, effective_current, cond_meas, candidate_pcis);
 
   if (!cond_meas) {
     // Store regular meas config and derive serving cell MO.
