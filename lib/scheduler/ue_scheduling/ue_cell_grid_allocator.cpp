@@ -420,7 +420,8 @@ void ue_cell_grid_allocator::set_pdsch_params(dl_grant_info&                    
   if (not is_retx) {
     pdsch_sched_ctx.olla_mcs =
         ue_cc.link_adaptation_controller().calculate_dl_mcs(msg.pdsch_cfg.codewords[0].mcs_table);
-    pdsch_sched_ctx.slice_id = grant.user->ran_slice_id();
+    pdsch_sched_ctx.slice_id            = grant.user->ran_slice_id();
+    pdsch_sched_ctx.slot_nof_dl_symbols = cell_cfg.get_nof_dl_symbol_per_slot(pdsch_alloc.slot);
   }
   pdsch_sched_ctx.cqi = ue_cc.channel_state_manager().get_wideband_cqi();
 

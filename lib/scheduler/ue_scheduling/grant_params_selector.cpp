@@ -217,6 +217,12 @@ static std::optional<dl_sched_context> get_dl_sched_context(const slice_ue&     
   const cell_configuration&    cell_cfg         = ue_cell_cfg.cell_cfg_common;
   unsigned                     slot_nof_symbols = cell_cfg.get_nof_dl_symbol_per_slot(pdsch_slot);
 
+  // For reTx, reject slots whose DL symbol count differs from the original newTx slot. This ensures the reTx lands
+  // on the same slot type (full DL vs. special slot), which is required for DMRS and reserved RE patterns to match.
+  if (h_dl != nullptr and slot_nof_symbols != h_dl->get_grant_params().slot_nof_dl_symbols) {
+    return std::nullopt;
+  }
+
   // TODO: Support more search spaces.
   static constexpr search_space_id ue_ded_ss_id = to_search_space_id(2);
   const search_space_info&         ss           = ue_cc.cfg().search_space(ue_ded_ss_id);

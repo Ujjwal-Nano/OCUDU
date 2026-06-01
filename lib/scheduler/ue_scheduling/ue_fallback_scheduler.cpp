@@ -936,6 +936,9 @@ dl_harq_process_handle ue_fallback_scheduler::fill_dl_srb_grant(ue&             
 
   // Save in HARQ the parameters set for this PDCCH and PDSCH PDUs.
   dl_harq_alloc_context ctxt{pdcch.dci.type(), std::nullopt, std::nullopt, std::nullopt, true};
+  if (not is_retx) {
+    ctxt.slot_nof_dl_symbols = cell_cfg.get_nof_dl_symbol_per_slot(pdsch_slot);
+  }
   h_dl->save_grant_params(ctxt, msg);
 
   return *h_dl;
