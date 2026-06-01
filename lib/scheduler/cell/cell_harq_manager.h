@@ -85,11 +85,13 @@ struct dl_harq_process_impl : public base_harq_process {
       units::bytes  sched_bytes;
     };
 
-    dci_dl_rnti_config_type                     dci_cfg_type;
-    vrb_alloc                                   rbs;
-    uint8_t                                     nof_symbols;
-    uint8_t                                     nof_layers{1};
-    bool                                        is_fallback{false};
+    dci_dl_rnti_config_type dci_cfg_type;
+    vrb_alloc               rbs;
+    uint8_t                 nof_symbols;
+    uint8_t                 nof_layers{1};
+    bool                    is_fallback{false};
+    /// Number of DL symbols available in the slot where the newTx was scheduled.
+    uint8_t                                     slot_nof_dl_symbols{0};
     cqi_value                                   cqi;
     pdsch_mcs_table                             mcs_table;
     sch_mcs_index                               mcs;
@@ -247,6 +249,8 @@ struct dl_harq_alloc_context {
   std::optional<cqi_value> cqi;
   /// Whether the HARQ allocation was done in fallback mode.
   bool is_fallback = false;
+  /// Number of DL symbols available in the PDSCH slot at the time of the newTx.
+  uint8_t slot_nof_dl_symbols = 0;
 };
 
 /// \brief Context of the scheduler during the current PUSCH allocation.
