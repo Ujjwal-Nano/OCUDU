@@ -214,6 +214,17 @@ void inter_cu_handover_target_routine::operator()(
       CORO_EARLY_RETURN(generate_handover_resource_allocation_response(false));
     }
 
+    // Set fullConfig so the UE clears source-side measConfig/measGapConfig before applying the
+    // target's new config. The target CU can derive the source meas state from AS-Config in the
+    // HandoverPreparationInformation and generate explicit remove lists (see handle_rrc_handover_preparation_info),
+    // but fullConfig provides an additional safety net for cases where AS-Config is absent or incomplete.
+    // See TS 38.331 clause 6.2.2 (fullConfig optionally present during reconfigurationWithSync)
+    // and clause 5.3.5.11 NOTE 1 (MeasConfig is part of what fullConfig clears).
+    if (!rrc_reconfig_args.non_crit_ext.has_value()) {
+      rrc_reconfig_args.non_crit_ext.emplace();
+    }
+    rrc_reconfig_args.non_crit_ext->full_cfg_present = true;
+
     // Define transaction ID.
     // We set this to zero, as only in the inter CU Handover case, the first RRC transaction of the target UE is an RRC
     // Reconfiguration. When the RRC Reconfig Complete with a transaction ID = 0 is received, we will notify the NGAP to

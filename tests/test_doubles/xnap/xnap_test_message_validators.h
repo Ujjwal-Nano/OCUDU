@@ -39,5 +39,8 @@ byte_buffer get_rrc_container(const ocucp::xnap_message& msg);
 /// carrying a non-empty measConfig (verifies the source packed its meas state for the target).
 bool handover_request_has_as_config_meas_cfg(const ocucp::xnap_message& msg);
 
+/// \brief Returns true if the HandoverCommand inside a Handover Request Ack has fullConfig set.
+bool handover_request_ack_has_full_cfg(const ocucp::xnap_message& msg);
+
 } // namespace test_helpers
 } // namespace ocudu

@@ -129,3 +129,33 @@ bool ocudu::test_helpers::handover_request_has_as_config_meas_cfg(const xnap_mes
   return recfg_ies.meas_cfg_present && (recfg_ies.meas_cfg.meas_obj_to_add_mod_list.size() > 0 ||
                                         recfg_ies.meas_cfg.meas_id_to_add_mod_list.size() > 0);
 }
+
+bool ocudu::test_helpers::handover_request_ack_has_full_cfg(const xnap_message& msg)
+{
+  if (msg.pdu.type() != asn1::xnap::xn_ap_pdu_c::types_opts::successful_outcome) {
+    return false;
+  }
+  if (msg.pdu.successful_outcome().proc_code != ASN1_XNAP_ID_HO_PREP) {
+    return false;
+  }
+
+  // Decode HandoverCommand from target2source transparent container.
+  const auto& container =
+      msg.pdu.successful_outcome().value.ho_request_ack()->target2_source_ng_ra_nnode_transp_container;
+  asn1::rrc_nr::ho_cmd_s ho_cmd;
+  asn1::cbit_ref         bref(container);
+  if (ho_cmd.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  // Decode RRCReconfiguration from HandoverCommand.
+  const auto&               ho_cmd_msg = ho_cmd.crit_exts.c1().ho_cmd().ho_cmd_msg;
+  asn1::rrc_nr::rrc_recfg_s rrc_recfg;
+  asn1::cbit_ref            bref2(ho_cmd_msg);
+  if (rrc_recfg.unpack(bref2) != asn1::OCUDUASN_SUCCESS) {
+    return false;
+  }
+
+  const auto& ies = rrc_recfg.crit_exts.rrc_recfg();
+  return ies.non_crit_ext_present && ies.non_crit_ext.full_cfg_present;
+}

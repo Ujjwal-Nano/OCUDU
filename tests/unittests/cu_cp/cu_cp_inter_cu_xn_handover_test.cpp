@@ -145,6 +145,8 @@ public:
     report_fatal_error_if_not(this->wait_for_xnap_tx_pdu(xnc_peer_idx, xnap_pdu),
                               "Failed to receive Handover Request Ack");
     report_fatal_error_if_not(test_helpers::is_valid_handover_request_ack(xnap_pdu), "Invalid Handover Request Ack");
+    report_fatal_error_if_not(test_helpers::handover_request_ack_has_full_cfg(xnap_pdu),
+                              "fullConfig not set in inter-CU HO RRCReconfiguration");
     return true;
   }
 
