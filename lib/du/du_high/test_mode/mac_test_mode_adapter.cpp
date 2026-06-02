@@ -336,59 +336,69 @@ void mac_test_mode_cell_adapter::forward_crc_ind_to_mac(const mac_crc_indication
 
 void mac_test_mode_cell_adapter::handle_uci(const mac_uci_indication_message& msg)
 {
-  mac_uci_indication_message msg_copy{msg};
+  // Dispatch to the MAC strand to serialize with store_uci (called from slot_indication) and
+  // history.write (called from on_new_uplink_scheduler_results), both of which run on that strand.
+  // Heap-allocate the copy so the lambda fits in the event handler's fixed-size task buffer.
+  auto uci_msg_ptr = std::make_unique<mac_uci_indication_message>(msg);
+  if (not event_handler.schedule(cell_index, [this, uci_msg_ptr = std::move(uci_msg_ptr)]() mutable {
+        mac_uci_indication_message& uci_msg = *uci_msg_ptr;
 
-  if (not test_ue_cfg.auto_ack_indication_delay.has_value()) {
-    const auto entry = history.read(msg.sl_rx);
-    if (entry != nullptr) {
-      // Forward UCI to MAC, but alter the UCI for the test mode UE.
-      for (mac_uci_pdu& test_uci : msg_copy.ucis) {
-        if (ue_info_mgr.is_cell_test_ue(cell_index, test_uci.rnti)) {
-          bool entry_found = false;
-          if (std::holds_alternative<mac_uci_pdu::pusch_type>(test_uci.pdu)) {
-            for (const ul_sched_info& pusch : entry->puschs) {
-              if (pusch.pusch_cfg.rnti == test_uci.rnti and pusch.uci.has_value()) {
-                test_uci    = create_uci_pdu(pusch, test_ue_cfg);
-                entry_found = true;
+        if (not test_ue_cfg.auto_ack_indication_delay.has_value()) {
+          const auto entry = history.read(uci_msg.sl_rx);
+          if (entry != nullptr) {
+            // Forward UCI to MAC, but alter the UCI for the test mode UE.
+            for (mac_uci_pdu& test_uci : uci_msg.ucis) {
+              if (ue_info_mgr.is_cell_test_ue(cell_index, test_uci.rnti)) {
+                bool entry_found = false;
+                if (std::holds_alternative<mac_uci_pdu::pusch_type>(test_uci.pdu)) {
+                  for (const ul_sched_info& pusch : entry->puschs) {
+                    if (pusch.pusch_cfg.rnti == test_uci.rnti and pusch.uci.has_value()) {
+                      test_uci    = create_uci_pdu(pusch, test_ue_cfg);
+                      entry_found = true;
+                    }
+                  }
+                } else {
+                  // PUCCH case.
+                  for (const pucch_info& pucch : entry->pucchs) {
+                    if (pucch_info_and_uci_ind_match(pucch, test_uci)) {
+                      // Intercept the UCI indication and force HARQ-ACK=ACK and UCI.
+                      test_uci    = create_uci_pdu(pucch, test_ue_cfg);
+                      entry_found = true;
+                    }
+                  }
+                }
+
+                if (not entry_found) {
+                  logger.warning(
+                      "TEST_MODE c-rnti={}: Failed to set UCI value for slot={}. Cause: Mismatch between provided "
+                      "UCI and expected UCI",
+                      test_uci.rnti,
+                      uci_msg.sl_rx);
+                }
               }
             }
           } else {
-            // PUCCH case.
-            for (const pucch_info& pucch : entry->pucchs) {
-              if (pucch_info_and_uci_ind_match(pucch, test_uci)) {
-                // Intercept the UCI indication and force HARQ-ACK=ACK and UCI.
-                test_uci    = create_uci_pdu(pucch, test_ue_cfg);
-                entry_found = true;
-              }
-            }
+            // Failed to lock entry in history ring.
+            logger.warning("TEST_MODE: Unable to set UCI value for slot={}. Cause: Overflow detected in test mode "
+                           "internal storage",
+                           uci_msg.sl_rx);
           }
-
-          if (not entry_found) {
-            logger.warning(
-                "TEST_MODE c-rnti={}: Failed to set UCI value for slot={}. Cause: Mismatch between provided UCI and "
-                "expected UCI",
-                test_uci.rnti,
-                msg.sl_rx);
-          }
+        } else {
+          // In case of auto-ACK mode, test mode UEs are removed from UCI.
+          uci_msg.ucis.erase(
+              std::remove_if(uci_msg.ucis.begin(),
+                             uci_msg.ucis.end(),
+                             [this](const auto& u) { return ue_info_mgr.is_cell_test_ue(cell_index, u.rnti); }),
+              uci_msg.ucis.end());
         }
-      }
-    } else {
-      // Failed to lock entry in history ring.
-      logger.warning("TEST_MODE: Unable to set UCI value for slot={}. Cause: Overflow detected in test mode "
-                     "internal storage",
-                     msg.sl_rx);
-    }
-  } else {
-    // In case of auto-ACK mode, test mode UEs are removed from UCI.
-    msg_copy.ucis.erase(
-        std::remove_if(msg_copy.ucis.begin(),
-                       msg_copy.ucis.end(),
-                       [this](const auto& u) { return ue_info_mgr.is_cell_test_ue(cell_index, u.rnti); }),
-        msg_copy.ucis.end());
-  }
 
-  // Forward UCI indication to real MAC.
-  forward_uci_ind_to_mac(msg_copy);
+        // Forward UCI indication to real MAC.
+        forward_uci_ind_to_mac(uci_msg);
+      })) {
+    logger.warning("TEST_MODE: Unable to handle UCI for slot={}. Cause: Overflow of the test mode "
+                   "internal storage",
+                   msg.sl_rx);
+  }
 }
 
 void mac_test_mode_cell_adapter::handle_srs(const mac_srs_indication_message& msg)
@@ -399,12 +409,6 @@ void mac_test_mode_cell_adapter::handle_srs(const mac_srs_indication_message& ms
 // Intercepts the sched + signalling results coming from the MAC.
 void mac_test_mode_cell_adapter::on_new_downlink_scheduler_results(const mac_dl_sched_result& dl_res)
 {
-  if (last_slot_ind != dl_res.slot) {
-    // Process any pending tasks for the test mode asynchronously.
-    event_handler.process_pending_tasks(cell_index);
-    last_slot_ind = dl_res.slot;
-  }
-
   for (auto& grant : dl_res.dl_res->ue_grants) {
     rnti_t crnti = grant.pdsch_cfg.rnti;
     if (not ue_info_mgr.is_cell_test_ue(cell_index, crnti) or ue_info_mgr.is_msg4_rxed(crnti)) {
@@ -451,12 +455,6 @@ void mac_test_mode_cell_adapter::on_new_downlink_scheduler_results(const mac_dl_
 // Intercepts the UL results coming from the MAC.
 void mac_test_mode_cell_adapter::on_new_uplink_scheduler_results(const mac_ul_sched_result& ul_res)
 {
-  if (last_slot_ind != ul_res.slot) {
-    // Process any pending tasks for the test mode asynchronously.
-    event_handler.process_pending_tasks(cell_index);
-    last_slot_ind = ul_res.slot;
-  }
-
   // Update history.
   {
     auto entry = history.write(ul_res.slot);
@@ -487,6 +485,10 @@ void mac_test_mode_cell_adapter::on_cell_results_completion(slot_point slot)
 {
   // Forward result to lower layers.
   result_notifier.on_cell_results_completion(slot);
+
+  // Drain any handle_uci tasks deferred from the fastpath strand. Called unconditionally here
+  // because on_new_uplink_scheduler_results is skipped on DL-only slots.
+  event_handler.process_pending_tasks(cell_index);
 
   // Notify test mode controller about completed slot.
   ev_notifier.on_slot_completed(cell_index, slot);

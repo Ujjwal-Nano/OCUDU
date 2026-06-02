@@ -114,8 +114,6 @@ private:
 
   mac_test_mode_event_handler& event_handler;
   mac_test_mode_ue_repository& ue_info_mgr;
-
-  slot_point last_slot_ind;
 };
 
 /// MAC controller in test mode.
