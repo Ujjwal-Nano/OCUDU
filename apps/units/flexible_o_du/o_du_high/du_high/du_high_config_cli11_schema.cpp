@@ -511,7 +511,7 @@ static void configure_cli11_ssb_args(CLI::App& app, du_high_unit_ssb_config& ssb
 
         if (temp_value == 0) {
           ssb_params.pss_to_sss_epre = ocudu::ssb_pss_to_sss_epre::dB_0;
-        } else if (temp_value == 3) {
+        } else {
           ssb_params.pss_to_sss_epre = ocudu::ssb_pss_to_sss_epre::dB_3;
         }
       },
