@@ -562,6 +562,9 @@ async_task<bool> cu_cp_impl::handle_ue_context_transfer(cu_cp_ue_index_t ue_inde
     // Transfer location reporting configuration from source UE to new UE.
     ue->get_location_manager().set_config(source_ue->get_location_manager().get_config());
 
+    // Transfer UE AMBR from source UE to new UE.
+    ue->set_ue_ambr(source_ue->get_ue_ambr());
+
     return true;
   };
 
