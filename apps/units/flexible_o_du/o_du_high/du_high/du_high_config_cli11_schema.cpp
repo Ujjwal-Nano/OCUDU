@@ -513,8 +513,6 @@ static void configure_cli11_ssb_args(CLI::App& app, du_high_unit_ssb_config& ssb
           ssb_params.pss_to_sss_epre = ocudu::ssb_pss_to_sss_epre::dB_0;
         } else if (temp_value == 3) {
           ssb_params.pss_to_sss_epre = ocudu::ssb_pss_to_sss_epre::dB_3;
-        } else {
-          report_fatal_error("Unsupported --pss_to_sss_epre_db value '{}'", temp_value);
         }
       },
       "SSB PSS to SSS EPRE ratio in dB {0, 3}")
