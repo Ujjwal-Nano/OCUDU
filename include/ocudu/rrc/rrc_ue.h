@@ -298,8 +298,19 @@ public:
                        bool                               cond_meas           = false,
                        span<const pci_t>                  candidate_pcis      = {}) = 0;
 
-  /// \brief Get the packed RRC measurement config for the current serving cell of the UE.
-  virtual byte_buffer get_packed_meas_config() = 0;
+  /// \brief Get the packed RRC MeasConfig IE for the UE.
+  ///
+  /// When called with an empty (default) candidate_pcis, returns the regular serving-cell
+  /// measurement config and updates the stored context. When called with a non-empty
+  /// candidate_pcis, returns the CHO-specific config filtered to those candidates without
+  /// touching the stored context.
+  virtual byte_buffer get_packed_meas_config(span<const pci_t> candidate_pcis = {}) = 0;
+
+  /// \brief Update the stored measurement config to reflect a config that has been applied at the UE.
+  ///
+  /// Call this after the UE acknowledges an RRCReconfiguration that carried a measConfig (e.g. the
+  /// outer CHO RRCReconfiguration), so that context.meas_cfg stays in sync with VarMeasConfig.
+  virtual void update_meas_config(const rrc_meas_cfg& cfg) = 0;
 
   /// \brief Get the serving cell measurement object for the current serving cell of the UE.
   virtual std::optional<uint8_t> get_serving_cell_mo() = 0;

@@ -730,11 +730,13 @@ public:
     return meas_config;
   }
 
-  byte_buffer get_packed_meas_config() override
+  byte_buffer get_packed_meas_config(span<const pci_t> /* candidate_pcis */ = {}) override
   {
     logger.info("Received a new request to get packed RRC UE meas config");
     return {};
   }
+
+  void update_meas_config(const rrc_meas_cfg& /* cfg */) override {}
 
   std::optional<uint8_t> get_serving_cell_mo() override
   {

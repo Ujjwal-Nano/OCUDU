@@ -635,6 +635,17 @@ rrc_ue_impl::get_rrc_ue_cond_reconfiguration_context(const rrc_reconfiguration_p
     recfg_ies.meas_cfg_present = true;
     recfg_ies.meas_cfg         = meas_config_to_rrc_asn1(request.meas_cfg.value());
 
+    // Include measurement gap config so the UE can perform inter-frequency measurements
+    // during CHO condition evaluation (before any handover executes).
+    if (!request.meas_gap_cfg.empty()) {
+      recfg_ies.meas_cfg.meas_gap_cfg_present = true;
+      asn1::cbit_ref bref(request.meas_gap_cfg);
+      if (recfg_ies.meas_cfg.meas_gap_cfg.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+        logger.log_warning("ue={}: Failed to decode measGapConfig for outer CHO RRCReconfiguration", context.ue_index);
+        recfg_ies.meas_cfg.meas_gap_cfg_present = false;
+      }
+    }
+
     logger.log_debug("ue={}: Using CHO-specific measConfig with condTriggerConfig-r16 - {} meas_obj, {} "
                      "report_cfg, {} meas_id",
                      context.ue_index,
@@ -950,17 +961,39 @@ std::optional<rrc_meas_cfg> rrc_ue_impl::generate_meas_config(const std::optiona
   return result;
 }
 
-byte_buffer rrc_ue_impl::get_packed_meas_config()
+byte_buffer rrc_ue_impl::get_packed_meas_config(span<const pci_t> candidate_pcis)
 {
-  // (Re-)generate measurement config.
-  generate_meas_config(context.meas_cfg);
+  if (!candidate_pcis.empty()) {
+    auto cfg = generate_meas_config(context.meas_cfg, true, candidate_pcis);
+    if (!cfg.has_value()) {
+      return {};
+    }
+    // Convert to ASN1, pack and return.
+    return pack_into_pdu(meas_config_to_rrc_asn1(cfg.value()), "RRCMeasConfig");
+  }
 
+  // (Re-)generate regular measurement config and update stored context.
+  generate_meas_config(context.meas_cfg);
   if (context.meas_cfg.has_value()) {
     // Convert to ASN1, pack and return.
     return pack_into_pdu(meas_config_to_rrc_asn1(context.meas_cfg.value()), "RRCMeasConfig");
   }
 
   return {};
+}
+
+void rrc_ue_impl::update_meas_config(const rrc_meas_cfg& cfg)
+{
+  context.meas_cfg = cfg;
+  // Re-derive the serving cell measurement object ID from the new config.
+  if (context.meas_cfg.has_value()) {
+    for (const auto& meas_obj : context.meas_cfg.value().meas_obj_to_add_mod_list) {
+      if (meas_obj.meas_obj_nr.has_value() && meas_obj.meas_obj_nr->ssb_freq == context.cell.ssb_arfcn) {
+        context.serving_cell_mo = meas_obj_id_to_uint(meas_obj.meas_obj_id);
+        break;
+      }
+    }
+  }
 }
 
 std::optional<uint8_t> rrc_ue_impl::get_serving_cell_mo()

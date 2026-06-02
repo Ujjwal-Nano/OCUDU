@@ -51,8 +51,21 @@ void conditional_handover_reconfiguration_routine::operator()(coro_context<async
     }
   }
 
+  // Request measGapConfig from the source DU so the UE can perform inter-frequency measurements
+  // during CHO condition evaluation. The source DU is best positioned to choose a gapOffset that
+  // does not conflict with its own downlink scheduling (gapOffset is relative to PCell SFN per
+  // TS 38.331 Section 5.5.2.9 NOTE 2). The DU returns empty meas_gap_cfg for intra-frequency CHO.
+  generate_gap_request();
+  CORO_AWAIT_VALUE(gap_response,
+                   source_du_f1ap_ue_ctxt_mng.handle_ue_context_modification_request(ue_context_mod_request));
+  if (!gap_response.success) {
+    logger.warning("ue={}: \"{}\" - source DU gap request failed; CHO will proceed without measGapConfig",
+                   source_ue.get_ue_index(),
+                   name());
+  }
+
   // Build the conditional reconfiguration message.
-  rrc_container = build_conditional_reconfiguration_message();
+  rrc_container = build_conditional_reconfiguration_message(gap_response.du_to_cu_rrc_info.meas_gap_cfg);
   if (rrc_container.empty()) {
     logger.warning(
         "ue={}: \"{}\" failed. Could not build conditional reconfiguration", source_ue.get_ue_index(), name());
@@ -140,6 +153,12 @@ void conditional_handover_reconfiguration_routine::operator()(coro_context<async
     CORO_EARLY_RETURN(false);
   }
 
+  // The UE has applied the CHO measConfig to its VarMeasConfig (TS 38.331 Section 5.3.5.3).
+  // Update the stored context so the gNB tracks the correct UE measurement state.
+  if (cho_meas_result.has_value()) {
+    source_ue.get_rrc_ue()->update_meas_config(cho_meas_result.value());
+  }
+
   // Set CHO state to execution.
   {
     auto& cho_ctx = source_ue.get_cho_context();
@@ -155,7 +174,8 @@ void conditional_handover_reconfiguration_routine::operator()(coro_context<async
   CORO_RETURN(true);
 }
 
-byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reconfiguration_message()
+byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reconfiguration_message(
+    const byte_buffer& source_du_meas_gap_cfg)
 {
   auto& cho_ctx = source_ue.get_cho_context();
   if (!cho_ctx.has_value() || cho_ctx->candidates.empty()) {
@@ -177,7 +197,7 @@ byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reco
   rrc_request.cho_candidates = std::vector<cu_cp_ue_cho_candidate>();
 
   // Generate CHO-specific measurement config filtered for candidate targets.
-  auto cho_meas_result =
+  cho_meas_result =
       source_ue.get_rrc_ue()->generate_meas_config(source_rrc_context.meas_cfg, true, candidate_target_pcis);
 
   if (!cho_meas_result.has_value()) {
@@ -185,8 +205,14 @@ byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reco
     return {};
   }
   cho_meas_id_map_t cho_nci_to_meas_ids = cho_meas_result->nci_to_meas_ids;
-  rrc_request.meas_cfg                  = std::move(cho_meas_result);
-  rrc_request.cho_nci_to_meas_ids       = std::move(cho_nci_to_meas_ids);
+  // When candidates are on different ARFCNs the UE needs measurement gaps to evaluate CHO
+  // conditions. Use the measGapConfig provided by the source DU (gapOffset is relative to the
+  // source PCell SFN per TS 38.331 Section 5.5.2.9 NOTE 2).
+  if (cho_meas_result->meas_obj_to_add_mod_list.size() > 1 && !source_du_meas_gap_cfg.empty()) {
+    rrc_request.meas_gap_cfg = source_du_meas_gap_cfg.copy();
+  }
+  rrc_request.meas_cfg            = cho_meas_result; // copy; member kept for post-ack context update
+  rrc_request.cho_nci_to_meas_ids = std::move(cho_nci_to_meas_ids);
 
   // Apply runtime T1 threshold override.
   if (request.t1_thres_override.has_value() && rrc_request.meas_cfg.has_value()) {
@@ -237,8 +263,28 @@ byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reco
   return std::move(cond_reconf_ctxt.rrc_ue_cond_reconfiguration_pdu);
 }
 
+void conditional_handover_reconfiguration_routine::generate_gap_request()
+{
+  ue_context_mod_request              = {};
+  ue_context_mod_request.ue_index     = source_ue.get_ue_index();
+  ue_context_mod_request.need_for_gap = true;
+
+  // Include the CHO measurement config so the source DU knows which inter-frequency candidates
+  // require gaps and can choose an appropriate gap pattern.
+  std::vector<pci_t> candidate_pcis;
+  for (const auto& candidate : source_ue.get_cho_context()->candidates) {
+    candidate_pcis.push_back(candidate.target_pci);
+  }
+  byte_buffer packed_meas = source_ue.get_rrc_ue()->get_packed_meas_config(candidate_pcis);
+  if (!packed_meas.empty()) {
+    ue_context_mod_request.cu_to_du_rrc_info.emplace();
+    ue_context_mod_request.cu_to_du_rrc_info->meas_cfg = std::move(packed_meas);
+  }
+}
+
 void conditional_handover_reconfiguration_routine::generate_ue_context_modification_request()
 {
+  ue_context_mod_request               = {};
   ue_context_mod_request.ue_index      = source_ue.get_ue_index();
   ue_context_mod_request.rrc_container = rrc_container.copy();
 
