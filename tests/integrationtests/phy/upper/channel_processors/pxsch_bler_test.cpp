@@ -30,9 +30,9 @@ static constexpr subcarrier_spacing scs                         = subcarrier_spa
 static constexpr uint16_t           rnti                        = 0x1234;
 static constexpr unsigned           bwp_start_rb                = 0;
 static constexpr unsigned           nof_ofdm_symbols            = 14;
-static const symbol_slot_mask       dmrs_symbol_mask            = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0};
+static const symbol_slot_mask       dmrs_mask                   = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0};
 static constexpr unsigned           nof_ldpc_iterations         = 10;
-static constexpr dmrs_type          dmrs                        = dmrs_type::TYPE1;
+static constexpr dmrs_config_type   dmrs                        = dmrs_config_type::type1;
 static constexpr unsigned           nof_cdm_groups_without_data = 2;
 static constexpr cyclic_prefix      cy_prefix                   = cyclic_prefix::NORMAL;
 static constexpr unsigned           rv                          = 0;
@@ -131,7 +131,7 @@ public:
   ~pxsch_bler_test() { teardown(); }
 
 private:
-  std::shared_ptr<resource_grid_factory> create_grid_factory()
+  static std::shared_ptr<resource_grid_factory> create_grid_factory()
   {
     std::shared_ptr<channel_precoder_factory> precod_factory = create_channel_precoder_factory("auto");
     report_fatal_error_if_not(precod_factory, "Failed to create channel precoding factory.");
@@ -212,7 +212,7 @@ private:
     tbs_config.n_prb                        = freq_allocation.length();
     tbs_config.nof_layers                   = nof_layers;
     tbs_config.nof_symb_sh                  = nof_ofdm_symbols;
-    tbs_config.nof_dmrs_prb = dmrs.nof_dmrs_per_rb() * dmrs_symbol_mask.count() * nof_cdm_groups_without_data;
+    tbs_config.nof_dmrs_prb = get_nof_re_per_prb(dmrs) * dmrs_mask.count() * nof_cdm_groups_without_data;
     units::bytes tbs        = tbs_calculator_calculate(tbs_config);
 
     // Select LDPC base graph.
@@ -279,7 +279,7 @@ private:
     pdsch_config.cp                          = cy_prefix;
     pdsch_config.n_id                        = n_id;
     pdsch_config.ref_point                   = pdsch_processor::pdu_t::PRB0;
-    pdsch_config.dmrs_symbol_mask            = dmrs_symbol_mask;
+    pdsch_config.dmrs_symbol_mask            = dmrs_mask;
     pdsch_config.dmrs                        = dmrs;
     pdsch_config.scrambling_id               = scrambling_id;
     pdsch_config.n_scid                      = n_scid;
@@ -299,23 +299,23 @@ private:
     std::iota(rx_ports.begin(), rx_ports.end(), 0U);
 
     // Prepare PUSCH processor configuration.
-    pusch_config.context            = std::nullopt;
-    pusch_config.slot               = slot_point(to_numerology_value(scs), 0);
-    pusch_config.rnti               = rnti;
-    pusch_config.bwp_size_rb        = bwp_size_rb;
-    pusch_config.bwp_start_rb       = bwp_start_rb;
-    pusch_config.cp                 = cy_prefix;
-    pusch_config.mcs_descr          = mcs_descr;
-    pusch_config.codeword           = {rv, ldpc_base_graph, true};
-    pusch_config.uci                = {};
-    pusch_config.n_id               = n_id;
-    pusch_config.nof_tx_layers      = nof_layers;
-    pusch_config.rx_ports           = rx_ports;
-    pusch_config.dmrs_symbol_mask   = dmrs_symbol_mask;
-    pusch_config.dmrs               = pusch_processor::dmrs_configuration{.dmrs                        = dmrs,
-                                                                          .scrambling_id               = scrambling_id,
-                                                                          .n_scid                      = n_scid,
-                                                                          .nof_cdm_groups_without_data = nof_cdm_groups_without_data};
+    pusch_config.context          = std::nullopt;
+    pusch_config.slot             = slot_point(to_numerology_value(scs), 0);
+    pusch_config.rnti             = rnti;
+    pusch_config.bwp_size_rb      = bwp_size_rb;
+    pusch_config.bwp_start_rb     = bwp_start_rb;
+    pusch_config.cp               = cy_prefix;
+    pusch_config.mcs_descr        = mcs_descr;
+    pusch_config.codeword         = {rv, ldpc_base_graph, true};
+    pusch_config.uci              = {};
+    pusch_config.n_id             = n_id;
+    pusch_config.nof_tx_layers    = nof_layers;
+    pusch_config.rx_ports         = rx_ports;
+    pusch_config.dmrs_symbol_mask = dmrs_mask;
+    pusch_config.dmrs = pusch_processor::dmrs_configuration{.dmrs                        = dmrs,
+                                                            .scrambling_id               = scrambling_id,
+                                                            .n_scid                      = n_scid,
+                                                            .nof_cdm_groups_without_data = nof_cdm_groups_without_data};
     pusch_config.freq_alloc         = freq_alloc;
     pusch_config.start_symbol_index = 0;
     pusch_config.nof_symbols        = nof_ofdm_symbols;
