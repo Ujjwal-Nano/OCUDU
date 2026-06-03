@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "e2_entity.h"
+#include "../procedures/e2_reconnection_routine.h"
 #include "../procedures/e2_setup_routine.h"
 #include "e2_impl.h"
 #include "e2_subscription_manager_impl.h"
@@ -41,9 +42,6 @@ e2_entity::e2_entity(e2_agent_dependencies&& dependencies) :
 
 void e2_entity::start()
 {
-  // Create e2ap (sctp) connection to RIC.
-  e2ap->handle_e2_tnl_connection_request();
-
   // Start a 5-second timeout so that the setup coroutine is not blocked indefinitely waiting for
   // interface-setup bytes that may never arrive (e.g. if no F1/NG/E1 setup is performed).
   // Dispatch the callback body to task_exec so the aggregator event is only accessed on the E2 thread.
@@ -57,8 +55,14 @@ void e2_entity::start()
   if (not task_exec.execute([this]() {
         main_ctrl_loop.schedule([this](coro_context<async_task<void>>& ctx) {
           CORO_BEGIN(ctx);
-          CORO_AWAIT(
-              launch_async<e2_setup_routine>(cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, timers, logger));
+          if (e2ap->handle_e2_tnl_connection_request()) {
+            CORO_AWAIT(launch_async<e2_setup_routine>(
+                cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, timers, logger));
+          } else {
+            // RIC not reachable at startup — enter the reconnection loop immediately.
+            CORO_AWAIT(launch_async<e2_reconnection_routine>(
+                cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, *subscription_mngr, timers, logger));
+          }
           CORO_RETURN();
         });
       })) {
@@ -83,7 +87,11 @@ void e2_entity::stop()
 
 void e2_entity::on_e2_disconnection()
 {
-  logger.info("E2 connection was closed.");
-  // TODO: notify all components about the E2 disconnection (e.g., stop running indication procedures).
-  subscription_mngr->stop();
+  logger.warning("E2 connection lost. Scheduling reconnection...");
+  main_ctrl_loop.schedule([this](coro_context<async_task<void>>& ctx) {
+    CORO_BEGIN(ctx);
+    CORO_AWAIT(launch_async<e2_reconnection_routine>(
+        cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, *subscription_mngr, timers, logger));
+    CORO_RETURN();
+  });
 }
