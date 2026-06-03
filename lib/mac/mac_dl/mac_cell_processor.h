@@ -14,6 +14,7 @@
 #include "rar_pdu_assembler.h"
 #include "sib_pdu_assembler.h"
 #include "ssb_assembler.h"
+#include "ocudu/mac/phy_cell_operation_controller.h"
 #include "ocudu/support/async/manual_event.h"
 #include "ocudu/support/memory_pool/ring_buffer_pool.h"
 
@@ -119,6 +120,16 @@ private:
   // Represents cell activation state.
   enum class cell_state { inactive, active } state = cell_state::inactive;
   manual_event_flag stop_completed;
+
+  /// \brief Optional PHY cell operation controller. When set, start()/stop() propagate to the PHY via FAPI P5
+  /// START/STOP procedures. When null, MAC toggles its own state only and the PHY is not notified.
+  phy_cell_operation_controller* phy_cell_op_controller = nullptr;
+
+  /// True until start() has run once. The very first activation happens during DU.start() while
+  /// FAPI executors are not yet pumping their queues, so awaiting the FAPI START handshake would
+  /// deadlock. On the first call we skip the await and rely on the gate defaulting to active.
+  /// Subsequent activations (runtime lock/unlock) take the full FAPI path.
+  bool is_first_activation = true;
 
   mac_pcap& pcap;
 

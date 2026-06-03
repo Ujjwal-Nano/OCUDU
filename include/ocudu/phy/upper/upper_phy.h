@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <functional>
+
 namespace ocudu {
 
 class downlink_pdu_validator;
@@ -88,6 +90,13 @@ public:
   ///
   /// It shall wait for pending tasks that have cross dependencies to finish their processing.
   virtual void stop() = 0;
+
+  /// \brief Wires the activation target invoked by the operation controller.
+  ///
+  /// Called by the o_du_low factory after the FAPI adaptor exists, to bind
+  /// upper_phy_operation_controller::start()/stop() to the per-sector slot-indication gate in the
+  /// FAPI P7 translator. Decouples the upper PHY layer from FAPI internals.
+  virtual void set_operation_controller_active_target(std::function<void(bool)> target) = 0;
 };
 
 } // namespace ocudu

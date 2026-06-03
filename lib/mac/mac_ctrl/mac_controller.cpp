@@ -49,7 +49,8 @@ mac_cell_controller& mac_controller::add_cell(const mac_cell_creation_request& c
   return dl_unit.add_cell(cell_add_req,
                           mac_cell_config_dependencies{std::move(cell_time_source),
                                                        cell_metrics_cfg.report_period,
-                                                       cell_metrics_cfg.mac_notifier});
+                                                       cell_metrics_cfg.mac_notifier,
+                                                       cell_add_req.phy_cell_op_controller});
 }
 
 void mac_controller::remove_cell(du_cell_index_t cell_index)

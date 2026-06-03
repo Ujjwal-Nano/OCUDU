@@ -34,6 +34,14 @@ void phy_to_fapi_time_event_fastpath_translator::on_tti_boundary(const upper_phy
 {
   translator.handle_new_slot(context.slot.without_hyper_sfn());
 
+  // FAPI lifecycle gate: only deliver slot indications when the cell is active. PHY housekeeping
+  // (handle_new_slot above) still runs so the resource grid stays in sync, but MAC sees no slot
+  // ticks for an inactive cell and therefore stops issuing DL grants — no PDSCH/SSB symbols are
+  // placed in the resource grid, which is what takes the cell off the air.
+  if (!active.load(std::memory_order_relaxed)) {
+    return;
+  }
+
   // Delivering the slot.indication message must always be the last step.
   slot_indication_notifier->on_slot_indication(fapi::build_slot_indication(context.slot, context.time_point));
 }
