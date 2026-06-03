@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp.h"
 #include "ocudu/f1ap/cu_cp/f1ap_cu.h"
 #include "ocudu/ngap/ngap.h"
@@ -13,6 +12,7 @@
 #include "ocudu/nrppa/nrppa.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/rrc_du.h"
+#include "ocudu/rrc/rrc_resume.h"
 #include "ocudu/rrc/rrc_ue.h"
 #include "ocudu/xnap/xnap_handover.h"
 
@@ -186,7 +186,7 @@ public:
 
   /// \brief Handle the reception of an Bearer Context Inactivity Notification message.
   /// \param[in] msg The received Bearer Context Inactivity Notification message.
-  virtual void handle_bearer_context_inactivity_notification(const cu_cp_inactivity_notification& msg) = 0;
+  virtual void handle_bearer_context_inactivity_notification(const e1ap_inactivity_notification& msg) = 0;
 
   /// \brief Handles the reception of a DL Data Notification message.
   /// \param[in] ue_index The index of the UE.
@@ -269,8 +269,7 @@ public:
   /// \brief Handle the reception of an RRC Resume Request.
   /// \param[in] request The resume request.
   /// \returns The RRC Resume Request response.
-  virtual async_task<rrc_resume_request_response>
-  handle_rrc_resume_request(const cu_cp_rrc_resume_request& request) = 0;
+  virtual async_task<rrc_resume_request_response> handle_rrc_resume_request(const rrc_resume_request& request) = 0;
 
   /// \brief Initiate RAN paging for a UE in RRC Inactive state.
   virtual void handle_ran_paging_required(cu_cp_ue_index_t ue_index) = 0;

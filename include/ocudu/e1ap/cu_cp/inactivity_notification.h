@@ -5,15 +5,15 @@
 #pragma once
 
 #include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/cu_types.h"
 
 namespace ocudu::ocucp {
 
-struct ngap_rrc_inactive_transition_report {
-  enum class ngap_rrc_state { inactive = 0, connected };
-
-  cu_cp_ue_index_t            ue_index = cu_cp_ue_index_t::invalid;
-  ngap_rrc_state              rrc_state;
-  cu_cp_user_location_info_nr user_location_info;
+struct e1ap_inactivity_notification {
+  cu_cp_ue_index_t              ue_index    = cu_cp_ue_index_t::invalid;
+  bool                          ue_inactive = false;
+  std::vector<drb_id_t>         inactive_drbs;
+  std::vector<pdu_session_id_t> inactive_pdu_sessions;
 };
 
 } // namespace ocudu::ocucp

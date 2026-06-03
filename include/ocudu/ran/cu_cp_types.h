@@ -4,6 +4,11 @@
 
 #pragma once
 
+#include "ocudu/adt/byte_buffer.h"
+#include "ocudu/ran/cause/e1ap_cause.h"
+#include "ocudu/ran/cause/f1ap_cause.h"
+#include "ocudu/ran/cause/ngap_cause.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/ran/gnb_id.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/plmn_identity.h"
@@ -105,15 +110,42 @@ constexpr std::underlying_type_t<xnc_gateway_index_t> xnc_gateway_index_to_uint(
   return static_cast<std::underlying_type_t<xnc_gateway_index_t>>(gw_index);
 }
 
+struct cu_cp_global_gnb_id {
+  plmn_identity plmn_id = plmn_identity::test_value();
+  gnb_id_t      gnb_id;
+};
+
+/// Notification from the E1AP/F1AP that transaction reference information for some UEs has been lost.
+struct ue_transaction_info_loss_event {
+  std::vector<cu_cp_ue_index_t> ues_lost;
+};
+
+/// Common interface reset message for E1AP (E1 Reset), F1AP (F1 Reset) and NGAP (NG Reset).
+struct cu_cp_reset {
+  std::variant<e1ap_cause_t, f1ap_cause_t, ngap_cause_t> cause;
+  bool                                                   interface_reset = false;
+  std::vector<cu_cp_ue_index_t>                          ues_to_reset;
+};
+
 struct cu_cp_user_location_info_nr {
   nr_cell_global_id_t     nr_cgi;
   tai_t                   tai;
   std::optional<uint64_t> time_stamp;
 };
 
-struct cu_cp_global_gnb_id {
-  plmn_identity plmn_id = plmn_identity::test_value();
-  gnb_id_t      gnb_id;
+struct cu_cp_initial_ue_message {
+  cu_cp_ue_index_t               ue_index = cu_cp_ue_index_t::invalid;
+  byte_buffer                    nas_pdu;
+  establishment_cause_t          establishment_cause;
+  cu_cp_user_location_info_nr    user_location_info;
+  std::optional<five_g_s_tmsi_t> five_g_s_tmsi;
+  std::optional<uint16_t>        amf_set_id;
+};
+
+struct cu_cp_ul_nas_transport {
+  cu_cp_ue_index_t            ue_index = cu_cp_ue_index_t::invalid;
+  byte_buffer                 nas_pdu;
+  cu_cp_user_location_info_nr user_location_info;
 };
 
 } // namespace ocudu

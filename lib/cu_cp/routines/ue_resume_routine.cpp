@@ -4,15 +4,14 @@
 
 #include "ue_resume_routine.h"
 #include "pdu_session_routine_helpers.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 
 using namespace ocudu;
 using namespace ocucp;
 using namespace asn1::rrc_nr;
 
-static bool verify_rrc_resume_request(const cu_cp_rrc_resume_request& request,
-                                      ue_manager&                     ue_mng,
-                                      const ocudulog::basic_logger&   logger)
+static bool
+verify_rrc_resume_request(const rrc_resume_request& request, ue_manager& ue_mng, const ocudulog::basic_logger& logger)
 {
   if (request.ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("UE index must not be invalid");
@@ -27,7 +26,7 @@ static bool verify_rrc_resume_request(const cu_cp_rrc_resume_request& request,
   return true;
 }
 
-ue_resume_routine::ue_resume_routine(const cu_cp_rrc_resume_request&        request_,
+ue_resume_routine::ue_resume_routine(const rrc_resume_request&              request_,
                                      const ue_configuration&                ue_cfg_,
                                      du_processor&                          du_proc_,
                                      cu_cp_ue_context_manipulation_handler& ue_context_handler_,

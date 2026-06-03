@@ -10,6 +10,7 @@
 #include "../up_resource_manager/up_resource_manager_impl.h"
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/cu_cp/ue_task_scheduler.h"
+#include "ocudu/f1ap/cu_cp/f1ap_rrc_msg_transfer_handling.h"
 #include "ocudu/ngap/ngap.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/rrc_ue.h"
@@ -223,7 +224,7 @@ public:
     return ue_removal_handler->handle_ue_removal_request(ue_index);
   }
 
-  async_task<rrc_resume_request_response> on_rrc_resume_request(const cu_cp_rrc_resume_request& request) override
+  async_task<rrc_resume_request_response> on_rrc_resume_request(const rrc_resume_request& request) override
   {
     ocudu_assert(cu_cp_rrc_ue_handler != nullptr, "CU-CP handler must not be nullptr");
     return cu_cp_rrc_ue_handler->handle_rrc_resume_request(request);

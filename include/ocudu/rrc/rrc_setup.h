@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include "ocudu/ran/cu_cp_types.h"
+#include <cstdint>
 
 namespace ocudu::ocucp {
 
-struct ngap_rrc_inactive_transition_report {
-  enum class ngap_rrc_state { inactive = 0, connected };
-
-  cu_cp_ue_index_t            ue_index = cu_cp_ue_index_t::invalid;
-  ngap_rrc_state              rrc_state;
-  cu_cp_user_location_info_nr user_location_info;
+/// <AMF Identifier> = <AMF Region ID><AMF Set ID><AMF Pointer>
+/// with AMF Region ID length is 8 bits, AMF Set ID length is 10 bits and AMF Pointer length is 6 bits
+struct amf_identifier_t {
+  uint8_t  amf_region_id = 0;
+  uint16_t amf_set_id    = 0;
+  uint8_t  amf_pointer   = 0;
 };
 
 } // namespace ocudu::ocucp
