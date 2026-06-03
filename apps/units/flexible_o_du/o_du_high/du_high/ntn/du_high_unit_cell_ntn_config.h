@@ -66,6 +66,8 @@ struct du_high_unit_cell_ntn_config {
   std::optional<sat_switch_with_resync_t> sat_switch_with_resync;
   /// List of NTN neighbor cells.
   std::vector<neighbor_ntn_cell> ncells;
+  /// Orbit propagator to use for ephemeris propagation. Allowed values: "rk4", "keplerian".
+  std::string propagator_type = "rk4";
 };
 
 } // namespace ocudu
