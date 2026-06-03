@@ -53,7 +53,11 @@ public:
   /// \brief Request a new TNL association to the Near-RT RIC.
   virtual bool handle_e2_tnl_connection_request() = 0;
 
-  /// \brief Request the E2AP handler to disconnect from the Near-RT RIC.
+  /// \brief Send E2 REMOVAL REQUEST, await the RIC response (TS 38.463 sec. 8.3.7), then tear down the TNL association.
+  /// For abrupt teardown without the E2AP handshake, use handle_e2_disconnection_request() instead.
+  virtual async_task<void> handle_e2_removal_request() = 0;
+
+  /// \brief Tear down the TNL association without an E2AP handshake (e.g. on reconnection after connection loss).
   virtual async_task<void> handle_e2_disconnection_request() = 0;
 
   /// \brief Transmit the pre-built E2 Setup Request and await the RIC response.

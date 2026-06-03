@@ -688,6 +688,26 @@ inline e2_message generate_e2_setup_failure(unsigned transaction_id)
   return e2_setup_failure;
 }
 
+inline e2_message generate_e2_removal_response(unsigned transaction_id)
+{
+  e2_message msg = {};
+  msg.pdu.set_successful_outcome();
+  msg.pdu.successful_outcome().load_info_obj(ASN1_E2AP_ID_E2REMOVAL);
+  msg.pdu.successful_outcome().value.e2_removal_resp()->transaction_id = transaction_id;
+  return msg;
+}
+
+inline e2_message generate_e2_removal_failure(unsigned transaction_id)
+{
+  e2_message msg = {};
+  msg.pdu.set_unsuccessful_outcome();
+  msg.pdu.unsuccessful_outcome().load_info_obj(ASN1_E2AP_ID_E2REMOVAL);
+  auto& fail           = msg.pdu.unsuccessful_outcome().value.e2_removal_fail();
+  fail->transaction_id = transaction_id;
+  fail->cause.set_misc();
+  return msg;
+}
+
 inline asn1::e2sm::ue_id_gnb_du_s generate_ueid_gnb_du(uint32_t ue_idx)
 {
   asn1::e2sm::ue_id_gnb_du_s ueid;
@@ -1216,6 +1236,14 @@ public:
   {
     logger.info("E2 TNL connection request received");
     return true;
+  }
+
+  async_task<void> handle_e2_removal_request() override
+  {
+    return launch_async([](coro_context<async_task<void>>& ctx) {
+      CORO_BEGIN(ctx);
+      CORO_RETURN();
+    });
   }
 
   async_task<void> handle_e2_disconnection_request() override
