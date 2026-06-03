@@ -23,6 +23,14 @@ public:
     return tnl_call_count > tnl_fail_count;
   }
 
+  async_task<void> handle_e2_removal_request() override
+  {
+    return launch_async([](coro_context<async_task<void>>& ctx) {
+      CORO_BEGIN(ctx);
+      CORO_RETURN();
+    });
+  }
+
   async_task<void> handle_e2_disconnection_request() override
   {
     ++disconnect_count;

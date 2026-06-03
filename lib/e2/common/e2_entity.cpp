@@ -76,7 +76,7 @@ void e2_entity::stop()
         main_ctrl_loop.schedule([this](coro_context<async_task<void>>& ctx) {
           CORO_BEGIN(ctx);
 
-          CORO_AWAIT(e2ap->handle_e2_disconnection_request());
+          CORO_AWAIT(e2ap->handle_e2_removal_request());
 
           CORO_RETURN();
         });
