@@ -8,6 +8,7 @@
 #include "ocudu/fapi/p7/builders/rx_data_indication_builder.h"
 #include "ocudu/fapi/p7/builders/srs_indication_builder.h"
 #include "ocudu/fapi/p7/builders/uci_indication_builder.h"
+#include "ocudu/support/csi_grid_registry.h"
 #include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/units.h"
 
@@ -490,6 +491,9 @@ void phy_to_fapi_results_event_fastpath_translator::on_new_pucch_results(const u
 
 void phy_to_fapi_results_event_fastpath_translator::on_new_srs_results(const ul_srs_results& result)
 {
+  // Publish per-RU CSI grid for the scheduler (side channel, bypasses FAPI).
+  csi_grid_registry::instance().update(result.context.rnti, result.processor_result.ru_power_grid);
+  
   fapi::srs_indication         msg;
   fapi::srs_indication_builder builder(msg);
 
