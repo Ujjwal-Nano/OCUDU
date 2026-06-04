@@ -6,8 +6,46 @@
 #include "../logging/scheduler_metrics_handler.h"
 #include "ocudu/ran/pdcch/search_space.h"
 #include "ocudu/support/math/mod_math_utils.h"
+#include "../policy/scheduler_swap.h"
 
 using namespace ocudu;
+
+namespace {
+// Returns a copy of used_vrbs with every RB NOT owned by this UE marked as used,
+// so recommended_vrbs() can only place the UE on its swap-assigned RBs.
+vrb_bitmap constrain_to_owned_rus(const vrb_bitmap& used_vrbs,
+                                  scheduler_policy& policy,
+                                  du_ue_index_t     ue_index)
+{
+  auto* sw = dynamic_cast<scheduler_swap*>(&policy);
+  if (sw == nullptr) {
+    return used_vrbs;
+  }
+  const std::vector<unsigned> owned = sw->owned_rus(ue_index);
+  if (owned.empty()) {
+    return used_vrbs;
+  }
+  vrb_bitmap     constrained = used_vrbs;
+  const unsigned K           = sw->rbs_per_ru();
+  for (unsigned rb = 0, n = constrained.size(); rb != n; ++rb) {
+    bool is_owned = false;
+    for (unsigned ru : owned) {
+      const unsigned first = sw->ru_first_rb(ru);
+      if (rb >= first && rb < first + K) {
+        is_owned = true;
+        break;
+      }
+    }
+    if (not is_owned) {
+      constrained.set(rb);
+    }
+  }
+  return constrained;
+}
+} // namespace
+
+
+
 
 /// \brief Helper function to determine the expected number of PDSCHs that can be allocated per slot in a manner that
 /// ensures fair distribution of PDSCHs across slots.
@@ -524,7 +562,9 @@ unsigned intra_slice_scheduler::schedule_dl_newtx_candidates(dl_ran_slice_candid
     ocudu_assert(max_grant_size > 0, "Invalid grant size.");
 
     // Derive recommended parameters for the DL newTx grant.
-    vrb_interval alloc_vrbs = grant_builder.recommended_vrbs(used_dl_vrbs, max_grant_size);
+    const vrb_bitmap dl_used    = constrain_to_owned_rus(used_dl_vrbs, dl_policy, grant_builder.ue().ue_index());
+    vrb_interval     alloc_vrbs = grant_builder.recommended_vrbs(dl_used, max_grant_size);
+    
     if (alloc_vrbs.empty()) {
       logger.warning("ue={} c-rnti={}: Failed to allocate RBs for PDSCH grant at slot={}",
                      fmt::underlying(grant_builder.ue().ue_index()),
