@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+# OCUDU gNB - single TDD cell, band 78, 20 MHz, 30 kHz SCS.
+# Adapted from the B200 split-8 example for: 2x2 antennas + SRS enabled,
+# to provide the inputs for per-UE per-RU CSI work (uplink channel sounding).
+#
+# HARDWARE NOTE: 2x2 needs a 2-channel board (e.g. USRP B210, which is 2T2R).
+#   A plain B200 is single-antenna (1T1R) and cannot do 2x2 over the air.
+#   The B210 is addressed under the same UHD "type=b200" driver family below.
+#   If you only have a 1-antenna board (or want a simpler first run), set both
+#   nof_antennas_* to 1 - SRS still sounds the channel and you still get a
+#   per-RU power grid, just without the per-antenna (spatial) dimension.
+
+cu_cp:
+  amf:
+    addrs: 127.0.1.100
+    port: 38412
+    bind_addrs: 127.0.0.1
+    supported_tracking_areas:
+      - tac: 7
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: type=b200,num_recv_frames=64,num_send_frames=64
+  srate: 23.04
+  otw_format: sc12
+  tx_gain: 80
+  rx_gain: 40
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 7
+  pci: 1
+
+  # --- 2x2 MIMO: this is the part that makes SRS sounding / UL precoding meaningful.
+  #     With 1 antenna the SRS channel matrix is 1x1 and TPMI is always 0 (no effect).
+  nof_antennas_dl: 2
+  nof_antennas_ul: 2
+
+  # --- TDD pattern: SRS lives in uplink symbols, so the pattern must leave UL room.
+  #     This is the standard n78 7D/2U pattern (the example relied on the implicit
+  #     default; made explicit here so SRS reliably has UL slots/symbols).
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 10
+    nof_dl_slots: 7
+    nof_dl_symbols: 6
+    nof_ul_slots: 2
+    nof_ul_symbols: 4
+
+  # --- SRS: enable uplink sounding (off by default).
+  srs:
+    type_enabled: periodic       # disabled | periodic | aperiodic
+    period_ms: 20                # must be SCS-compatible (<= 1280 at 30 kHz SCS)
+    tx_comb: 4                   # 2 or 4 -> SRS occupies 12/tx_comb subcarriers per RB
+                                 #           (comb-4 = 3 SRS REs per RB)
+    #max_nof_sym_per_slot: 2      # UL symbols reserved for all cell SRS resources
+    #nof_sym_per_resource: 1      # symbols per SRS resource (must be <= max above)
+    #cyclic_shift_reuse: 1        # must be compatible with tx_comb and nof_antennas_ul
+    #sequence_id_reuse: 1
+    # c_srs:  leave UNSET -> auto-picks the WIDEST SRS bandwidth (full-band coverage,
+    #         so your per-RU grid covers as many RBs as possible). Set it only if you
+    #         deliberately want to sound a narrower band.
+
+log:
+  filename: /tmp/gnb.log
+  all_level: warning
+  # Tip: while bringing SRS up, raise visibility, e.g.:
+  #   phy_level: info
+  #   sched_level: debug
+
+pcap:
+  mac_enable: false
+  mac_filename: /tmp/gnb_mac.pcap
+  ngap_enable: false
+  ngap_filename: /tmp/gnb_ngap.pcap
