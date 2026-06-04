@@ -98,7 +98,20 @@ srs_estimator_result srs_estimator_generic_impl::estimate(const resource_grid_re
   result.time_alignment.max            = std::numeric_limits<double>::max();
   result.channel_matrix                = srs_channel_matrix(nof_rx_ports, nof_antenna_ports);
 
-  // Temporary LSE.
+
+//CSI grid: per RU power grid (one per Rx port) containing the SRS symbols, with the same subcarrier allocation as the received grid and one column per resource unit.
+
+  static constexpr unsigned nof_sc_per_rb = 12;
+  const unsigned ru_size_rbs = std::max(1U, rbs_per_ru);
+  const unsigned last_sc = common_info.mapping_initial_subcarrier + (sequence_length - 1) * static_cast<unsigned>(common_info.comb_size);
+  const unsigned nof_sounded_rbs = (last_sc / nof_sc_per_rb) + 1;
+  const unsigned nof_rus = (nof_sounded_rbs + ru_size_rbs - 1) / ru_size_rbs;
+  result.ru_power_grid.assign(nof_rx_ports, std::vector<float>(nof_rus, 0.0F));
+ 
+
+
+
+// Temporary LSE.
   static_tensor<3, cf_t, max_seq_length * srs_constants::max_nof_rx_ports * srs_constants::max_nof_tx_ports> temp_lse(
       {sequence_length, nof_rx_ports, nof_antenna_ports});
 
@@ -209,6 +222,19 @@ srs_estimator_result srs_estimator_generic_impl::estimate(const resource_grid_re
 
       // Compensate phase shift.
       compensate_phase_shift(mean_lse, phase_shift_subcarrier, phase_shift_offset);
+
+      // ** CSI grid: accumulate per RU power |H|^2 
+
+      const unsigned k0 = info.mapping_initial_subcarrier;
+      const unsigned dk = static_cast<unsigned>(info.comb_size);
+      for (unsigned i = 0, n = mean_lse.size(); i != n; ++i) {
+        unsigned sc = k0 + i * dk;
+        unsigned rb = sc / nof_sc_per_rb;
+        unsigned ru = rb / ru_size_rbs;
+        result.ru_power_grid[i_rx_port][ru] += std::norm(mean_lse[i]);
+      }
+       // ** CSI grid ** //
+
 
       // Calculate channel wideband coefficient.
       cf_t coefficient = ocuduvec::mean(mean_lse);

@@ -47,6 +47,8 @@ private:
   /// Complex exponential table for time compensation.
   complex_exponential_table cexp_table;
 
+  unsigned rbs_per_ru = 1;
+
   /// \brief Perform phase compensation to the mean least squared estimates.
   ///
   /// This function is equivalent to:

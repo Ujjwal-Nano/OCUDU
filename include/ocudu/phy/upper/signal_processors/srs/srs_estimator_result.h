@@ -7,6 +7,7 @@
 #include "ocudu/phy/support/time_alignment_estimator/time_alignment_measurement.h"
 #include "ocudu/ran/srs/srs_channel_matrix.h"
 #include <optional>
+#include <vector>
 
 namespace ocudu {
 
@@ -25,6 +26,10 @@ struct srs_estimator_result {
   std::optional<float> rsrp_dB;
   /// Wideband measured noise variance as a linear quantity.
   std::optional<float> noise_variance;
+  // Per-Rx-port, per-RU linear channel power |H|^2 from SRS. [rx_port][ru].
+  std::vector<std::vector<float>> ru_power_grid;
+
+
   /// Measured time alignment.
   time_alignment_measurement time_alignment;
 };
