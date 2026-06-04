@@ -17,6 +17,8 @@ set(SOURCES
         policy/scheduler_policy_factory.cpp
         policy/scheduler_time_rr.cpp
         policy/scheduler_time_qos.cpp
+        policy/scheduler_swap.cpp        
+        policy/swap/swap_allocator.cpp     
         pucch_scheduling/pucch_allocator_impl.cpp
         pucch_scheduling/pucch_allocator_helpers.cpp
         pucch_scheduling/pucch_collision_manager.cpp

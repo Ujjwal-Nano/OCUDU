@@ -5,6 +5,7 @@
 #include "scheduler_policy_factory.h"
 #include "scheduler_time_qos.h"
 #include "scheduler_time_rr.h"
+#include "scheduler_swap.h"
 
 using namespace ocudu;
 
@@ -17,5 +18,10 @@ std::unique_ptr<scheduler_policy> ocudu::create_scheduler_strategy(const schedul
   if (std::holds_alternative<time_qos_scheduler_config>(policy_cfg)) {
     return std::make_unique<scheduler_time_qos>(std::get<time_qos_scheduler_config>(policy_cfg), cell_cfg);
   }
+  if (std::holds_alternative<swap_scheduler_config>(policy_cfg)) {
+  return std::make_unique<scheduler_swap>(std::get<swap_scheduler_config>(policy_cfg));
+}
+
+
   return nullptr;
 }

@@ -51,16 +51,28 @@ struct time_qos_scheduler_config {
   bool gbr_enabled = true;
 };
 
+struct swap_scheduler_config {
+  unsigned num_users         = 4;   // set to your testbed UE count
+  unsigned rus_per_user      = 1;
+  unsigned num_redun         = 0;
+  unsigned epsilon           = 4;
+  unsigned allocation_period = 1;   // in SRS periods
+  unsigned rbs_per_ru        = 1;   // RBs per RU (match the PHY-side ru_size_rbs)
+  unsigned swap_period_slots = 20;  // run step() this often; tie to your SRS period
+};
+
+
+
 /// \brief Round-Robin policy scheduler expert parameters.
 struct time_rr_scheduler_config {};
 
 /// \brief Scheduler policy parameters.
-using scheduler_policy_config = std::variant<time_qos_scheduler_config, time_rr_scheduler_config>;
+using scheduler_policy_config = std::variant<time_qos_scheduler_config, time_rr_scheduler_config, swap_scheduler_config>;
 
 struct ul_power_control {
   /// Enable closed-loop PUSCH power control.
   bool enable_pusch_cl_pw_control = false;
-  /// Enable bandwidth adaptation to prevent negative PHR.
+  /// Enable bandwidth adaptation to prevent negative PHR.  
   bool enable_phr_bw_adaptation = false;
   /// Target PUSCH SINR to be achieved with Close-loop power control, in dB.
   /// Only relevant if \c enable_closed_loop_pw_control is set to true.
