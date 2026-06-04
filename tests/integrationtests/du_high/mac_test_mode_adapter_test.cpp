@@ -264,6 +264,7 @@ TEST_F(mac_test_mode_test, when_test_mode_ue_has_pucch_grants_then_uci_indicatio
     f1_uci.harq_info->harqs.resize(1);
     f1_uci.harq_info->harqs[0] = uci_pucch_f0_or_f1_harq_values::nack;
     this->mac_wrapper->get_control_info_handler(to_du_cell_index(0)).handle_uci(uci);
+    this->run_slot();
 
     ASSERT_TRUE(mac_events.last_uci.has_value());
     ASSERT_EQ(mac_events.last_uci->sl_rx, sl_rx.without_hyper_sfn());
@@ -325,6 +326,7 @@ TEST_P(mac_test_mode_auto_uci_test, when_uci_is_only_for_test_mode_ue_then_it_is
   uci_ind.sl_rx = {0, 0};
   uci_ind.ucis.push_back(make_random_uci_with_csi());
   mac_wrapper->get_control_info_handler(to_du_cell_index(0)).handle_uci(uci_ind);
+  this->run_slot();
 
   ASSERT_FALSE(mac_events.last_uci.has_value());
 }
@@ -337,6 +339,7 @@ TEST_P(mac_test_mode_auto_uci_test, when_uci_is_also_for_other_ues_then_test_mod
   uci_ind.ucis.push_back(make_random_uci_with_csi());
   uci_ind.ucis.back().rnti = to_rnti(0x4602);
   mac_wrapper->get_control_info_handler(to_du_cell_index(0)).handle_uci(uci_ind);
+  this->run_slot();
 
   ASSERT_TRUE(mac_events.last_uci.has_value());
   ASSERT_EQ(mac_events.last_uci->ucis.size(), 1);
