@@ -678,6 +678,24 @@ static void configure_cli11_qos_aware_policy_args(CLI::App& app, time_qos_schedu
       ->capture_default_str();
 }
 
+static void configure_cli11_swap_policy_args(CLI::App& app, swap_scheduler_config& expert_params)
+{
+  add_option(app, "--num_users", expert_params.num_users, "Number of UEs in the swap partition")
+      ->capture_default_str();
+  add_option(app, "--rus_per_user", expert_params.rus_per_user, "Resource units owned per UE")
+      ->capture_default_str();
+  add_option(app, "--num_redun", expert_params.num_redun, "Spare (unowned) resource units")
+      ->capture_default_str();
+  add_option(app, "--epsilon", expert_params.epsilon, "Worst RUs reconsidered each period")
+      ->capture_default_str();
+  add_option(app, "--allocation_period", expert_params.allocation_period, "Reallocate every N SRS periods")
+      ->capture_default_str();
+  add_option(app, "--rbs_per_ru", expert_params.rbs_per_ru, "RBs per resource unit (must match PHY ru_size_rbs)")
+      ->capture_default_str();
+  add_option(app, "--swap_period_slots", expert_params.swap_period_slots, "Run the swap every N slots (tie to SRS period)")
+      ->capture_default_str();
+}
+
 static void configure_cli11_scheduler_policy_args(CLI::App& app, std::optional<scheduler_policy_config>& policy_cfg)
 {
   static time_qos_scheduler_config qos_cfg;
@@ -698,6 +716,17 @@ static void configure_cli11_scheduler_policy_args(CLI::App& app, std::optional<s
     CLI::App* rr_sched_sub_cmd = app.get_subcommand("rr_sched");
     if (rr_sched_sub_cmd->count() != 0) {
       policy_cfg = time_rr_scheduler_config{};
+    }
+  });
+
+  static swap_scheduler_config swap_cfg;
+  CLI::App*                    swap_sched_cfg_subcmd =
+      add_subcommand(app, "swap_sched", "Periodic worst-first swap policy configuration")->configurable();
+  configure_cli11_swap_policy_args(*swap_sched_cfg_subcmd, swap_cfg);
+  swap_sched_cfg_subcmd->parse_complete_callback([&]() {
+    CLI::App* swap_sched_sub_cmd = app.get_subcommand("swap_sched");
+    if (swap_sched_sub_cmd->count() != 0) {
+      policy_cfg = swap_cfg;
     }
   });
 }
