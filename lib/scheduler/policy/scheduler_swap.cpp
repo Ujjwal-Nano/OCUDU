@@ -98,7 +98,35 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
   }
   last_swap_slot = sl;
 
-  alloc.step(build_csi_grid());
+  swap_sched::csi_grid csi = build_csi_grid();
+  alloc.step(csi);
+
+  // --- metrics: one JSON line per period ---
+  if (!metrics_log.is_open()) {
+    metrics_log.open("/tmp/swap_metrics.jsonl", std::ios::app);
+  }
+  if (metrics_log.is_open()) {
+    const auto& assign  = alloc.assignment();
+    double      weakest = std::numeric_limits<double>::max();
+    metrics_log << "{\"slot\":" << sl.count() << ",\"users\":[";
+    for (unsigned u = 0; u < csi.size(); ++u) {
+      double served = 0.0;
+      for (unsigned ru : assign[u]) {
+        if (ru < csi[u].size()) {
+          served += csi[u][ru];
+        }
+      }
+      weakest = std::min(weakest, served);
+      if (u) {
+        metrics_log << ",";
+      }
+      metrics_log << "{\"u\":" << u << ",\"served\":" << served << "}";
+    }
+    metrics_log << "],\"weakest_user_csi\":" << weakest << "}\n";
+    metrics_log.flush();
+  }
+
+
 }
 
 void scheduler_swap::compute_ue_dl_priorities(slot_point               pdcch_slot,

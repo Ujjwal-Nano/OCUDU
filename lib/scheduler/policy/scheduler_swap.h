@@ -9,6 +9,8 @@
 #include "ocudu/scheduler/config/scheduler_expert_config.h"
 #include <array>
 #include <vector>
+#include <fstream>
+#include <limits>
 
 namespace ocudu {
 
@@ -70,6 +72,9 @@ private:
   std::vector<rnti_t>             user_to_rnti;  // user idx -> rnti (for registry lookup)
 
   slot_point last_swap_slot;
+
+  std::ofstream metrics_log;
+
 };
 
 } // namespace ocudu
