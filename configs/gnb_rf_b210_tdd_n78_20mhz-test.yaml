@@ -70,6 +70,14 @@ cell_cfg:
     #         so your per-RU grid covers as many RBs as possible). Set it only if you
     #         deliberately want to sound a narrower band.
 
+  scheduler:
+    policy:                   # scheduler policy name (e.g. "swap_sched", rr_sched", "qos_sched")
+      swap_sched:
+        num_users: 4
+        rus_per_user: 1
+        rbs_per_ru: 12
+        swap_period_slots: 40
+
 log:
   filename: /tmp/gnb.log
   all_level: warning
