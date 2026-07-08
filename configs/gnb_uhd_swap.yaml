@@ -1,0 +1,54 @@
+cu_cp:
+  amf:
+    addrs: 192.168.200.207
+    port: 38412
+    bind_addrs: 192.168.200.205
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "99942"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: type=b200,num_recv_frames=64,num_send_frames=64
+  srate: 23.04
+  otw_format: sc12
+  tx_gain: 80
+  rx_gain: 60
+  clock: external
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "99942"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+  srs:
+    type_enabled: periodic
+    period_ms: 20
+    tx_comb: 4
+  scheduler:
+    policy:
+      swap_sched:
+        num_users: 4
+        rus_per_user: 1
+        num_redun: 0
+        rbs_per_ru: 1
+        swap_period_slots: 40
+
+expert_execution:
+  threads:
+    main_pool:
+      nof_threads: 4
+    lower_phy:
+      execution_profile: single
+
+log:
+  filename: /tmp/gnb.log
+  all_level: warning

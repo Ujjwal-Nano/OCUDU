@@ -1,0 +1,16 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/rlc/rlc_tx_tm_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"rlc"
+		],
+		"name" : "rlc_tx_tm_test"
+	}
+}

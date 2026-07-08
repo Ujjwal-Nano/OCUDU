@@ -1,0 +1,4 @@
+# Directory labels
+ ran
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/ran/prach/prach_configuration_test.cpp

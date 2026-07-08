@@ -1,0 +1,4 @@
+# Directory labels
+ fapi
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/fapi/common/builders/error_indication_test.cpp

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libocudu_radio_realtime_loopback.a CMakeFiles/ocudu_radio_realtime_loopback.dir/loopback_buffer.cpp.o CMakeFiles/ocudu_radio_realtime_loopback.dir/radio_config_realtime_loopback_validator.cpp.o CMakeFiles/ocudu_radio_realtime_loopback.dir/radio_factory_realtime_loopback_impl.cpp.o CMakeFiles/ocudu_radio_realtime_loopback.dir/radio_session_realtime_loopback_impl.cpp.o
+/usr/bin/ranlib libocudu_radio_realtime_loopback.a

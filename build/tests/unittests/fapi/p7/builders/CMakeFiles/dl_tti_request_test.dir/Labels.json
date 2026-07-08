@@ -1,0 +1,16 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/fapi/p7/builders/dl_tti_request_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"fapi"
+		],
+		"name" : "dl_tti_request_test"
+	}
+}

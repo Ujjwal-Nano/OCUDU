@@ -1,0 +1,16 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/ntn/ntn_assistance_info_gen_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"ntn"
+		],
+		"name" : "ntn_assistance_info_gen_test"
+	}
+}

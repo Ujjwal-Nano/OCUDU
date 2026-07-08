@@ -17,7 +17,7 @@ vrb_bitmap constrain_to_owned_rus(const vrb_bitmap& used_vrbs,
                                   scheduler_policy& policy,
                                   du_ue_index_t     ue_index)
 {
-  auto* sw = dynamic_cast<scheduler_swap*>(&policy);
+  auto* sw = policy.as_swap();
   if (sw == nullptr) {
     return used_vrbs;
   }

@@ -1,0 +1,4 @@
+# Directory labels
+ ran
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/ran/pucch/pucch_info_test.cpp

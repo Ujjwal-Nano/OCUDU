@@ -12,6 +12,7 @@ namespace ocudu {
 
 class slice_ue;
 class ue_cell;
+class scheduler_swap;
 
 /// Type used to represent a UE priority.
 using ue_sched_priority = double;
@@ -38,6 +39,7 @@ class scheduler_policy
 {
 public:
   virtual ~scheduler_policy() = default;
+  virtual scheduler_swap* as_swap() { return nullptr; }
 
   virtual void add_ue(du_ue_index_t ue_index) = 0;
 

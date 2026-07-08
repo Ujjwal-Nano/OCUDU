@@ -1,0 +1,4 @@
+# Directory labels
+ ntn
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/ntn/ntn_assistance_info_gen_test.cpp

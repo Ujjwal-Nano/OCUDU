@@ -1,0 +1,16 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/fapi/common/builders/error_indication_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"fapi"
+		],
+		"name" : "error_indication_builder_test"
+	}
+}

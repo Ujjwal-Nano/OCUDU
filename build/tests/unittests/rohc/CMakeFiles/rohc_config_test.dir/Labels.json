@@ -1,0 +1,16 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/rohc/rohc_config_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"rohc"
+		],
+		"name" : "rohc_config_test"
+	}
+}

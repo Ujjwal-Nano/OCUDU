@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblpp_asn1.a CMakeFiles/lpp_asn1.dir/lpp/lpp.cpp.o
+/usr/bin/ranlib liblpp_asn1.a

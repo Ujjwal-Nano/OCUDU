@@ -1,0 +1,4 @@
+# Directory labels
+ ran
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/ran/precoding/precoding_codebooks_test.cpp

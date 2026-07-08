@@ -1,0 +1,16 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/gtpu/gtpu_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"gtpu"
+		],
+		"name" : "gtpu_test"
+	}
+}

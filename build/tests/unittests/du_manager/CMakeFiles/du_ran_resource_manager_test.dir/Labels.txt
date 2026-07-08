@@ -1,0 +1,8 @@
+# Directory labels
+ du_manager
+ du_high
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/du_manager/du_ran_resource_manager_test.cpp
+/home/user/OCUDU/tests/unittests/du_manager/du_drx_resource_manager_test.cpp
+/home/user/OCUDU/tests/unittests/du_manager/decode_ue_nr_cap_container_test.cpp
+/home/user/OCUDU/tests/unittests/du_manager/du_meas_config_manager_test.cpp

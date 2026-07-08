@@ -1,0 +1,4 @@
+# Directory labels
+ receiver
+# Source files and their labels
+/home/user/OCUDU/tests/unittests/ofh/receiver/ofh_message_receiver_test.cpp

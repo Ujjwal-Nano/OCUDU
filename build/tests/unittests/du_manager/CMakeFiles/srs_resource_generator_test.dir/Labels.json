@@ -1,0 +1,17 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/user/OCUDU/tests/unittests/du_manager/srs_resource_generator_test.cpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"du_manager",
+			"du_high"
+		],
+		"name" : "srs_resource_generator_test"
+	}
+}

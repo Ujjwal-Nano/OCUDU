@@ -34,7 +34,7 @@ public:
 
   void add_ue(du_ue_index_t ue_index) override;
   void rem_ue(du_ue_index_t ue_index) override;
-
+  scheduler_swap* as_swap() override { return this; }
   void compute_ue_dl_priorities(slot_point               pdcch_slot,
                                 slot_point               pdsch_slot,
                                 span<ue_newtx_candidate> ue_candidates) override;
