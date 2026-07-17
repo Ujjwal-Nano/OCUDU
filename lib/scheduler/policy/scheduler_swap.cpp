@@ -28,6 +28,7 @@ scheduler_swap::scheduler_swap(const swap_scheduler_config& cfg_) : cfg(cfg_), a
   ue_to_user.fill(-1);
   user_to_ue.assign(cfg.num_users, INVALID_DU_UE_INDEX);          // VERIFY sentinel name
   user_to_rnti.assign(cfg.num_users, rnti_t::INVALID_RNTI);        // VERIFY sentinel name
+  user_last_seen.assign(cfg.num_users, slot_point{});
   alloc.init_assignment(/*seed*/ 1);
 }
 
@@ -71,10 +72,14 @@ swap_sched::csi_grid scheduler_swap::build_csi_grid() const
     if (user_to_rnti[u] == rnti_t::INVALID_RNTI) {
       continue; // this user slot is empty / no RNTI learned yet
     }
-    auto g = csi_grid_registry::instance().get(user_to_rnti[u]); // [rx_port][ru]
-    for (const auto& per_port : g) {                             // collapse rx ports -> scalar power
-      for (unsigned r = 0; r != R && r < per_port.size(); ++r) {
-        csi[u][r] += per_port[r];
+    auto g = csi_grid_registry::instance().get(user_to_rnti[u]); // [rx_port][rb] (per-RB grid!)
+    for (const auto& per_port : g) {                             // collapse rx ports, aggregate RBs->RU
+      for (unsigned r = 0; r != R; ++r) {
+        const unsigned rb_begin = r * cfg.rbs_per_ru;
+        const unsigned rb_end   = std::min<unsigned>(rb_begin + cfg.rbs_per_ru, per_port.size());
+        for (unsigned rb = rb_begin; rb < rb_end; ++rb) {
+          csi[u][r] += per_port[rb];
+        }
       }
     }
   }
@@ -83,15 +88,29 @@ swap_sched::csi_grid scheduler_swap::build_csi_grid() const
 
 void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> candidates)
 {
-  // Learn / refresh each candidate UE's RNTI so build_csi_grid() can look it up.
+// Learn / refresh each candidate UE's mapping and RNTI (lazy, works for any UE count).
   for (const ue_newtx_candidate& c : candidates) {
-    du_ue_index_t idx = c.ue->ue_index();        // VERIFY accessor
-    int           u   = ue_to_user[idx];
+    du_ue_index_t idx = c.ue->ue_index();
+    if (ue_to_user[idx] < 0) {
+      add_ue(idx); // first sight of this UE: claim a free user slot
+    }
+    int u = ue_to_user[idx];
     if (u >= 0) {
-      user_to_rnti[u] = c.ue->crnti();           // VERIFY accessor (slice_ue rnti)
+      user_to_rnti[u]   = c.ue->crnti();
+      user_last_seen[u] = sl;
     }
   }
 
+  // Evict user slots whose UE has vanished (released / re-attached under a new index),
+  // so slots and the CSI registry recycle correctly over long multi-UE runs.
+  for (unsigned u = 0; u != user_to_ue.size(); ++u) {
+    if (user_to_ue[u] != INVALID_DU_UE_INDEX && user_last_seen[u].valid() &&
+        (sl - user_last_seen[u]) > static_cast<int>(10 * cfg.swap_period_slots)) {
+      csi_grid_registry::instance().erase(user_to_rnti[u]);
+      rem_ue(user_to_ue[u]);
+      user_last_seen[u] = slot_point{};
+    }
+  }
   // Gate to the SRS reporting period (run once per cfg.swap_period_slots).
   if (last_swap_slot.valid() && (sl - last_swap_slot) < static_cast<int>(cfg.swap_period_slots)) {
     return;
@@ -120,7 +139,22 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
       if (u) {
         metrics_log << ",";
       }
-      metrics_log << "{\"u\":" << u << ",\"served\":" << served << "}";
+      metrics_log << "{\"u\":" << u << ",\"rnti\":" << static_cast<unsigned>(user_to_rnti[u]) << ",\"served\":" << served << ",\"rus\":[";
+      for (unsigned k = 0; k < assign[u].size(); ++k) {
+        if (k) {
+          metrics_log << ",";
+        }
+        metrics_log << assign[u][k];
+      }
+      metrics_log << "],\"csi\":[";
+      for (unsigned r = 0; r < csi[u].size(); ++r) {
+        if (r) {
+          metrics_log << ",";
+        }
+        metrics_log << csi[u][r];
+      }
+      metrics_log << "]}";
+
     }
     metrics_log << "],\"weakest_user_csi\":" << weakest << "}\n";
     metrics_log.flush();

@@ -70,6 +70,7 @@ private:
   std::array<int, MAX_NOF_DU_UES> ue_to_user;   // -1 == unmapped
   std::vector<du_ue_index_t>      user_to_ue;    // user idx -> du ue idx
   std::vector<rnti_t>             user_to_rnti;  // user idx -> rnti (for registry lookup)
+  std::vector<slot_point> user_last_seen; // last slot this user's UE appeared as a candidate
 
   slot_point last_swap_slot;
 
