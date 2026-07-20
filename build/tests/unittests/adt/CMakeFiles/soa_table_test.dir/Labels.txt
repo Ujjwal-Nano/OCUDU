@@ -1,5 +1,0 @@
-# Directory labels
- adt
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/adt/soa_table_test.cpp
-/home/user/OCUDU/tests/unittests/adt/stable_id_map_test.cpp

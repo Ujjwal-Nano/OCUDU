@@ -1,5 +1,0 @@
-# Directory labels
- adt
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/adt/type_list_buffer_test.cpp
-/home/user/OCUDU/tests/unittests/adt/segment_list_test.cpp

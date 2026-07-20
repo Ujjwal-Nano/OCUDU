@@ -1,12 +1,12 @@
 cu_cp:
   amf:
-    addr: 192.168.200.207
+    addr: 10.53.1.2
     port: 38412
-    bind_addr: 192.168.200.205
+    bind_addr: 10.53.1.1
     supported_tracking_areas:
-      - tac: 1
+      - tac: 7
         plmn_list:
-          - plmn: "99970"
+          - plmn: "00101"
             tai_slice_support_list:
               - sst: 1
 
@@ -22,8 +22,8 @@ cell_cfg:
   band: 3
   channel_bandwidth_MHz: 10
   common_scs: 15
-  plmn: "99970"
-  tac: 1
+  plmn: "00101"
+  tac: 7
   pci: 1
   nof_antennas_dl: 1
   nof_antennas_ul: 1
@@ -41,7 +41,7 @@ cell_cfg:
 expert_execution:
   threads:
     main_pool:
-      nof_threads: 4
+      nof_threads: 3
     lower_phy:
       execution_profile: single
 

@@ -1,4 +1,0 @@
-# Directory labels
- nru
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/nru/nru_packing_test.cpp

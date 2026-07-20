@@ -1,4 +1,0 @@
-# Directory labels
- support
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/support/when_all_test.cpp

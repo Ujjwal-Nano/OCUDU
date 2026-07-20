@@ -1,4 +1,0 @@
-# Directory labels
- ran
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/ran/ssb_mapping_test.cpp

@@ -1,4 +1,0 @@
-# Directory labels
- e2ap
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/e2/asn1_e2sm_ccc_test.cpp

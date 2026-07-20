@@ -1,6 +1,0 @@
-# Directory labels
- phy
-# Source files and their labels
-/home/user/OCUDU/apps/examples/phy/radio_ssb.cpp
-/home/user/OCUDU/apps/examples/phy/lower_phy_example_factory.cpp
-/home/user/OCUDU/apps/examples/phy/upper_phy_ssb_example.cpp

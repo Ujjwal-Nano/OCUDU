@@ -1,0 +1,68 @@
+# SRS + swap-scheduler TEST config — 17 Jul 2026
+# Base: proven working OTA config (P40 attach @ 3750 MHz, 20 MHz, 49/33 Mbps)
+# Added: srs block (periodic sounding) + sched_expert_cfg/policy/swap_sched activation
+# Backup: original working yaml untouched — revert to it if this breaks anything
+
+cu_cp:
+  amf:
+    addrs: 192.168.200.207
+    port: 38412
+    bind_addrs: 192.168.200.213
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "99942"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: type=b200,serial=31E9F80
+  srate: 23.04
+  otw_format: sc12
+  tx_gain: 85
+  rx_gain: 40
+  clock: external
+
+cell_cfg:
+  dl_arfcn: 650000
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "99942"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+
+  # --- SRS: periodic uplink sounding (feeds the CSI grid via TDD reciprocity)
+  srs:
+    type_enabled: periodic       # disabled | periodic | aperiodic
+    period_ms: 20                # SCS-compatible; 20 ms @ 30 kHz = 40 slots
+    tx_comb: 2                   # comb-4 -> 3 SRS REs per RB
+    # c_srs: leave unset -> widest SRS bandwidth (full-band per-RU coverage)
+
+  # --- Swap scheduler policy activation
+  scheduler:
+    policy:
+      swap_sched:
+        num_users: 1             # single P40 for pipeline validation; raise when 2nd UE exists
+        rus_per_user: 4
+        rbs_per_ru: 12
+        swap_period_slots: 40    # = 20 ms @ 30 kHz, aligned to SRS period
+
+expert_execution:
+  threads:
+    main_pool:
+      nof_threads: 4
+    lower_phy:
+      execution_profile: dual
+
+log:
+  filename: /tmp/gnb_srs_test.log
+  all_level: info
+  # if SRS bring-up needs more visibility: phy_level: debug, sched_level: debug
+
+pcap:
+  mac_enable: false
+  ngap_enable: false

@@ -1,4 +1,0 @@
-# Directory labels
- e2ap
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/e2/common/e2ap_asn1_packer.cpp

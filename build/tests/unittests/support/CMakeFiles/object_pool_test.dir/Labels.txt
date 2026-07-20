@@ -1,5 +1,0 @@
-# Directory labels
- support
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/support/unbounded_object_pool_test.cpp
-/home/user/OCUDU/tests/unittests/support/bounded_object_pool_test.cpp

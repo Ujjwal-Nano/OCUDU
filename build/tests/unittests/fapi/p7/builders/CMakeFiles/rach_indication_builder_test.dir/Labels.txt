@@ -1,4 +1,0 @@
-# Directory labels
- fapi
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/fapi/p7/builders/rach_indication_test.cpp

@@ -1,4 +1,0 @@
-# Directory labels
- adt
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/adt/batched_dispatch_queue_test.cpp

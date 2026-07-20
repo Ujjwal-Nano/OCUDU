@@ -1,4 +1,0 @@
-# Directory labels
- cu_cp
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/cu_cp/ue_manager/ue_manager_test.cpp

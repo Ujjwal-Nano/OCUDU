@@ -1,5 +1,0 @@
-# Directory labels
- sched
-# Source files and their labels
-/home/user/OCUDU/tests/unittests/scheduler/config/csi_helper_test.cpp
-/home/user/OCUDU/tests/unittests/scheduler/config/pucch_resource_generator_test.cpp
