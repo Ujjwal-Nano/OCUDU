@@ -1,13 +1,11 @@
 #!/bin/bash
-# csi_run.sh — systematic CSI capture -> git -> plot workflow
-# usage:  csi_run.sh start                      (begin a fresh recording)
-#         csi_run.sh save <name> ["note text"]  (snapshot, plot, commit, push)
 set -e
 LOG=/tmp/swap_metrics.jsonl
-REPO=~/OCUDU
+REPO=/home/tud/OCUDU
 case "$1" in
   start)
     : > "$LOG"
+    chmod 666 "$LOG"
     echo "recording started fresh: $LOG (run your experiment now)"
     ;;
   save)
@@ -23,7 +21,7 @@ case "$1" in
     git add "datasets/$BASE.jsonl" "datasets/$BASE.txt" "datasets/plots/$BASE.png"
     git commit -m "dataset: $BASE — ${3:-no note}"
     git push
-    echo "saved + pushed: datasets/$BASE.jsonl  (+ note, + plot)"
+    echo "saved + pushed: datasets/$BASE.jsonl"
     ;;
   *)
     echo "usage: csi_run.sh start | csi_run.sh save <name> [note]"; exit 1 ;;
