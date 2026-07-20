@@ -18,7 +18,7 @@ case "$1" in
     python3 "$REPO/tools/plot_csi.py" "$REPO/datasets/$BASE.jsonl" \
             -o "$REPO/datasets/plots/$BASE.png"
     cd "$REPO"
-    git add "datasets/$BASE.jsonl" "datasets/$BASE.txt" "datasets/plots/$BASE.png"
+    git add "datasets/$BASE.jsonl" "datasets/$BASE.txt" "datasets/plots/$BASE.png" "datasets/plots/${BASE}_stats.txt" 2>/dev/null || git add "datasets/$BASE.jsonl" "datasets/$BASE.txt" "datasets/plots/$BASE.png"
     git commit -m "dataset: $BASE — ${3:-no note}"
     git push
     echo "saved + pushed: datasets/$BASE.jsonl"
