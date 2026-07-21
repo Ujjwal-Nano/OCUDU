@@ -4,6 +4,7 @@
 #include "scheduler_swap.h"
 #include "../slicing/slice_ue_repository.h" // for slice_ue accessors  // VERIFY path
 #include "ocudu/support/csi_grid_registry.h"
+#include <chrono>
 
 using namespace ocudu;
 
@@ -127,8 +128,9 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
   if (metrics_log.is_open()) {
     const auto& assign  = alloc.assignment();
     double      weakest = std::numeric_limits<double>::max();
-    metrics_log << "{\"slot\":" << sl.count() << ",\"users\":[";
-    for (unsigned u = 0; u < csi.size(); ++u) {
+    metrics_log << "{\"t\":" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::system_clock::now().time_since_epoch()).count()
+                << ",\"slot\":" << sl.count() << ",\"users\":[";    for (unsigned u = 0; u < csi.size(); ++u) {
       double served = 0.0;
       for (unsigned ru : assign[u]) {
         if (ru < csi[u].size()) {
