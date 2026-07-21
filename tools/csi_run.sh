@@ -29,10 +29,13 @@ case "$1" in
     rm -f /tmp/_rb.jsonl
 
     python3 "$REPO/tools/plot_csi.py" "$D/$BASE.jsonl" -o "$P/$BASE.png"
+    if [ -s "$SW" ]; then
+      sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"
+      python3 "$REPO/tools/plot_csi.py" "$D/$BASE.swap.jsonl" -o "$P/${BASE}_swap.png" || true
+    fi
     python3 "$REPO/tools/analyze_position.py" "$D/$BASE.jsonl" \
             --csv "$D/campaign.csv" | tee "$P/${BASE}_analysis.txt"
 
-    if [ -s "$SW" ]; then sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"; fi
 
     cd "$REPO"
     git add "datasets/$BASE."* "datasets/plots/$BASE"* datasets/campaign.csv
