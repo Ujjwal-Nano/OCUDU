@@ -53,7 +53,9 @@ def analyse(name, mins, M, margin):
     flips = int((np.diff(am) != 0).sum())
     share = np.bincount(am, minlength=R) / n * 100.0
     sep   = gap.mean() / std.mean()                      # separation ratio
-    pick  = int(am[0])
+    warm  = min(50, max(1, n // 10))          # ~1 s warm-up window
+    pick  = int(M[:warm].mean(0).argmax())    # decide from a short average, not one sample
+    best_fixed = int(mean.argmax())           # hindsight-optimal fixed choice
     viol  = np.where(M[:, pick] < M.max(1) - margin)[0]
     life  = (mins[viol[0]] - mins[0]) if len(viol) else np.nan   # nan = censored
     regret = float((M.max(1) - M[:, pick]).mean())
@@ -67,12 +69,14 @@ def analyse(name, mins, M, margin):
     print(f"   flips          : {flips}  ({flips/n*100:.1f}% of samples)")
     print(f"   decision life  : pick RU{pick} -> " +
           (f">{margin:.0f} dB suboptimal after {life:.2f} min" if not np.isnan(life) else f"never (censored at {mins[-1]-mins[0]:.1f} min)"))
+    regret_bf = float((M.max(1) - M[:, best_fixed]).mean())
     print(f"   mean regret    : {regret:.2f} dB   (max available gain vs avg RU: {best_gain:.2f} dB)")
+    print(f"   best fixed RU  : RU{best_fixed}  regret {regret_bf:.2f} dB  (cost of not adapting)")
     return dict(seg=name, n=n, dur=float(mins[-1]-mins[0]),
                 gap=float(gap.mean()), sigma=float(std.mean()), sep=float(sep),
                 flips=flips, flip_pct=float(flips/n*100), pick=pick,
                 life_min=float(life) if not np.isnan(life) else "",
-                regret=regret, best_gain=best_gain,
+                regret=regret, best_gain=best_gain, best_fixed=best_fixed, regret_bf=regret_bf,
                 **{f"mean_RU{r}": float(mean[r]) for r in range(R)},
                 **{f"std_RU{r}": float(std[r]) for r in range(R)},
                 **{f"argmax_RU{r}": float(share[r]) for r in range(R)})
