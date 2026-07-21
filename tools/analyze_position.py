@@ -46,7 +46,10 @@ def analyse(name, mins, M, margin):
     if n < 10:
         print(f"{name:>18}  too few samples ({n})")
         return None
-    mean = M.mean(0); std = M.std(0); p10 = np.percentile(M, 10, axis=0)
+    lin  = 10.0 ** (M / 10.0)
+    mean = 10.0 * np.log10(lin.mean(0))   # mean POWER (linear average), reported in dB
+    mean_db = M.mean(0)                   # dB-domain (geometric) mean, for reference
+    std = M.std(0); p10 = np.percentile(M, 10, axis=0)
     srt  = np.sort(M, 1)
     gap  = srt[:, -1] - srt[:, 0]
     am   = M.argmax(1)
@@ -55,7 +58,7 @@ def analyse(name, mins, M, margin):
     sep   = gap.mean() / std.mean()                      # separation ratio
     warm  = min(50, max(1, n // 10))          # ~1 s warm-up window
     pick  = int(M[:warm].mean(0).argmax())    # decide from a short average, not one sample
-    best_fixed = int(mean.argmax())           # hindsight-optimal fixed choice
+    best_fixed = int(mean.argmax())  # by mean power           # hindsight-optimal fixed choice
     viol  = np.where(M[:, pick] < M.max(1) - margin)[0]
     life  = (mins[viol[0]] - mins[0]) if len(viol) else np.nan   # nan = censored
     regret = float((M.max(1) - M[:, pick]).mean())
@@ -63,7 +66,7 @@ def analyse(name, mins, M, margin):
 
     print(f"\n{name}  (n={n}, {mins[-1]-mins[0]:.1f} min)")
     for r in range(R):
-        print(f"   RU{r}: mean {mean[r]:7.2f}  std {std[r]:4.2f}  p10 {p10[r]:7.2f}  argmax {share[r]:5.1f}%")
+        print(f"   RU{r}: meanP {mean[r]:7.2f}  (geoM {mean_db[r]:7.2f})  std {std[r]:4.2f}  p10 {p10[r]:7.2f}  argmax {share[r]:5.1f}%")
     print(f"   gap best-worst : mean {gap.mean():.2f} dB  (min {gap.min():.2f}, max {gap.max():.2f})")
     print(f"   separation gap/sigma : {sep:.1f}")
     print(f"   flips          : {flips}  ({flips/n*100:.1f}% of samples)")
@@ -77,7 +80,8 @@ def analyse(name, mins, M, margin):
                 flips=flips, flip_pct=float(flips/n*100), pick=pick,
                 life_min=float(life) if not np.isnan(life) else "",
                 regret=regret, best_gain=best_gain, best_fixed=best_fixed, regret_bf=regret_bf,
-                **{f"mean_RU{r}": float(mean[r]) for r in range(R)},
+                **{f"meanP_RU{r}": float(mean[r]) for r in range(R)},
+                **{f"geoM_RU{r}": float(mean_db[r]) for r in range(R)},
                 **{f"std_RU{r}": float(std[r]) for r in range(R)},
                 **{f"argmax_RU{r}": float(share[r]) for r in range(R)})
 
