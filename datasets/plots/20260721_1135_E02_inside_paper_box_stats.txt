@@ -1,0 +1,5 @@
+dataset: /home/tud/OCUDU/datasets/20260721_1135_E02_inside_paper_box.jsonl
+
+user 0: 1744 samples, 1 segment(s)
+  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
+    0 0x4602  1744   -23.8/ -22.7   -22.9/ -21.9   -22.9/ -21.7   -22.7/ -21.3
