@@ -10,6 +10,8 @@
 #include "ocudu/fapi/p7/builders/uci_indication_builder.h"
 #include "ocudu/support/csi_grid_registry.h"
 #include <fstream>
+#include <chrono>
+#include <iomanip>
 #include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/units.h"
 
@@ -494,22 +496,26 @@ void phy_to_fapi_results_event_fastpath_translator::on_new_srs_results(const ul_
 {
   // Publish per-RU CSI grid for the scheduler (side channel, bypasses FAPI).
   csi_grid_registry::instance().update(result.context.rnti, result.processor_result.ru_power_grid);
-// DEBUG: confirm producer executes (remove later)
+// Per-RB SRS CSI dump: one line per SRS occasion, independent of scheduler/traffic
   {
-    static std::ofstream dbg("/tmp/srs_producer.log", std::ios::app);
-    const auto& gg = result.processor_result.ru_power_grid;
-float vmax = 0.0F; unsigned imax = 0;
-    if (!gg.empty()) {
+    static std::ofstream rblog("/tmp/srs_rb.jsonl", std::ios::app);
+    static unsigned      rbcnt = 0;
+    const auto&          gg = result.processor_result.ru_power_grid;
+    if (!gg.empty() && !gg[0].empty()) {
+      const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch()).count();
+      rblog << "{\"t\":" << now
+            << ",\"rnti\":" << static_cast<unsigned>(result.context.rnti)
+            << ",\"ports\":" << gg.size() << ",\"rb\":[";
       for (unsigned i = 0; i != gg[0].size(); ++i) {
-        if (gg[0][i] > vmax) { vmax = gg[0][i]; imax = i; }
+        double v = 0.0;
+        for (const auto& port : gg) { if (i < port.size()) v += port[i]; }
+        if (i) rblog << ",";
+        rblog << std::setprecision(5) << v;
       }
+      rblog << "]}\n";
+      if (++rbcnt % 50 == 0) rblog.flush();
     }
-    dbg << "rnti=" << static_cast<unsigned>(result.context.rnti)
-        << " ports=" << gg.size()
-        << " rus=" << (gg.empty() ? 0 : gg[0].size())
-        << " v0=" << ((gg.empty() || gg[0].empty()) ? -1.0F : gg[0][0])
-        << " vmax=" << vmax << "@" << imax << "\n";
-    dbg.flush();
   }
   
   fapi::srs_indication         msg;
