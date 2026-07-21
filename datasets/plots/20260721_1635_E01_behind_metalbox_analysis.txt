@@ -1,0 +1,17 @@
+file      : /home/tud/OCUDU/datasets/20260721_1635_E01_behind_metalbox.jsonl
+samples   : 10100   duration 3.4 min   RUs 4
+trim      : first 1.5 min, last 1.0 min
+
+WHOLE (trimmed)  (n=2607, 0.9 min)
+   RU0: meanP  -24.38  (geoM  -26.48)  std 4.32  p10  -32.41  argmax  28.7%
+   RU1: meanP  -23.96  (geoM  -26.10)  std 4.38  p10  -32.14  argmax  28.4%
+   RU2: meanP  -24.15  (geoM  -26.21)  std 4.28  p10  -32.13  argmax  25.4%
+   RU3: meanP  -24.96  (geoM  -26.98)  std 4.17  p10  -32.64  argmax  17.5%
+   gap best-worst : mean 2.94 dB  (min 0.14, max 13.39)
+   separation gap/sigma : 0.7
+   flips          : 1026  (39.4% of samples)
+   decision life  : pick RU1 -> >1 dB suboptimal after 0.00 min
+   mean regret    : 0.95 dB   (max available gain vs avg RU: 1.30 dB)
+   best fixed RU  : RU1  regret 0.95 dB  (cost of not adapting)
+
+appended 1 row(s) to /home/tud/OCUDU/datasets/campaign.csv
