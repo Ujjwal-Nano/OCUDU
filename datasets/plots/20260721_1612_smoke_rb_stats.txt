@@ -1,6 +1,0 @@
-dataset: /home/tud/OCUDU/datasets/20260721_1612_smoke_rb.jsonl
-
-user 0: 5742 samples, 2 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4601  1130   -32.2/ -27.8   -32.9/ -28.8   -33.4/ -29.9   -34.8/ -31.9
-    1 0x4602  4612   -31.9/ -30.6   -32.4/ -31.1   -33.5/ -32.4   -33.9/ -32.8

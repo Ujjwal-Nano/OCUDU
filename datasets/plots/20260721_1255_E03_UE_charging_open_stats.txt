@@ -1,5 +1,0 @@
-dataset: /home/tud/OCUDU/datasets/20260721_1255_E03_UE_charging_open.jsonl
-
-user 0: 1416 samples, 1 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4602  1416   -27.5/ -25.7   -28.1/ -26.1   -29.7/ -27.9   -30.5/ -29.0

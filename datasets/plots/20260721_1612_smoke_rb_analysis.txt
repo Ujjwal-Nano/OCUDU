@@ -1,4 +1,0 @@
-file      : /home/tud/OCUDU/datasets/20260721_1612_smoke_rb.jsonl
-samples   : 5742   duration 2.0 min   RUs 4
-trim      : first 1.5 min, last 1.0 min
-   WHOLE (trimmed)  too few samples (0)
