@@ -37,7 +37,7 @@ case "$1" in
     cd "$REPO"
     git add "datasets/$BASE."* "datasets/plots/$BASE"* datasets/campaign.csv
     git commit -m "dataset: $BASE — ${3:-no note}"
-    git pull --rebase -q && git push
+    git pull --rebase && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
     ;;
   *) echo "usage: csi_run.sh start | csi_run.sh save <name> [note]"; exit 1 ;;
