@@ -34,7 +34,12 @@ case "$1" in
       python3 "$REPO/tools/plot_csi.py" "$D/$BASE.swap.jsonl" -o "$P/${BASE}_swap.png" || true
     fi
     python3 "$REPO/tools/analyze_position.py" "$D/$BASE.jsonl" \
-            --csv "$D/campaign.csv" | tee "$P/${BASE}_analysis.txt"
+            --csv "$REPO/datasets/campaign.csv" | tee "$P/${BASE}_analysis.txt"
+    # full metric suite (regret/T*, lifetime CCDF, coherence Bc/Tc, granularity) from the raw per-RB file
+    zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rbfull.jsonl
+    python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
+            --trim-start 1.5 --trim-end 1.0 || true
+    rm -f /tmp/_rbfull.jsonl
 
 
     cd "$REPO"
