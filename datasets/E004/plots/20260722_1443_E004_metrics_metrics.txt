@@ -1,0 +1,20 @@
+file        : /tmp/_rbfull.jsonl
+samples     : 148342   duration 49.4 min   rate 50.0/s
+RBs sounded : 48   RU size K=12 -> 4 RUs
+SRS SNR est : median 9.1 dB  p10 8.3 dB  (per-RB, slow/fast split; lower bound if UE moving)
+T*          : 741.705 s at 0.5 dB budget
+regret(fixed choice) : 0.05 dB
+lifetime eps=0.5 dB : median    0.060 s   p10    0.020 s
+lifetime eps=1.0 dB : median    0.300 s   p10    0.040 s
+lifetime eps=2.0 dB : median   53.000 s   p10    1.770 s
+lifetime eps=3.0 dB : median 2966.840 s   p10 2966.840 s
+freq-corr lag1 (1s-avg): 0.50  (low value => noise-dominated raw data)
+Bc(0.5)     : 0.36 MHz  (RU width K=12 = 4.32 MHz)
+  K= 4 (12 RUs): G= 2.03 dB  sep= 5.67
+  K= 6 (8 RUs): G= 1.73 dB  sep= 5.85
+  K= 8 (6 RUs): G= 1.57 dB  sep= 5.98
+  K=12 (4 RUs): G= 1.36 dB  sep= 6.29
+  K=16 (3 RUs): G= 1.26 dB  sep= 6.34
+  K=24 (2 RUs): G= 1.00 dB  sep= 5.38
+Tc(0.5)     : 12.900 s
+re-attaches  : 0  at min 
