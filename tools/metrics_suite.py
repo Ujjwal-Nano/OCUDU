@@ -83,6 +83,20 @@ def main():
     L.append(f"file        : {a.cap}")
     L.append(f"samples     : {len(M)}   duration {mins[-1]-mins[0]:.1f} min   rate {fs:.1f}/s")
     L.append(f"RBs sounded : {NRB}   RU size K={a.K} -> {R} RUs")
+    # SRS SNR estimate from per-RB data: slow(signal) vs fast(noise) split over 1 s
+    w=max(1,int(round(fs)))
+    kern=np.ones(w)/w
+    sig_pow, noi_pow = [], []
+    for rb in range(NRB):
+        col=P[:,rb]
+        slow=np.convolve(col, kern, mode="same")
+        fast=col-slow
+        sig_pow.append(slow.mean()**2 if False else (slow**2).mean())
+        noi_pow.append(fast.var())
+    snr_lin=np.array(sig_pow)/np.maximum(np.array(noi_pow),1e-20)
+    snr_db=10*np.log10(np.maximum(snr_lin,1e-12))
+    L.append(f"SRS SNR est : median {np.median(snr_db):.1f} dB  p10 {np.percentile(snr_db,10):.1f} dB  "
+             f"(per-RB, slow/fast split; lower bound if UE moving)")
 
     fig, ax = plt.subplots(2, 3, figsize=(16.5, 9))
 
