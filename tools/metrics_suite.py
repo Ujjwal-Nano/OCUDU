@@ -111,9 +111,12 @@ def main():
     ax[0,1].set_xlabel("decision lifetime (s)"); ax[0,1].set_ylabel("P(lifetime > x)")
     ax[0,1].set_title("B  decision lifetime CCDF"); ax[0,1].grid(alpha=.3, which="both"); ax[0,1].legend(fontsize=8)
 
-    # C frequency correlation -> Bc
-    Pn = P/np.maximum(P.mean(0),1e-15); x = Pn-Pn.mean(0)
+    # C frequency correlation -> Bc  (time-average 1 s to suppress per-occasion noise floor)
+    blk = max(1, int(round(fs)))
+    B = P[:len(P)//blk*blk].reshape(-1, blk, NRB).mean(1) if len(P) >= blk else P
+    x = B/np.maximum(B.mean(0),1e-15) - 1.0
     cf = np.array([(x[:, :NRB-d]*x[:, d:]).mean() for d in range(NRB)]); cf /= cf[0]
+    L.append(f"freq-corr lag1 (1s-avg): {cf[1]:.2f}  (low value => noise-dominated raw data)")
     df = np.arange(NRB)*RBBW/1e6
     ax[0,2].plot(df, cf, lw=2, color="#1f77b4"); ax[0,2].axhline(.5, ls="--", c="k", lw=1)
     Bc = df[np.argmax(cf<0.5)] if (cf<0.5).any() else np.nan
