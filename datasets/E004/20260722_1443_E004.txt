@@ -1,1 +1,2 @@
 behind oscillopse
+tilt-dominated: steep ~3dB linear slope, RU0 high -> RU3 low (opposite of E001). SRS SNR 9.1dB (trustworthy). Bc=0.4MHz is a mis-summary of a monotonic tilt; use G/separation instead. Panel E shows ~0.2Hz periodic scatterer.
