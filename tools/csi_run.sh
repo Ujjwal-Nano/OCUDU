@@ -17,7 +17,7 @@ case "$1" in
     [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [note]"; exit 1; }
     [ -s "$RB" ] || { echo "ERROR: $RB empty — did the gNB run with SRS enabled?"; exit 1; }
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$2"
-    D="$REPO/datasets"; P="$D/plots"; mkdir -p "$P"
+    D="$REPO/datasets/$2"; P="$D/plots"; mkdir -p "$P"   # per-measurement folder
 
     echo "${3:-no note}" > "$D/$BASE.txt"
     sudo cp "$RB" "$D/$BASE.rb.jsonl"; sudo chown "$USER" "$D/$BASE.rb.jsonl"
@@ -38,7 +38,7 @@ case "$1" in
 
 
     cd "$REPO"
-    git add "datasets/$BASE."* "datasets/plots/$BASE"* datasets/campaign.csv
+    git add "$D" datasets/campaign.csv
     git commit -m "dataset: $BASE — ${3:-no note}"
     git pull --rebase && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
