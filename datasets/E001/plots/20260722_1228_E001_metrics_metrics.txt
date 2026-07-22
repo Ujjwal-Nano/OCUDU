@@ -1,4 +1,4 @@
-file        : /tmp/_rbfull.jsonl
+file        : /home/tud/OCUDU/datasets/E001/20260722_1228_E001.rb.jsonl.gz
 samples     : 104021   duration 34.7 min   rate 50.0/s
 RBs sounded : 48   RU size K=12 -> 4 RUs
 T*          : 520.100 s at 0.5 dB budget
@@ -7,12 +7,13 @@ lifetime eps=0.5 dB : median    0.080 s   p10    0.020 s
 lifetime eps=1.0 dB : median    0.340 s   p10    0.040 s
 lifetime eps=2.0 dB : median    2.580 s   p10    0.528 s
 lifetime eps=3.0 dB : median 2080.420 s   p10 2080.420 s
-Bc(0.5)     : 0.36 MHz  (RU width K=12 = 4.32 MHz)
+freq-corr lag1 (1s-avg): 0.88  (low value => noise-dominated raw data)
+Bc(0.5)     : 6.48 MHz  (RU width K=12 = 4.32 MHz)
   K= 4 (12 RUs): G= 1.89 dB  sep= 4.43
   K= 6 (8 RUs): G= 1.63 dB  sep= 4.20
   K= 8 (6 RUs): G= 1.48 dB  sep= 4.04
   K=12 (4 RUs): G= 1.28 dB  sep= 3.78
   K=16 (3 RUs): G= 1.19 dB  sep= 3.38
   K=24 (2 RUs): G= 0.93 dB  sep= 3.21
-Tc(0.5)     : 0.220 s
+Tc(0.5)     : 15.660 s
 re-attaches  : 0  at min 
