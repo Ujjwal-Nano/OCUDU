@@ -3,31 +3,41 @@
 #   csi_run.sh start                     (stop the gNB first!)
 #   csi_run.sh save <name> ["note"]
 set -e
-RB=/tmp/srs_rb.jsonl            # per-RB producer log (every SRS occasion, ~50/s)
+RB=/tmp/srs_rb.jsonl            # per-RB producer log (~50/s)
 SW=/tmp/swap_metrics.jsonl      # per-RU scheduler log (traffic-gated)
+GC=/tmp/gnb_console.txt         # gNB console (CQI/RSRP/MCS via 't', needs 'script' launch)
+GL=/tmp/gnb_srs_test.log        # gNB detail log (SRS/PHY/events, from yaml log sink)
 REPO=/home/tud/OCUDU
 RBS_PER_RU=${RBS_PER_RU:-12}
-
 case "$1" in
   start)
-    sudo rm -f "$RB" "$SW" 2>/dev/null || true
-    echo "cleared $RB and $SW — start the gNB and run the experiment now"
+    sudo rm -f "$RB" "$SW" "$GC" "$GL" 2>/dev/null || true
+    echo "cleared logs — start the gNB (with 'script' for CQI) and run the experiment"
     ;;
   save)
     [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [note]"; exit 1; }
     [ -s "$RB" ] || { echo "ERROR: $RB empty — did the gNB run with SRS enabled?"; exit 1; }
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$2"
-    D="$REPO/datasets/$2"; P="$D/plots"; mkdir -p "$P"   # per-measurement folder
-
+    D="$REPO/datasets/$2"; P="$D/plots"; mkdir -p "$P"
     echo "${3:-no note}" > "$D/$BASE.txt"
-    sudo cp "$RB" "$D/$BASE.rb.jsonl"; sudo chown "$USER" "$D/$BASE.rb.jsonl"
-    gzip -9f "$D/$BASE.rb.jsonl"
 
+    # raw per-RB (archival)
+    sudo cp "$RB" "$D/$BASE.rb.jsonl"; sudo chown "$USER" "$D/$BASE.rb.jsonl"; gzip -9f "$D/$BASE.rb.jsonl"
+
+    # gNB logs (CQI/RSRP/MCS + events), if captured
+    for lf in "$GC" "$GL"; do
+      if [ -s "$lf" ]; then
+        n="$D/$BASE.$(basename "$lf")"
+        sudo cp "$lf" "$n"; sudo chown "$USER" "$n"; gzip -9f "$n"
+      fi
+    done
+
+    # per-RU view
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rb.jsonl
-    python3 "$REPO/tools/rb_to_ru.py" /tmp/_rb.jsonl -o "$D/$BASE.jsonl" \
-            --rbs-per-ru "$RBS_PER_RU" --skip-rb0
+    python3 "$REPO/tools/rb_to_ru.py" /tmp/_rb.jsonl -o "$D/$BASE.jsonl" --rbs-per-ru "$RBS_PER_RU" --skip-rb0
     rm -f /tmp/_rb.jsonl
 
+    # plots + analysis
     python3 "$REPO/tools/plot_csi.py" "$D/$BASE.jsonl" -o "$P/$BASE.png"
     if [ -s "$SW" ]; then
       sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"
@@ -35,15 +45,19 @@ case "$1" in
     fi
     python3 "$REPO/tools/analyze_position.py" "$D/$BASE.jsonl" \
             --csv "$REPO/datasets/campaign.csv" | tee "$P/${BASE}_analysis.txt"
-    # full metric suite (regret/T*, lifetime CCDF, coherence Bc/Tc, granularity) from the raw per-RB file
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rbfull.jsonl
     python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
             --trim-start 1.5 --trim-end 1.0 || true
     rm -f /tmp/_rbfull.jsonl
 
+    # gNB console summary (CQI/RSRP/MCS distributions + events), if the log was archived
+    if [ -s "$D/$BASE.gnb_console.txt.gz" ]; then
+      python3 "$REPO/tools/gnb_log_summary.py" "$D/$BASE.gnb_console.txt.gz" \
+              > "$P/${BASE}_gnb_summary.txt" 2>/dev/null || true
+    fi
 
     cd "$REPO"
-    git add "$D" datasets/campaign.csv
+    git add "$D" datasets/campaign.csv tools/
     git commit -m "dataset: $BASE — ${3:-no note}"
     git pull --rebase && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
