@@ -27,23 +27,23 @@ LAMBDA = 3e8 / 3.75e9  # ~0.08 m
 
 def load(path, trim_start, trim_end):
     op = gzip.open if path.endswith(".gz") else open
-    T, P = [], []
+    T, P, RN = [], [], []
     with op(path, "rt") as f:
         for line in f:
             line = line.strip()
             if not line: continue
             try: d = json.loads(line)
             except json.JSONDecodeError: continue
-            T.append(d["t"]); P.append(d["rb"])
+            T.append(d["t"]); P.append(d["rb"]); RN.append(d.get("rnti",-1))
     if not P: sys.exit("no samples in " + path)
-    T = np.array(T, float); P = np.array(P, float)
+    T = np.array(T, float); P = np.array(P, float); RN = np.array(RN)
     P = P[:, 1:]                                   # drop CRB0 (never sounded)
     mins = (T - T[0]) / 60000.0
     k = (mins >= trim_start) & (mins <= mins[-1] - trim_end)
     if k.sum() < 100: k = np.ones(len(mins), bool)  # short capture: keep all
-    T, P, mins = T[k], P[k], mins[k]
+    T, P, mins, RN = T[k], P[k], mins[k], RN[k]
     fs = 1000.0 / np.median(np.diff(T))            # samples per second
-    return T, P, mins, fs
+    return T, P, mins, fs, RN
 
 def to_ru_db(P, K):
     R = P.shape[1] // K
@@ -76,7 +76,7 @@ def main():
     ap.add_argument("--speed", type=float, default=None, help="UE speed m/s, for the Doppler line")
     a = ap.parse_args()
 
-    T, P, mins, fs = load(a.cap, a.trim_start, a.trim_end)
+    T, P, mins, fs, RN = load(a.cap, a.trim_start, a.trim_end)
     NRB = P.shape[1]
     M = to_ru_db(P, a.K); R = M.shape[1]
     L = []
@@ -157,6 +157,13 @@ def main():
     # F context: per-RU traces
     for rr in range(R):
         ax[1,2].plot(mins, M[:,rr], lw=.8, label=f"RU{rr}")
+    cuts = [i for i in range(1,len(RN)) if RN[i]!=RN[i-1]]
+    for c in cuts:
+        tc = mins[c]
+        ax[1,2].axvline(tc, color="k", ls="--", lw=1, alpha=0.6)
+        ax[1,2].annotate(f"re-attach {tc:.1f}min\n{hex(int(RN[c]))}", xy=(tc, ax[1,2].get_ylim()[1]),
+                         fontsize=6, ha="left", va="top", color="k")
+    L.append(f"re-attaches  : {len(cuts)}  at min " + ", ".join(f"{mins[c]:.1f}" for c in cuts))
     ax[1,2].set_xlabel("time (min)"); ax[1,2].set_ylabel("per-RU power (dB)")
     ax[1,2].set_title("F  per-RU time series (context)"); ax[1,2].grid(alpha=.3); ax[1,2].legend(fontsize=7, ncol=2)
 
