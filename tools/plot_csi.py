@@ -63,6 +63,12 @@ def main():
         ax = axes[row][0]
         for r in range(R):
             ax.plot(x, M[:,r], lw=1.0, label=f"RU{r} (RB {12*r}-{12*r+11})")
+        for c in cuts[1:-1]:                       # mark re-attach events (rnti change)
+            xc = x[c]
+            ax.axvline(xc, color="k", ls="--", lw=1, alpha=0.6)
+            tlab = f"{xc:.1f}min" if have_t else f"#{c}"
+            ax.text(xc, ax.get_ylim()[1], f" re-attach {tlab}\n {hex(int(rn[c]))}",
+                    fontsize=6, va="top", ha="left", color="k")
         ax.set_title(f"user {ukey} — per-RU power vs {'time' if have_t else 'sample'}")
         ax.set_xlabel(xlabel); ax.set_ylabel("CSI power (dB)")
         ax.grid(alpha=0.3); ax.legend(fontsize=8, ncol=2)
