@@ -1,6 +1,0 @@
-dataset: /home/tud/OCUDU/datasets/E002/20260722_1146_E002.swap.jsonl
-
-user 0: 746 samples, 2 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4601   212   -34.0/ -30.2   -33.5/ -29.1   -33.0/ -29.2   -33.3/ -29.6
-    1 0x4602   534   -33.4/ -32.1   -33.3/ -31.8   -32.8/ -31.2   -32.2/ -30.6
