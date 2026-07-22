@@ -141,8 +141,11 @@ def main():
     b.set_xlabel("RU size K (RBs)"); b.set_xticks(Ks); b.set_title("D  granularity sweep"); b.grid(alpha=.3)
 
     # E temporal autocorrelation -> Tc
-    maxlag=min(len(M)-2, int(20*fs))
-    y=M[:,0]-M[:,0].mean()
+    # smooth 1 s to remove the per-occasion noise floor before temporal correlation
+    w=max(1,int(round(fs)))
+    ys=np.convolve(M[:,0], np.ones(w)/w, mode="valid")
+    y=ys-ys.mean()
+    maxlag=min(len(y)-2, int(60*fs))
     ac=np.array([(y[:len(y)-d]*y[d:]).mean() for d in range(maxlag)]); ac/=ac[0]
     lag=np.arange(maxlag)/fs
     ax[1,1].plot(lag,ac,lw=1.8,color="#ff7f0e"); ax[1,1].axhline(.5,ls="--",c="k",lw=1)
