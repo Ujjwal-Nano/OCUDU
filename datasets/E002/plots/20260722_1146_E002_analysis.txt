@@ -1,0 +1,17 @@
+file      : /home/tud/OCUDU/datasets/E002/20260722_1146_E002.jsonl
+samples   : 23901   duration 8.0 min   RUs 4
+trim      : first 1.5 min, last 1.0 min
+
+WHOLE (trimmed)  (n=16397, 5.5 min)
+   RU0: meanP  -32.77  (geoM  -32.89)  std 1.04  p10  -34.23  argmax  27.9%
+   RU1: meanP  -33.08  (geoM  -33.22)  std 1.09  p10  -34.50  argmax   2.7%
+   RU2: meanP  -32.62  (geoM  -32.80)  std 1.20  p10  -34.16  argmax  12.3%
+   RU3: meanP  -32.14  (geoM  -32.26)  std 1.02  p10  -33.42  argmax  57.0%
+   gap best-worst : mean 1.51 dB  (min 0.04, max 4.32)
+   separation gap/sigma : 1.4
+   flips          : 5650  (34.5% of samples)
+   decision life  : pick RU0 -> >1 dB suboptimal after 0.01 min
+   mean regret    : 0.88 dB   (max available gain vs avg RU: 0.78 dB)
+   best fixed RU  : RU3  regret 0.25 dB  (cost of not adapting)
+
+appended 1 row(s) to /home/tud/OCUDU/datasets/campaign.csv
