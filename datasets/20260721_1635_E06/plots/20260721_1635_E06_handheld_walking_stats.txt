@@ -1,6 +1,0 @@
-dataset: /home/tud/OCUDU/datasets/20260721_1635_E01_behind_metalbox.jsonl
-
-user 0: 10100 samples, 2 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4601  1054   -32.7/ -29.6   -31.3/ -27.6   -29.7/ -25.9   -28.9/ -24.6
-    1 0x4602  9046   -24.0/ -17.1   -23.6/ -16.9   -23.7/ -16.9   -24.4/ -17.5
