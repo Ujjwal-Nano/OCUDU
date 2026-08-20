@@ -1,0 +1,4 @@
+file      : /home/tud/OCUDU/datasets/E0001/20260820_1659_E0001.jsonl
+samples   : 3050   duration 1.0 min   RUs 4
+trim      : first 1.5 min, last 1.0 min
+   WHOLE (trimmed)  too few samples (0)
