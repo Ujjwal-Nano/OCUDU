@@ -85,9 +85,10 @@ def main():
     elif a.mobile:              win_s = 0.060
     else:                       win_s = 1.0
     W = max(1, int(round(win_s*fs)))
-    L.append(f"avg window   : {win_s*1000:.0f} ms ({W} samples)" + ("  [MOBILE]" if (a.mobile or a.avg_win) else ""))
+    _winnote = f"avg window   : {win_s*1000:.0f} ms ({W} samples)" + ("  [MOBILE]" if (a.mobile or a.avg_win) else "")
     M = to_ru_db(P, a.K); R = M.shape[1]
     L = []
+    L.append(_winnote)
     L.append(f"file        : {a.cap}")
     L.append(f"samples     : {len(M)}   duration {mins[-1]-mins[0]:.1f} min   rate {fs:.1f}/s")
     L.append(f"RBs sounded : {NRB}   RU size K={a.K} -> {R} RUs")
