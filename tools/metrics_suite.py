@@ -73,11 +73,19 @@ def main():
     ap.add_argument("--trim-start", type=float, default=1.5)
     ap.add_argument("--trim-end", type=float, default=1.0)
     ap.add_argument("--budget", type=float, default=0.5, help="regret budget for T* (dB)")
+    ap.add_argument("--mobile", action="store_true", help="short averaging window for moving UE (default 60 ms)")
+    ap.add_argument("--avg-win", type=float, default=None, help="averaging window in ms (overrides --mobile default)")
     ap.add_argument("--speed", type=float, default=None, help="UE speed m/s, for the Doppler line")
     a = ap.parse_args()
 
     T, P, mins, fs, RN = load(a.cap, a.trim_start, a.trim_end)
     NRB = P.shape[1]
+    # averaging window: 1 s static (noise suppression) vs short for mobility (preserve fast fading)
+    if a.avg_win is not None:   win_s = a.avg_win/1000.0
+    elif a.mobile:              win_s = 0.060
+    else:                       win_s = 1.0
+    W = max(1, int(round(win_s*fs)))
+    L.append(f"avg window   : {win_s*1000:.0f} ms ({W} samples)" + ("  [MOBILE]" if (a.mobile or a.avg_win) else ""))
     M = to_ru_db(P, a.K); R = M.shape[1]
     L = []
     L.append(f"file        : {a.cap}")
@@ -126,7 +134,7 @@ def main():
     ax[0,1].set_title("B  decision lifetime CCDF"); ax[0,1].grid(alpha=.3, which="both"); ax[0,1].legend(fontsize=8)
 
     # C frequency correlation -> Bc  (time-average 1 s to suppress per-occasion noise floor)
-    blk = max(1, int(round(fs)))
+    blk = W
     B = P[:len(P)//blk*blk].reshape(-1, blk, NRB).mean(1) if len(P) >= blk else P
     x = B/np.maximum(B.mean(0),1e-15) - 1.0
     cf = np.array([(x[:, :NRB-d]*x[:, d:]).mean() for d in range(NRB)]); cf /= cf[0]
@@ -156,7 +164,7 @@ def main():
 
     # E temporal autocorrelation -> Tc
     # smooth 1 s to remove the per-occasion noise floor before temporal correlation
-    w=max(1,int(round(fs)))
+    w=W
     ys=np.convolve(M[:,0], np.ones(w)/w, mode="valid")
     y=ys-ys.mean()
     maxlag=min(len(y)-2, int(60*fs))
