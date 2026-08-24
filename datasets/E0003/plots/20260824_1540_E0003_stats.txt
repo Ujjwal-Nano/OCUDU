@@ -1,4 +1,4 @@
-dataset: /home/tud/OCUDU/datasets/E0003/20260824_1540_E0003.jsonl
+dataset: datasets/E0003/20260824_1540_E0003.jsonl
 
 user 0: 64414 samples, 2 segment(s)
   seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
