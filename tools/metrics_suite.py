@@ -75,10 +75,27 @@ def main():
     ap.add_argument("--budget", type=float, default=0.5, help="regret budget for T* (dB)")
     ap.add_argument("--mobile", action="store_true", help="short averaging window for moving UE (default 60 ms)")
     ap.add_argument("--avg-win", type=float, default=None, help="averaging window in ms (overrides --mobile default)")
+    ap.add_argument("--reattach-guard", type=float, default=10.0,
+                    help="seconds of data to drop before AND after each re-attach (rnti change); 0 disables")
     ap.add_argument("--speed", type=float, default=None, help="UE speed m/s, for the Doppler line")
     a = ap.parse_args()
 
     T, P, mins, fs, RN = load(a.cap, a.trim_start, a.trim_end)
+    # drop a guard window around every re-attach (rnti change): power control resets there
+    if a.reattach_guard > 0 and len(RN) > 1:
+        g = int(round(a.reattach_guard * fs))
+        keep = np.ones(len(RN), bool)
+        cuts = [i for i in range(1, len(RN)) if RN[i] != RN[i-1]]
+        for c in cuts:
+            keep[max(0, c-g):min(len(RN), c+g)] = False
+        dropped = (~keep).sum()
+        if keep.sum() > 100:                      # only apply if enough data survives
+            P, mins, RN = P[keep], mins[keep], RN[keep]
+            _ra_note = f"re-attach guard: {a.reattach_guard:.0f}s x2 around {len(cuts)} event(s), dropped {dropped} samples ({100*dropped/len(keep):.1f}%)"
+        else:
+            _ra_note = f"re-attach guard SKIPPED: would drop too much ({len(cuts)} events)"
+    else:
+        _ra_note = "re-attach guard: none applied"
     NRB = P.shape[1]
     # averaging window: 1 s static (noise suppression) vs short for mobility (preserve fast fading)
     if a.avg_win is not None:   win_s = a.avg_win/1000.0
@@ -89,6 +106,7 @@ def main():
     M = to_ru_db(P, a.K); R = M.shape[1]
     L = []
     L.append(_winnote)
+    L.append(_ra_note)
     L.append(f"file        : {a.cap}")
     L.append(f"samples     : {len(M)}   duration {mins[-1]-mins[0]:.1f} min   rate {fs:.1f}/s")
     L.append(f"RBs sounded : {NRB}   RU size K={a.K} -> {R} RUs")
