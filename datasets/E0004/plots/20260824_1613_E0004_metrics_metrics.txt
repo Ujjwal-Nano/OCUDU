@@ -21,3 +21,4 @@ Bc(0.5)     : 11.52 MHz  (RU width K=12 = 4.32 MHz)
 Tc theory   : 336.0 ms at v=0.1 m/s (0.42*lambda/v)
 Tc(0.5)     : 0.260 s
 re-attaches  : 0  at min 
+appended mobility row to datasets/mobility_sweep.csv
