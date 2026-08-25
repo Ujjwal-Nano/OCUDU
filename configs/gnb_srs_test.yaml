@@ -21,7 +21,7 @@ ru_sdr:
   srate: 23.04
   otw_format: sc12
   tx_gain: 85
-  rx_gain: 40
+  rx_gain: 50
   clock: external
 
 cell_cfg:
