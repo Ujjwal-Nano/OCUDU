@@ -76,6 +76,7 @@ def main():
     ap.add_argument("--mobile", action="store_true", help="short averaging window for moving UE (default 60 ms)")
     ap.add_argument("--avg-win", type=float, default=None, help="averaging window in ms (overrides --mobile default)")
     ap.add_argument("--mobile-csv", default=None, help="append Tc/T*/regret row to this CSV (mobility sweep table)")
+    ap.add_argument("--label", default=None, help="name to record in the mobility CSV file column (defaults to the capture path)")
     ap.add_argument("--reattach-guard", type=float, default=10.0,
                     help="seconds of data to drop before AND after each re-attach (rnti change); 0 disables")
     ap.add_argument("--speed", type=float, default=None, help="UE speed m/s, for the Doppler line")
@@ -220,7 +221,7 @@ def main():
         import csv, os
         Tc_theory = (0.42*LAMBDA/a.speed) if a.speed else float("nan")
         row = {
-            "file": a.cap.split("/")[-1],
+            "file": a.label if a.label else a.cap.split("/")[-1],
             "speed_mps": a.speed if a.speed is not None else "",
             "Tc_meas_s": round(float(Tc),4) if not np.isnan(Tc) else "",
             "Tc_theory_s": round(Tc_theory,4) if a.speed else "",
