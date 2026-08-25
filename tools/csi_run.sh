@@ -15,11 +15,21 @@ case "$1" in
     echo "cleared logs — start the gNB (with 'script' for CQI) and run the experiment"
     ;;
   save)
-    [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [note]"; exit 1; }
+    [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [--mobile] [--speed V] [note]"; exit 1; }
     [ -s "$RB" ] || { echo "ERROR: $RB empty — did the gNB run with SRS enabled?"; exit 1; }
-    STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$2"
-    D="$REPO/datasets/$2"; P="$D/plots"; mkdir -p "$P"
-    echo "${3:-no note}" > "$D/$BASE.txt"
+    NAME="$2"; shift 2
+    SPEED=""; MOBILE=0
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --mobile) MOBILE=1; shift ;;
+        --speed)  SPEED="$2"; shift 2 ;;
+        *) break ;;
+      esac
+    done
+    NOTE="${1:-no note}"
+    STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$NAME"
+    D="$REPO/datasets/$NAME"; P="$D/plots"; mkdir -p "$P"
+    echo "$NOTE" > "$D/$BASE.txt"
 
     # raw per-RB (archival)
     sudo cp "$RB" "$D/$BASE.rb.jsonl"; sudo chown "$USER" "$D/$BASE.rb.jsonl"; gzip -9f "$D/$BASE.rb.jsonl"
@@ -46,8 +56,14 @@ case "$1" in
     python3 "$REPO/tools/analyze_position.py" "$D/$BASE.jsonl" \
             --csv "$REPO/datasets/campaign.csv" | tee "$P/${BASE}_analysis.txt"
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rbfull.jsonl
-    python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
-            --trim-start 1.5 --trim-end 1.0 || true
+    if [ "$MOBILE" = "1" ]; then
+      python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
+              ${SPEED:+--speed "$SPEED"} --avg-win 100 --trim-start 1.0 --trim-end 1.0 \
+              --mobile-csv "$REPO/datasets/mobility_sweep.csv" || true
+    else
+      python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
+              --trim-start 1.5 --trim-end 1.0 || true
+    fi
     rm -f /tmp/_rbfull.jsonl
 
     # gNB console summary (CQI/RSRP/MCS distributions + events), if the log was archived
@@ -57,7 +73,7 @@ case "$1" in
     fi
 
     cd "$REPO"
-    git add "$D" datasets/campaign.csv tools/
+    git add "$D" datasets/campaign.csv datasets/mobility_sweep.csv tools/
     git commit -m "dataset: $BASE — ${3:-no note}"
     git pull --rebase && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
