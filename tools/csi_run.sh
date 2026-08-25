@@ -74,7 +74,7 @@ case "$1" in
 
     cd "$REPO"
     git add "$D" datasets/campaign.csv datasets/mobility_sweep.csv tools/
-    git commit -m "dataset: $BASE — ${3:-no note}"
+    git commit -m "dataset: $BASE — $NOTE"
     git pull --rebase && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
     ;;
