@@ -1,6 +1,0 @@
-dataset: /home/tud/OCUDU/datasets/Experiment02/20260825_1404_Experiment02.swap.jsonl
-
-user 0: 1586 samples, 2 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4601    91   -26.4/ -23.2   -25.0/ -22.2   -25.8/ -22.8   -27.5/ -24.8
-    1 0x4602  1495   -23.7/ -19.5   -22.7/ -18.0   -22.5/ -17.8   -23.0/ -18.2

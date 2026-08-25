@@ -1,6 +1,0 @@
-dataset: datasets/E0003/20260824_1540_E0003.jsonl
-
-user 0: 64414 samples, 2 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4601  1055   -27.4/ -19.8   -27.2/ -19.2   -27.0/ -19.2   -27.3/ -18.9
-    1 0x4602 63359   -22.8/ -18.3   -22.9/ -18.2   -23.2/ -18.9   -23.3/ -18.6

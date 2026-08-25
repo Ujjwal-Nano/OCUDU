@@ -1,1 +1,0 @@
-controlled mobility 0.02 m/s, 1m, rx gain:50, D_los: 3.2m 
