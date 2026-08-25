@@ -1,0 +1,21 @@
+file : /home/tud/OCUDU/datasets/E004/20260722_1443_E004.rb.jsonl.gz
+samples 148342  49.4 min  rate 50/s  RBs 48
+rate model: log2(1+SNR), mean-band SNR 10.0 dB, cap 7.4 b/s/Hz
+  K= 2 (24 RUs): rate gain in-sample +0.751  honest +0.277 b/s/Hz
+  K= 3 (16 RUs): rate gain in-sample +0.626  honest +0.292 b/s/Hz
+  K= 4 (12 RUs): rate gain in-sample +0.554  honest +0.302 b/s/Hz
+  K= 6 ( 8 RUs): rate gain in-sample +0.471  honest +0.313 b/s/Hz
+  K= 8 ( 6 RUs): rate gain in-sample +0.424  honest +0.322 b/s/Hz
+  K=12 ( 4 RUs): rate gain in-sample +0.365  honest +0.321 b/s/Hz
+  K=16 ( 3 RUs): rate gain in-sample +0.336  honest +0.324 b/s/Hz
+  K=24 ( 2 RUs): rate gain in-sample +0.267  honest +0.267 b/s/Hz
+OPTIMAL K (honest): 16 RBs = 3 RUs, gain +0.324 b/s/Hz
+per-RU sigma 0.49 dB -> noise-limited minimum useful Δ ≈ 1.4 dB
+  Δ=1.0 dB: 20.6 swaps/min, regret 0.05 dB
+  Δ=2.0 dB: 0.1 swaps/min, regret 0.05 dB
+opportunity Δ≥0.5 dB: present   3.4% of time, median duration      20 ms, value 0.01 dB·s
+opportunity Δ≥1.0 dB: present   0.4% of time, median duration      20 ms, value 0.02 dB·s
+opportunity Δ≥2.0 dB: present   0.0% of time, median duration      20 ms, value 0.04 dB·s
+two-user weakest rate — blind split: mean 3.618, p10 3.419 b/s/Hz
+two-user weakest rate — best-RU (per user): mean 3.625, p10 3.434 b/s/Hz
+NOTE: users may contend for the same RU; 'best-RU' here is an upper reference, not a feasible allocation.

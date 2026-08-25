@@ -1,0 +1,25 @@
+file : /home/tud/OCUDU/datasets/E001/20260722_1228_E001.rb.jsonl.gz
+samples 104021  34.7 min  rate 50/s  RBs 48
+rate model: log2(1+SNR), mean-band SNR 10.0 dB, cap 7.4 b/s/Hz
+  K= 2 (24 RUs): rate gain in-sample +0.696  honest +0.298 b/s/Hz
+  K= 3 (16 RUs): rate gain in-sample +0.588  honest +0.314 b/s/Hz
+  K= 4 (12 RUs): rate gain in-sample +0.526  honest +0.319 b/s/Hz
+  K= 6 ( 8 RUs): rate gain in-sample +0.451  honest +0.320 b/s/Hz
+  K= 8 ( 6 RUs): rate gain in-sample +0.408  honest +0.322 b/s/Hz
+  K=12 ( 4 RUs): rate gain in-sample +0.351  honest +0.315 b/s/Hz
+  K=16 ( 3 RUs): rate gain in-sample +0.330  honest +0.327 b/s/Hz
+  K=24 ( 2 RUs): rate gain in-sample +0.249  honest +0.248 b/s/Hz
+OPTIMAL K (honest): 16 RBs = 3 RUs, gain +0.327 b/s/Hz
+per-RU sigma 0.68 dB -> noise-limited minimum useful Δ ≈ 1.9 dB
+  Δ=1.0 dB: 14.6 swaps/min, regret 0.05 dB
+  Δ=2.0 dB: 0.4 swaps/min, regret 0.05 dB
+opportunity Δ≥0.5 dB: present   2.9% of time, median duration      20 ms, value 0.01 dB·s
+opportunity Δ≥1.0 dB: present   0.3% of time, median duration      20 ms, value 0.02 dB·s
+opportunity Δ≥2.0 dB: present   0.0% of time, median duration      20 ms, value 0.04 dB·s
+pair 22_1228_E001 + 22_1341_E003: profile corr +0.93  weakest-user gain +13.41%
+pair 22_1228_E001 + 22_1443_E004: profile corr -0.93  weakest-user gain +18.98%
+pair 22_1228_E001 + 2_1622_E100-: profile corr -0.02  weakest-user gain +14.09%
+pair 22_1341_E003 + 22_1443_E004: profile corr -0.99  weakest-user gain +20.96%
+pair 22_1341_E003 + 2_1622_E100-: profile corr -0.07  weakest-user gain +17.84%
+pair 22_1443_E004 + 2_1622_E100-: profile corr -0.05  weakest-user gain +6.46%
+gain-vs-complementarity: slope -4.19 %/unit, r=-0.57
