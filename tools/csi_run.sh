@@ -28,7 +28,8 @@ case "$1" in
     done
     NOTE="${1:-no note}"
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$NAME"
-    D="$REPO/datasets/$NAME"; P="$D/plots"; mkdir -p "$P"
+    if [ "$MOBILE" = "1" ]; then SUB="Mobility"; else SUB="Static"; fi
+    D="$REPO/datasets/$SUB/$NAME"; P="$D/plots"; mkdir -p "$P"
     echo "$NOTE" > "$D/$BASE.txt"
 
     # raw per-RB (archival)
