@@ -49,7 +49,7 @@ cell_cfg:
         num_users: 1             # single P40 for pipeline validation; raise when 2nd UE exists
         rus_per_user: 4
         rbs_per_ru: 12
-        swap_period_slots: 40    # = 20 ms @ 30 kHz, aligned to SRS period
+        swap_period_slots: 20    #40 slots = 20 ms @ 30 kHz, aligned to SRS period, 10 ms @ 30KHz = 20 slots
 
 expert_execution:
   threads:
