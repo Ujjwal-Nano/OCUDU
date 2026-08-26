@@ -59,7 +59,7 @@ case "$1" in
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rbfull.jsonl
     if [ "$MOBILE" = "1" ]; then
       python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
-              ${SPEED:+--speed "$SPEED"} --avg-win 100 --trim-start 1.0 --trim-end 1.0 \
+              ${SPEED:+--speed "$SPEED"} --avg-win 40 --trim-start 1.0 --trim-end 1.0 \
               --label "$BASE" \
               --mobile-csv "$REPO/datasets/mobility_sweep.csv" || true
     else
