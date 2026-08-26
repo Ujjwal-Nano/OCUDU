@@ -1,0 +1,6 @@
+dataset: /home/tud/OCUDU/datasets/Mobility/E006/20260826_1252_E006.swap.jsonl
+
+user 0: 1287 samples, 2 segment(s)
+  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
+    0 0x4601   214   -21.9/ -16.8   -21.0/ -15.9   -21.2/ -15.7   -22.6/ -16.5
+    1 0x4602  1073   -22.9/ -19.4   -22.2/ -18.8   -22.2/ -18.8   -23.1/ -18.6
