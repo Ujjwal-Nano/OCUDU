@@ -38,7 +38,7 @@ cell_cfg:
   # --- SRS: periodic uplink sounding (feeds the CSI grid via TDD reciprocity)
   srs:
     type_enabled: periodic       # disabled | periodic | aperiodic
-    period_ms: 20                # SCS-compatible; 20 ms @ 30 kHz = 40 slots
+    period_ms: 10                # SCS-compatible; 20 ms @ 30 kHz = 40 slots, 10ms @ 30Khz = 20 slots
     tx_comb: 2                   # comb-4 -> 3 SRS REs per RB
     # c_srs: leave unset -> widest SRS bandwidth (full-band per-RU coverage)
 
