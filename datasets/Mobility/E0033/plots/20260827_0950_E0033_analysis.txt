@@ -1,0 +1,17 @@
+file      : /home/tud/OCUDU/datasets/Mobility/E0033/20260827_0950_E0033.jsonl
+samples   : 125850   duration 21.0 min   RUs 4
+trim      : first 1.5 min, last 1.0 min
+
+WHOLE (trimmed)  (n=110873, 18.5 min)
+   RU0: meanP  -20.74  (geoM  -21.94)  std 3.33  p10  -26.11  argmax  35.9%
+   RU1: meanP  -20.30  (geoM  -21.64)  std 3.49  p10  -26.54  argmax  22.2%
+   RU2: meanP  -20.51  (geoM  -22.19)  std 3.88  p10  -27.43  argmax  21.8%
+   RU3: meanP  -21.31  (geoM  -22.85)  std 3.86  p10  -28.16  argmax  20.0%
+   gap best-worst : mean 3.86 dB  (min 0.02, max 17.35)
+   separation gap/sigma : 1.1
+   flips          : 9757  (8.8% of samples)
+   decision life  : pick RU0 -> >1 dB suboptimal after 0.01 min
+   mean regret    : 1.54 dB   (max available gain vs avg RU: 1.76 dB)
+   best fixed RU  : RU1  regret 1.24 dB  (cost of not adapting)
+
+appended 1 row(s) to /home/tud/OCUDU/datasets/campaign.csv
