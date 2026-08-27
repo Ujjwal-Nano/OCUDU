@@ -91,7 +91,7 @@ def main():
     ax[1].set_xlabel("UE speed (m/s)"); ax[1].set_ylabel("required re-decision period T* (s)")
     ax[1].set_title("Required update rate vs speed")
 
-    ax[1].set_xlim(0.06, 0.56)
+    ax[1].set_xlim(0.01, 0.6)
     ax[1].grid(alpha=.3); ax[1].legend(fontsize=8); ax[1].set_ylim(bottom=0)
 
     fig.suptitle("Mobility sweep — SRS 10 ms vs 20 ms period",fontsize=12)
