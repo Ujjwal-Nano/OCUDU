@@ -11,11 +11,11 @@ Usage:
 import argparse, csv, sys
 import numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
+import matplotlib.ticker
 
 LAMBDA=0.08
 
 def period_of(fname):
-    # E00xx (4-digit-ish after E) = 10ms ; E0xx = 20ms. Heuristic on the label.
     import re
     ms=re.findall(r"E(\d+)", fname)
     if not ms: return "?"
@@ -41,6 +41,8 @@ def main():
         per=period_of(fname)
         if per not in data: continue
         v=getf(r,"speed_mps")
+        if not np.isnan(v) and abs(v - 0.02) < 1e-6:
+            continue
         tc=getf(r,"Tc_plateau_s","Tc_meas_s","Tc_meas")
         ts=getf(r,"Tstar_s")
         if not np.isnan(v):
@@ -51,19 +53,34 @@ def main():
     markers={"20ms":"o","10ms":"s"}
 
     # ---- Tc vs speed ----
+    all_tc = []
     for per in ("20ms","10ms"):
         v=np.array(data[per]["v"]); tc=np.array(data[per]["tc"])
         o=np.argsort(v); v,tc=v[o],tc[o]
         m=~np.isnan(tc)
         ax[0].plot(v[m],tc[m],markers[per]+"-",color=colors[per],label=f"measured ({per})",ms=7)
-    # theory line
+        all_tc.extend(tc[m].tolist())
     vv=np.linspace(0.015,0.55,100)
     ax[0].plot(vv,0.42*LAMBDA/vv,"k--",lw=1.3,label="theory 0.42·λ/v")
-    ax[0].plot(vv,0.30*LAMBDA/vv,"k:",lw=1,label="0.30·λ/v (fit)")
     ax[0].set_xlabel("UE speed (m/s)"); ax[0].set_ylabel("coherence time Tc (s)")
     ax[0].set_title("Coherence time vs speed")
-    
-    ax[0].grid(alpha=.3); ax[0].legend(fontsize=8); ax[0].set_ylim(bottom=0)
+    ax[0].set_yscale("log")
+
+    if all_tc:
+        lo, hi = min(all_tc), max(all_tc)
+        exp_lo = int(np.floor(np.log10(lo)))
+        exp_hi = int(np.ceil(np.log10(hi)))
+        candidates = []
+        for e in range(exp_lo, exp_hi+1):
+            for mm in (1, 2, 5):
+                candidates.append(mm * 10.0**e)
+        yticks0 = sorted(t for t in candidates if lo*0.9 <= t <= hi*1.1)
+        ax[0].set_yticks(yticks0)
+        ax[0].set_yticklabels([f"{t:g}" for t in yticks0])
+        ax[0].yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+
+    ax[0].set_xlim(0.05, 0.5)
+    ax[0].grid(alpha=.3, which="both"); ax[0].legend(fontsize=8)
 
     # ---- T* vs speed ----
     for per in ("20ms","10ms"):
@@ -73,13 +90,13 @@ def main():
         ax[1].plot(v[m],ts[m],markers[per]+"-",color=colors[per],label=f"T* ({per})",ms=7)
     ax[1].set_xlabel("UE speed (m/s)"); ax[1].set_ylabel("required re-decision period T* (s)")
     ax[1].set_title("Required update rate vs speed")
-    
+
+    ax[1].set_xlim(0.05, 0.5)
     ax[1].grid(alpha=.3); ax[1].legend(fontsize=8); ax[1].set_ylim(bottom=0)
 
     fig.suptitle("Mobility sweep — SRS 10 ms vs 20 ms period",fontsize=12)
     fig.tight_layout(rect=[0,0,1,0.95]); fig.savefig(a.out,dpi=140)
     print("wrote",a.out)
-    # also print the paired table
     print("\nspeed  Tc(20ms) Tc(10ms)  T*(20ms) T*(10ms)")
     allv=sorted(set(data["20ms"]["v"])|set(data["10ms"]["v"]))
     for vq in allv:
