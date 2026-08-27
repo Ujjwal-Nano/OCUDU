@@ -1,0 +1,1 @@
+Dlos:3.2m , rx gain: 40, speed: 0.4 m/s, srs period:10ms
