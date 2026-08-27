@@ -38,7 +38,7 @@ cell_cfg:
   # --- SRS: periodic uplink sounding (feeds the CSI grid via TDD reciprocity)
   srs:
     type_enabled: periodic       # disabled | periodic | aperiodic
-    period_ms: 10                # SCS-compatible; 20 ms @ 30 kHz = 40 slots, 10ms @ 30Khz = 20 slots
+    period_ms: 20                # SCS-compatible; 20 ms @ 30 kHz = 40 slots, 10ms @ 30Khz = 20 slots
     tx_comb: 2                   # comb-4 -> 3 SRS REs per RB
     # c_srs: leave unset -> widest SRS bandwidth (full-band per-RU coverage)
 
@@ -49,7 +49,7 @@ cell_cfg:
         num_users: 1             # single P40 for pipeline validation; raise when 2nd UE exists
         rus_per_user: 4
         rbs_per_ru: 12
-        swap_period_slots: 20    #40 slots = 20 ms @ 30 kHz, aligned to SRS period, 10 ms @ 30KHz = 20 slots
+        swap_period_slots: 40    #40 slots = 20 ms @ 30 kHz, aligned to SRS period, 10 ms @ 30KHz = 20 slots
 
 expert_execution:
   threads:
