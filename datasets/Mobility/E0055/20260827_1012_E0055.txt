@@ -1,0 +1,1 @@
+controlled mobility 0.3 m/s, 1m, rx gain:40, D_los: 3.2m, srs period:10ms E003 was @ 20ms
