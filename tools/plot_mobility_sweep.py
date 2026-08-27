@@ -94,5 +94,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
-[200~ENDOFFILE~
