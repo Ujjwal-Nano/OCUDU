@@ -1,0 +1,24 @@
+avg window   : 10 ms (1 samples)  [MOBILE]
+re-attach guard: 10s x2 around 0 event(s), dropped 0 samples (0.0%)
+file        : /tmp/_raw.jsonl
+samples     : 111732   duration 18.6 min   rate 100.0/s
+RBs sounded : 48   RU size K=12 -> 4 RUs
+SRS SNR est : median 3.6 dB  p10 2.1 dB  (per-RB, slow/fast split; lower bound if UE moving)
+T*          : 0.087 s at 0.5 dB budget
+regret(fixed choice) : 1.41 dB
+lifetime eps=0.5 dB : median    0.090 s   p10    0.030 s
+lifetime eps=1.0 dB : median    0.110 s   p10    0.050 s
+lifetime eps=2.0 dB : median    0.130 s   p10    0.050 s
+lifetime eps=3.0 dB : median    0.210 s   p10    0.060 s
+freq-corr lag1 (1s-avg): 0.98  (low value => noise-dominated raw data)
+Bc(0.5)     : 14.04 MHz  (RU width K=12 = 4.32 MHz)
+  K= 4 (12 RUs): G= 1.84 dB  sep= 1.34
+  K= 6 (8 RUs): G= 1.73 dB  sep= 1.24
+  K= 8 (6 RUs): G= 1.63 dB  sep= 1.15
+  K=12 (4 RUs): G= 1.46 dB  sep= 0.98
+  K=16 (3 RUs): G= 1.27 dB  sep= 0.82
+  K=24 (2 RUs): G= 0.85 dB  sep= 0.51
+Tc theory   : 84.0 ms at v=0.4 m/s (0.42*lambda/v)
+Tc(0.5)     : 0.059 s
+re-attaches  : 0  at min 
+appended mobility row to datasets/mobility_tc_rawwindow.csv
