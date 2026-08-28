@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""
-plot_coherence_distance.py
-Two panels: Dc/lambda vs speed for both SRS rates (10 & 20 ms).
-Left = setpoint speed, right = motion-mean (v_eff). No floor, no theory line.
-"""
+"""Dc/lambda vs speed, both SRS rates. Left=setpoint, right=motion-mean. Zero-based y, error bars."""
 import csv, argparse
 import numpy as np
 import matplotlib
@@ -33,9 +29,9 @@ def main():
     ap.add_argument("--t-acc",type=float,default=0.5)
     ap.add_argument("--freq-ghz",type=float,default=3.75)
     ap.add_argument("--drop-speed",type=float,nargs="*",default=[0.02])
+    ap.add_argument("--err-samples",type=float,default=0.5)
     ap.add_argument("-o","--out",default="coherence_distance.png")
-    # accept --win for compatibility but plot both rates
-    ap.add_argument("--win",type=int,default=None,help="(ignored; both rates plotted)")
+    ap.add_argument("--win",type=int,default=None)
     args=ap.parse_args()
     lam=C/(args.freq_ghz*1e9)
     rows=[r for r in load(args.csv) if r["v_set"] not in args.drop_speed]
@@ -48,15 +44,18 @@ def main():
     d10,d20=subset(10),subset(20)
     fig,axes=plt.subplots(1,2,figsize=(12,5),sharey=True)
     for ax,mode in zip(axes,["setpoint","motion-mean"]):
-        for (vset,veff,Tc),col,lab in [(d10,"#d62728","10 ms SRS"),(d20,"#1f77b4","20 ms SRS")]:
+        for (vset,veff,Tc),col,lab,win in [(d10,"#d62728","10 ms SRS",10),(d20,"#1f77b4","20 ms SRS",20)]:
             if len(vset)==0: continue
             vx=vset if mode=="setpoint" else veff
-            ax.plot(vx,vx*Tc/lam,"o-",color=col,ms=7,lw=1.5,label=lab)
+            Dc=vx*Tc/lam
+            dDc=vx*(args.err_samples*win/1000.0)/lam
+            ax.errorbar(vx,Dc,yerr=dDc,fmt='o-',color=col,ms=7,lw=1.5,capsize=3,label=lab)
         ax.set_xlabel(f"UE speed (m/s) [{mode}]"); ax.grid(alpha=0.3); ax.legend(fontsize=9)
+        ax.set_ylim(0,None)
     axes[0].set_ylabel("coherence distance $D_c/\\lambda$")
-    axes[0].set_title("Setpoint speed"); axes[1].set_title("Motion-mean (v_eff) speed")
-    fig.suptitle("Coherence distance vs speed ($D_c=v\\cdot T_c$, raw W=1)",fontsize=13)
-    plt.tight_layout(rect=[0,0,1,0.96]); plt.savefig(args.out,dpi=120)
+    axes[0].set_title("Setpoint speed"); axes[1].set_title("Motion-mean speed")
+    fig.suptitle("Coherence distance vs speed",fontsize=12)
+    plt.tight_layout(rect=[0,0,1,0.95]); plt.savefig(args.out,dpi=120)
     print("wrote",args.out)
 
 if __name__=="__main__": main()
