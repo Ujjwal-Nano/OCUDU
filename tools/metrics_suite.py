@@ -205,9 +205,9 @@ def main():
     if len(ok):
         ax[0, 0].plot(Tstar, r[ok[-1]], "o", ms=10, mfc="w", mew=2, color="#1f77b4")
         ax[0, 0].text(Tstar, r[ok[-1]] + 0.05, f" T*={Tstar:.2f}s", fontsize=9)
-    ax[0, 0].set_xlabel("re-decision period T (s)")
-    ax[0, 0].set_ylabel("mean regret (dB)")
-    ax[0, 0].set_title(f"A  regret vs update rate (budget {a.budget} dB)")
+    ax[0, 0].set_xlabel("re-decision period T(s)")
+    ax[0, 0].set_ylabel("Mean Power loss (dB)")
+    ax[0, 0].set_title(f"Mean Power Loss (dB) vs Update rate")
     ax[0, 0].grid(alpha=0.3, which="both")
     L.append(f"T*          : {Tstar:.3f} s at {a.budget} dB budget")
     L.append(f"regret(fixed choice) : {r[-1]:.2f} dB")
@@ -231,9 +231,9 @@ def main():
         L.append(
             f"lifetime eps={eps:>3} dB : median {np.median(li):8.3f} s   p10 {np.percentile(li,10):8.3f} s"
         )
-    ax[0, 1].set_xlabel("decision lifetime (s)")
+    ax[0, 1].set_xlabel("Decision Lifetime (s)")
     ax[0, 1].set_ylabel("P(lifetime > x)")
-    ax[0, 1].set_title("B  decision lifetime CCDF")
+    ax[0, 1].set_title("Decision lifetime CCDF")
     ax[0, 1].grid(alpha=0.3, which="both")
     ax[0, 1].legend(fontsize=8)
 
@@ -247,21 +247,21 @@ def main():
         f"freq-corr lag1 (1s-avg): {cf[1]:.2f}  (low value => noise-dominated raw data)"
     )
     df = np.arange(NRB) * RBBW / 1e6
-    ax[0, 2].plot(df, cf, lw=2, color="#1f77b4")
-    ax[0, 2].axhline(0.5, ls="--", c="k", lw=1)
+    ax[1, 1].plot(df, cf, lw=2, color="#1f77b4")
+    ax[1, 1].axhline(0.5, ls="--", c="k", lw=1)
     Bc = df[np.argmax(cf < 0.5)] if (cf < 0.5).any() else np.nan
     if not np.isnan(Bc):
-        ax[0, 2].axvline(Bc, ls=":", c="r", lw=2)
-        ax[0, 2].text(Bc * 1.05, 0.8, f"$B_c$≈{Bc:.1f} MHz", color="r", fontsize=9)
+        ax[1, 1].axvline(Bc, ls=":", c="r", lw=2)
+        ax[1, 1].text(Bc * 1.05, 0.8, f"$B_c$≈{Bc:.1f} MHz", color="r", fontsize=9)
     for K, st in [(4, ":"), (12, "-."), (24, "--")]:
-        ax[0, 2].axvline(K * RBBW / 1e6, color="gray", ls=st, lw=1)
-        ax[0, 2].text(
+        ax[1, 1].axvline(K * RBBW / 1e6, color="gray", ls=st, lw=1)
+        ax[1, 1].text(
             K * RBBW / 1e6, 0.05, f"K={K}", rotation=90, fontsize=7, color="gray"
         )
-    ax[0, 2].set_xlabel("frequency separation (MHz)")
-    ax[0, 2].set_ylabel("correlation")
-    ax[0, 2].set_title("C  frequency correlation -> $B_c$")
-    ax[0, 2].grid(alpha=0.3)
+    ax[1, 1].set_xlabel("frequency separation (MHz)")
+    ax[1, 1].set_ylabel("correlation")
+    ax[1, 1].set_title("C  frequency correlation -> $B_c$")
+    ax[1, 1].grid(alpha=0.3)
     L.append(f"Bc(0.5)     : {Bc:.2f} MHz  (RU width K={a.K} = {a.K*RBBW/1e6:.2f} MHz)")
 
     # D granularity sweep
@@ -293,8 +293,8 @@ def main():
     ac = np.array([(y[: len(y) - d] * y[d:]).mean() for d in range(maxlag)])
     ac /= ac[0]
     lag = np.arange(maxlag) / fs
-    ax[1, 1].plot(lag, ac, lw=1.8, color="#ff7f0e")
-    ax[1, 1].axhline(0.5, ls="--", c="k", lw=1)
+    ax[0, 2].plot(lag, ac, lw=1.8, color="#ff7f0e")
+    ax[0, 2].axhline(0.5, ls="--", c="k", lw=1)
     k = np.where(ac < 0.5)[0]
     if len(k) and k[0] > 0:
         i = k[0]  # first lag below 0.5
@@ -307,17 +307,14 @@ def main():
     else:
         Tc = np.nan
     if not np.isnan(Tc):
-        ax[1, 1].plot(Tc, 0.5, "o", ms=9, mfc="w", mew=2, color="#ff7f0e")
-        ax[1, 1].text(Tc, 0.55, f" $T_c$={Tc:.2f}s", fontsize=9)
+        ax[0, 2].plot(Tc, 0.5, "o", ms=9, mfc="w", mew=2, color="#ff7f0e")
+        ax[0, 2].text(Tc, 0.55, f" $T_c$={Tc:.2f}s", fontsize=9)
     if a.speed:
         Tth = 0.42 * LAMBDA / a.speed
-        ax[1, 1].axvline(Tth, ls=":", c="g", lw=2)
-        ax[1, 1].text(Tth, 0.85, f" theory {Tth*1000:.0f} ms", color="g", fontsize=8)
-        L.append(f"Tc theory   : {Tth*1000:.1f} ms at v={a.speed} m/s (0.42*lambda/v)")
-    ax[1, 1].set_xlabel("lag (s)")
-    ax[1, 1].set_ylabel("autocorrelation")
-    ax[1, 1].set_title("E  temporal autocorrelation -> $T_c$")
-    ax[1, 1].grid(alpha=0.3)
+    ax[0, 2].set_xlabel("lag (s)")
+    ax[0, 2].set_ylabel("autocorrelation")
+    ax[0, 2].set_title("E  temporal autocorrelation -> $T_c$")
+    ax[0, 2].grid(alpha=0.3)
     L.append(f"Tc(0.5)     : {Tc:.3f} s")
 
     # F context: per-RU traces
