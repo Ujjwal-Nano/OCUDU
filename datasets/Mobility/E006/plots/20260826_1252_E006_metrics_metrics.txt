@@ -4,7 +4,7 @@ file        : /tmp/_raw.jsonl
 samples     : 56248   duration 18.7 min   rate 50.0/s
 RBs sounded : 48   RU size K=12 -> 4 RUs
 SRS SNR est : median 1.8 dB  p10 1.2 dB
-T*          : 0.079 s at 0.5 dB budget
+T*          : 0.082 s at 0.5 dB budget
 regret(fixed choice) : 1.67 dB
 lifetime eps=0.5 dB : median    0.100 s
 lifetime eps=1.0 dB : median    0.100 s

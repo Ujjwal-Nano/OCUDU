@@ -153,18 +153,24 @@ def main():
 
     fig, ax = plt.subplots(2, 2, figsize=(13, 9))
 
-    # A regret -> T*
+    # A regret -> T* (interpolated first crossing, avoids picking a noisy far-right dip)
     Ts = np.logspace(
         np.log10(2 / fs), np.log10(max(2.1 / fs, (mins[-1] - mins[0]) * 60 / 4)), 40
     )
     r = regret_vs_T(M, Ts, fs)
     ax[0, 0].semilogx(Ts, r, lw=2, color="#1f77b4")
     ax[0, 0].axhline(a.budget, ls="--", c="k", lw=1)
-    ok = np.where(r <= a.budget)[0]
-    Tstar = Ts[ok[-1]] if len(ok) else np.nan
-    if len(ok):
-        ax[0, 0].plot(Tstar, r[ok[-1]], "o", ms=10, mfc="w", mew=2, color="#1f77b4")
-        ax[0, 0].text(Tstar, r[ok[-1]] + 0.05, f" T*={Tstar:.2f}s", fontsize=9)
+    kk = np.where(r > a.budget)[0]
+    if len(kk) and kk[0] > 0:
+        i = kk[0]
+        frac = (a.budget - r[i - 1]) / (r[i] - r[i - 1])
+        Tstar = Ts[i - 1] + frac * (Ts[i] - Ts[i - 1])
+    elif len(kk):
+        Tstar = Ts[0]  # already above budget at the very first point tested
+    else:
+        Tstar = Ts[-1]  # never exceeds budget across the whole range tested
+    ax[0, 0].plot(Tstar, a.budget, "o", ms=10, mfc="w", mew=2, color="#1f77b4")
+    ax[0, 0].text(Tstar, a.budget + 0.05, f" T*={Tstar:.2f}s", fontsize=9)
     ax[0, 0].set_xlabel("re-decision period T (s)")
     ax[0, 0].set_ylabel("mean power loss (dB)")
     ax[0, 0].set_title("Mean power loss vs update rate")
