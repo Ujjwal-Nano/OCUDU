@@ -198,12 +198,18 @@ def main():
     ax[0, 1].legend(fontsize=8)
 
     # E temporal autocorr -> Tc (interpolated crossing) [bottom-left]
-    ys = np.convolve(M[:, 0], np.ones(W) / W, mode="valid")
-    y = ys - ys.mean()
-    maxlag = min(len(y) - 2, int(60 * fs))
-    ac = np.array([(y[: len(y) - d] * y[d:]).mean() for d in range(maxlag)])
-    ac /= ac[0]
-    lag = np.arange(maxlag) / fs
+    # E temporal autocorr -> Tc, averaged across all RUs for noise reduction
+    ac_all = []
+    for rr in range(R):
+        ys = np.convolve(M[:, rr], np.ones(W) / W, mode="valid")
+        y = ys - ys.mean()
+        maxlag = min(len(y) - 2, int(60 * fs))
+        ac_r = np.array([(y[: len(y) - d] * y[d:]).mean() for d in range(maxlag)])
+        ac_r /= ac_r[0]
+        ac_all.append(ac_r)
+    ac = np.mean(ac_all, axis=0)
+    lag = np.arange(len(ac)) / fs
+
     ax[1, 0].plot(lag, ac, lw=1.8, color="#ff7f0e")
     ax[1, 0].axhline(0.5, ls="--", c="k", lw=1)
     kk = np.where(ac < 0.5)[0]
