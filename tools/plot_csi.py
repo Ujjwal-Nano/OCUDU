@@ -59,7 +59,7 @@ def main():
 
     stats_lines = ["dataset: " + args.jsonl]
     n = len(users)
-    fig, axes = plt.subplots(n, 3, figsize=(17, 4.8 * n), squeeze=False)
+    fig, axes = plt.subplots(n, 1, figsize=(11, 4.8 * n), squeeze=False)
     fig.suptitle("SRS-derived per-RU CSI — " + args.jsonl, fontsize=13, y=0.995)
 
     for row, (ukey, rec) in enumerate(sorted(users.items())):
