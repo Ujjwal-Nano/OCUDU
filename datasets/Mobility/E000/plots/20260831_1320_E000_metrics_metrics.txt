@@ -1,16 +1,15 @@
-avg window   : 40 ms (2 samples)
+avg window   : 1000 ms (50 samples)
 re-attach guard: 10s x2 around 0 event(s)
-file        : /tmp/_rbfull.jsonl
+file        : /tmp/_raw.jsonl
 samples     : 82409   duration 27.5 min   rate 50.0/s
 RBs sounded : 48   RU size K=12 -> 4 RUs
 SRS SNR est : median 20.6 dB  p10 19.1 dB
-T*          : 412.065 s at 0.5 dB budget
+T*          : 134.057 s at 0.5 dB budget
 regret(fixed choice) : 0.37 dB
 lifetime eps=0.5 dB : median    1.490 s
 lifetime eps=1.0 dB : median    5.640 s
 lifetime eps=2.0 dB : median   68.510 s
 lifetime eps=3.0 dB : median  824.090 s
-Tc(0.5)     : 24.634 s
+Tc(0.5)     : 25.251 s
 Bc(0.5)     : 4.32 MHz  (RU width K=12 = 4.32 MHz)
 re-attaches  : 0  at min 
-appended mobility row to /home/tud/OCUDU/datasets/mobility_sweep.csv
