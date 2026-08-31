@@ -313,7 +313,7 @@ def main():
         Tth = 0.42 * LAMBDA / a.speed
     ax[0, 2].set_xlabel("lag (s)")
     ax[0, 2].set_ylabel("autocorrelation")
-    ax[0, 2].set_title("E  temporal autocorrelation -> $T_c$")
+    ax[0, 2].set_title("Autocorrelation, Coherence Time")
     ax[0, 2].grid(alpha=0.3)
     L.append(f"Tc(0.5)     : {Tc:.3f} s")
 
