@@ -237,7 +237,7 @@ def main():
     ax[1, 0].set_ylabel("autocorrelation")
     ax[1, 0].set_title("Temporal Autocorrelation")
     ax[1, 0].set_xlim(-2, min(60, lag[-1]))
-    ax[1, 0].set_ylim(-0.05, 1.05)
+    ax[1, 0].set_ylim(-0.2, 1.05)
     ax[1, 0].grid(alpha=0.3)
     L.append(f"Tc(0.5)     : {Tc:.3f} s")
 
