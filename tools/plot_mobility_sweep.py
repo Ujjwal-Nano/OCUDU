@@ -42,8 +42,6 @@ def main():
         ax[0].errorbar(v[m],tc[m],yerr=dtc,fmt=markers[per]+"-",color=colors[per],
                        label=f"measured ({per})",ms=7,capsize=3,lw=1.3)
         all_tc.extend(tc[m].tolist())
-    vv=np.linspace(0.015,0.55,100)
-    ax[0].plot(vv,0.42*LAMBDA/vv,"k--",lw=1.3,label="theory 0.42·λ/v")
     ax[0].set_xlabel("UE speed (m/s)"); ax[0].set_ylabel("coherence time Tc (s)")
     ax[0].set_title("Coherence time vs speed"); ax[0].set_yscale("log")
     if all_tc:

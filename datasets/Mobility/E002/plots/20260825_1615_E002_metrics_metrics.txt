@@ -1,24 +1,16 @@
-avg window   : 100 ms (5 samples)  [MOBILE]
-re-attach guard: 10s x2 around 0 event(s), dropped 0 samples (0.0%)
-file        : /tmp/_rbfull.jsonl
+avg window   : 20 ms (1 samples)
+re-attach guard: 10s x2 around 0 event(s)
+file        : /tmp/_raw.jsonl
 samples     : 54545   duration 18.2 min   rate 50.0/s
 RBs sounded : 48   RU size K=12 -> 4 RUs
-SRS SNR est : median 10.1 dB  p10 9.2 dB  (per-RB, slow/fast split; lower bound if UE moving)
+SRS SNR est : median 10.1 dB  p10 9.2 dB
 T*          : 0.482 s at 0.5 dB budget
 regret(fixed choice) : 2.00 dB
-lifetime eps=0.5 dB : median    0.660 s   p10    0.140 s
-lifetime eps=1.0 dB : median    0.840 s   p10    0.300 s
-lifetime eps=2.0 dB : median    1.080 s   p10    0.460 s
-lifetime eps=3.0 dB : median    1.380 s   p10    0.640 s
-freq-corr lag1 (1s-avg): 1.00  (low value => noise-dominated raw data)
-Bc(0.5)     : 10.80 MHz  (RU width K=12 = 4.32 MHz)
-  K= 4 (12 RUs): G= 2.38 dB  sep= 1.52
-  K= 6 (8 RUs): G= 2.27 dB  sep= 1.43
-  K= 8 (6 RUs): G= 2.18 dB  sep= 1.35
-  K=12 (4 RUs): G= 1.98 dB  sep= 1.20
-  K=16 (3 RUs): G= 1.72 dB  sep= 1.03
-  K=24 (2 RUs): G= 1.27 dB  sep= 0.73
-Tc theory   : 672.0 ms at v=0.05 m/s (0.42*lambda/v)
-Tc(0.5)     : 0.380 s
+lifetime eps=0.5 dB : median    0.660 s
+lifetime eps=1.0 dB : median    0.840 s
+lifetime eps=2.0 dB : median    1.080 s
+lifetime eps=3.0 dB : median    1.380 s
+Tc(0.5)     : 0.397 s
+Bc(0.5)     : 10.44 MHz  (RU width K=12 = 4.32 MHz)
 re-attaches  : 0  at min 
-appended mobility row to /home/tud/OCUDU/datasets/mobility_sweep.csv
+appended mobility row to datasets/mobility_tc_final_ruavg.csv
