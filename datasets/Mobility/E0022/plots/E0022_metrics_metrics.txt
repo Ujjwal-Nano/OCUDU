@@ -13,3 +13,4 @@ lifetime eps=3.0 dB : median    1.470 s
 Tc(0.5)     : 0.383 s
 Bc(0.5)     : 15.48 MHz  (RU width K=12 = 4.32 MHz)
 re-attaches  : 0  at min 
+appended mobility row to datasets/mobility_tc_rawwindow.csv
