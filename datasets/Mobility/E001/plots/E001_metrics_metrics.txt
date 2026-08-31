@@ -18,7 +18,5 @@ Bc(0.5)     : 8.28 MHz  (RU width K=12 = 4.32 MHz)
   K=12 (4 RUs): G= 1.93 dB  sep= 1.19
   K=16 (3 RUs): G= 1.66 dB  sep= 1.00
   K=24 (2 RUs): G= 1.19 dB  sep= 0.71
-Tc theory   : 1680.0 ms at v=0.02 m/s (0.42*lambda/v)
 Tc(0.5)     : 0.727 s
 re-attaches  : 0  at min 
-appended mobility row to datasets/mobility_tc_rawwindow.csv
