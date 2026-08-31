@@ -4,13 +4,12 @@ file        : datasets/Mobility/E0022/20260826_1450_E0022.rb.jsonl.gz
 samples     : 109251   duration 18.2 min   rate 100.0/s
 RBs sounded : 48   RU size K=12 -> 4 RUs
 SRS SNR est : median 8.7 dB  p10 8.4 dB
-T*          : 0.779 s at 0.5 dB budget
+T*          : 0.780 s at 0.5 dB budget
 regret(fixed choice) : 1.16 dB
 lifetime eps=0.5 dB : median    0.510 s
 lifetime eps=1.0 dB : median    0.890 s
 lifetime eps=2.0 dB : median    1.000 s
 lifetime eps=3.0 dB : median    1.470 s
-Tc(0.5)     : 0.399 s
+Tc(0.5)     : 0.383 s
 Bc(0.5)     : 15.48 MHz  (RU width K=12 = 4.32 MHz)
 re-attaches  : 0  at min 
-appended mobility row to datasets/mobility_tc_rawwindow.csv

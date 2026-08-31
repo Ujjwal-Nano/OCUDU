@@ -1,0 +1,5 @@
+dataset: /home/tud/OCUDU/datasets/Mobility/E00666/20260831_1511_E00666.jsonl
+
+user 0: 60128 samples, 14 segment(s)
+  best-RU fraction: RU0=31.4%, RU1=20.2%, RU2=40.8%, RU3=7.7%
+  total switches: 12834   zoom: 3.50-3.83 min
