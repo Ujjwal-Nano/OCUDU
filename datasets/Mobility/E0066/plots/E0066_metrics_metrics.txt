@@ -12,5 +12,9 @@ lifetime eps=2.0 dB : median    0.130 s
 lifetime eps=3.0 dB : median    0.210 s
 Tc(0.5)     : 0.066 s
 Bc(0.5)     : 14.04 MHz  (RU width K=12 = 4.32 MHz)
+RU-pair freq correlation (K=12, 4 RUs):
+  RU-sep 1 (4.3 MHz): corr=0.88
+  RU-sep 2 (8.6 MHz): corr=0.72
+  RU-sep 3 (13.0 MHz): corr=0.55
 re-attaches  : 0  at min 
 appended mobility row to datasets/mobility_tc_rawwindow.csv
