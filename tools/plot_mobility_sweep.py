@@ -50,6 +50,9 @@ def main():
         yt=sorted(t for t in cands if lo*0.9<=t<=hi*1.1)
         ax[0].set_yticks(yt); ax[0].set_yticklabels([f"{t:g}" for t in yt])
         ax[0].yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    c = 0.422
+    vv = np.linspace(0.048, 0.502, 100)
+    ax[0].plot(vv, c/vv, "k--", lw=1.2, alpha=0.7, label=f"trend ~1/v (c={c})")
     ax[0].set_xlim(0.048,0.502); ax[0].grid(alpha=.3,which="both"); ax[0].legend(fontsize=8)
 
     # ---- T* vs speed (with error bars) ----
