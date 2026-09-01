@@ -54,7 +54,7 @@ def main():
     stats_lines = ["dataset: " + args.jsonl]
     n = len(users)
     fig, axes = plt.subplots(n, 2, figsize=(17, 4.8 * n), squeeze=False)
-    fig.suptitle("SRS-derived per-RU CSI — " + args.jsonl, fontsize=13, y=0.995)
+    fig.suptitle("SRS-derived per-RBG CSI — " + args.jsonl, fontsize=13, y=0.995)
     for row, (ukey, rec) in enumerate(sorted(users.items())):
         M = to_db(rec["csi"])
         R = M.shape[1]
@@ -93,7 +93,7 @@ def main():
         zend = zstart + args.zoom_dur / 60.0
         axL = axes[row, 0]
         for r in range(R):
-            axL.plot(tmin, M[:, r], lw=0.8, label=f"RU{r} (RB {12*r}-{12*r+11})")
+            axL.plot(tmin, M[:, r], lw=0.8, label=f"RBG{r} (RB {12*r}-{12*r+11})")
         for i, c in enumerate(cuts[1:-1]):
             axL.axvline(
                 tmin[c],
@@ -113,7 +113,7 @@ def main():
         wz = (tmin >= zstart) & (tmin < zend)
         tz = (tmin[wz] - zstart) * 60.0
         for r in range(R):
-            axR.plot(tz, M[wz, r], lw=1.1, marker=".", ms=2, label=f"RU{r}")
+            axR.plot(tz, M[wz, r], lw=1.1, marker=".", ms=2, label=f"RBG{r}")
         bz = best[wz]
         axR.set_title(f"user {ukey} — zoom {args.zoom_dur:.0f}s @ {zstart:.1f} min")
         axR.set_xlabel("time within window (s)")
@@ -125,8 +125,8 @@ def main():
         )
         frac = {r: 100 * (best == r).mean() for r in range(R)}
         stats_lines.append(
-            "  best-RU fraction: "
-            + ", ".join(f"RU{r}={frac[r]:.1f}%" for r in range(R))
+            "  best-RBG fraction: "
+            + ", ".join(f"RBG{r}={frac[r]:.1f}%" for r in range(R))
         )
         stats_lines.append(
             f"  total switches: {(np.diff(best)!=0).sum()}   zoom: {zstart:.2f}-{zend:.2f} min"

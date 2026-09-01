@@ -1,5 +1,5 @@
 dataset: datasets/Mobility/E004/20260825_1700_E004.jsonl
 
 user 0: 63050 samples, 12 segment(s)
-  best-RU fraction: RU0=20.0%, RU1=21.0%, RU2=32.2%, RU3=26.9%
+  best-RBG fraction: RBG0=20.0%, RBG1=21.0%, RBG2=32.2%, RBG3=26.9%
   total switches: 8137   zoom: 3.57-3.90 min

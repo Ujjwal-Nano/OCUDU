@@ -1,6 +1,5 @@
-dataset: /home/tud/OCUDU/datasets/Mobility/E003/20260825_1637_E003.swap.jsonl
+dataset: datasets/Mobility/E003/20260825_1637_E003.swap.jsonl
 
 user 0: 1923 samples, 2 segment(s)
-  seg rnti    n      RU0:mean/10%out  RU1:mean/10%out  RU2:mean/10%out  RU3:mean/10%out
-    0 0x4601   107   -20.2/ -18.1   -21.3/ -19.7   -23.2/ -21.4   -24.7/ -22.7
-    1 0x4602  1816   -25.1/ -20.4   -23.9/ -18.9   -22.9/ -18.4   -23.2/ -18.8
+  best-RBG fraction: RBG0=19.6%, RBG1=21.3%, RBG2=26.1%, RBG3=33.0%
+  total switches: 386   zoom: 14.57-14.90 min

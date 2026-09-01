@@ -131,7 +131,7 @@ def main():
         _ra,
         f"file        : {a.cap}",
         f"samples     : {len(M)}   duration {mins[-1]-mins[0]:.1f} min   rate {fs:.1f}/s",
-        f"RBs sounded : {NRB}   RU size K={a.K} -> {R} RUs",
+        f"RBs sounded : {NRB}   RBG size K={a.K} -> {R} RBGs",
     ]
 
     # SNR
@@ -204,7 +204,7 @@ def main():
     ax[0, 1].legend(fontsize=8)
 
     # E temporal autocorr -> Tc (interpolated crossing) [bottom-left]
-    # E temporal autocorr -> Tc, averaged across all RUs for noise reduction
+    # E temporal autocorr -> Tc, averaged across all RBGs for noise reduction
     ac_all = []
     for rr in range(R):
         ys = np.convolve(M[:, rr], np.ones(W) / W, mode="valid")
@@ -301,7 +301,7 @@ def main():
     ax[1, 1].set_ylabel("correlation")
     ax[1, 1].set_title("Resource Block Frequency Correlation", pad=30)
     ax[1, 1].grid(alpha=0.3, zorder=0)
-    L.append(f"Bc(0.5)     : {Bc:.2f} MHz  (RU width K={a.K} = {a.K*RBBW/1e6:.2f} MHz)")
+    L.append(f"Bc(0.5)     : {Bc:.2f} MHz  (RBG width K={a.K} = {a.K*RBBW/1e6:.2f} MHz)")
 
     cuts = [i for i in range(1, len(RN)) if RN[i] != RN[i - 1]]
     L.append(
