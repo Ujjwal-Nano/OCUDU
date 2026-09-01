@@ -146,7 +146,7 @@ def main():
     ax[0,0].plot(Tstar, a.budget, "o", ms=10, mfc="w", mew=2, color="#1f77b4")
     ax[0,0].text(Tstar, a.budget+0.05, f" T*={Tstar:.2f}s", fontsize=9)
     ax[0,0].set_xlabel("re-decision period T (s)"); ax[0,0].set_ylabel("mean power loss (dB)")
-    ax[0,0].set_title("Mean power loss vs update rate"); ax[0,0].grid(alpha=0.3, which="both")
+    ax[0,0].set_xlim(Ts[0], Ts[-1]); ax[0,0].set_title("Mean power loss vs update rate"); ax[0,0].grid(alpha=0.3, which="both")
     L += [f"T*          : {Tstar:.3f} s at {a.budget} dB budget",
           f"regret(fixed choice) : {r[-1]:.2f} dB"]
 
@@ -179,7 +179,7 @@ def main():
         ax[0,2].text(Tc, 0.55, f" $T_c$={Tc:.2f}s", fontsize=9)
     ax[0,2].set_xlabel("lag (s)"); ax[0,2].set_ylabel("autocorrelation")
     ax[0,2].set_title("Temporal autocorrelation -> $T_c$")
-    ax[0,2].set_xlim(0, min(60, lag[-1])); ax[0,2].set_ylim(-0.05, 1.05); ax[0,2].grid(alpha=0.3)
+    ax[0,2].set_xlim(-1.5, min(60, lag[-1])); ax[0,2].set_ylim(-0.3, 1.05); ax[0,2].grid(alpha=0.3)
     L.append(f"Tc(0.5)     : {Tc:.3f} s")
 
     # C frequency correlation -> Bc
