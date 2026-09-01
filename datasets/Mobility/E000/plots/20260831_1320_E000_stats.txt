@@ -1,4 +1,4 @@
-dataset: /home/tud/OCUDU/datasets/Mobility/E000/20260831_1320_E000.jsonl
+dataset: datasets/Mobility/E000/20260831_1320_E000.jsonl
 
 user 0: 88414 samples, 16 segment(s)
   best-RU fraction: RU0=71.1%, RU1=0.5%, RU2=2.0%, RU3=26.3%
