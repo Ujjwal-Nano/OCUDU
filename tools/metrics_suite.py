@@ -299,7 +299,7 @@ def main():
     ax[1, 1].set_ylim(0, 1.05)
     ax[1, 1].set_xlabel("frequency separation (MHz)")
     ax[1, 1].set_ylabel("correlation")
-    ax[1, 1].set_title("Frequency correlation", pad=30)
+    ax[1, 1].set_title("Resource Block Frequency Correlation", pad=30)
     ax[1, 1].grid(alpha=0.3, zorder=0)
     L.append(f"Bc(0.5)     : {Bc:.2f} MHz  (RU width K={a.K} = {a.K*RBBW/1e6:.2f} MHz)")
 
