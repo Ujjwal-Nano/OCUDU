@@ -4,10 +4,10 @@ metrics_suite.py — P1 metric set from a per-RB SRS capture.
 Panels:
   A regret vs re-decision period T -> T*
   B decision-lifetime CCDF (eps = 0.5/1/2/3 dB)
-  E temporal autocorrelation -> coherence time Tc(0.5)  [interpolated, multi-RU]
+  E temporal autocorrelation -> coherence time Tc(0.5)  [interpolated, multi-RBG]
   C frequency correlation -> coherence bandwidth Bc(0.5), K=4/12/24 markers
-  G RU x RU frequency-correlation matrix (heatmap), modular in K
-  H RU-pair correlation vs RU separation (from per-RB cf at RU-spacing lags)
+  G RBG x RBG frequency-correlation matrix (heatmap), modular in K
+  H RBG-pair correlation vs RBG separation (from per-RB cf at RBG-spacing lags)
 Usage:
   python3 metrics_suite.py CAP.rb.jsonl[.gz] [-o out.png] [--K 12]
     [--trim-start 1.5] [--trim-end 1.0] [--budget 0.5]
@@ -64,7 +64,7 @@ def lifetimes(M, eps, fs):
     return np.array(out) if out else np.array([0.0])
 
 def ru_pair_correlation(cf, K, NRB):
-    """RU-pair freq correlation from per-RB curve cf at RU-separation lags. Modular in K."""
+    """RBG-pair freq correlation from per-RB curve cf at RBG-separation lags. Modular in K."""
     R = NRB // K
     out = {}
     for s in range(1, R):
@@ -73,7 +73,7 @@ def ru_pair_correlation(cf, K, NRB):
     return out, R
 
 def ru_corr_matrix(cf, K, NRB):
-    """Full RxR RU-pair correlation matrix from cf at |i-j|*K lags."""
+    """Full RxR RBG-pair correlation matrix from cf at |i-j|*K lags."""
     R = NRB // K
     M = np.eye(R)
     for i in range(R):
@@ -121,7 +121,7 @@ def main():
     L = [f"avg window   : {win_s*1000:.0f} ms ({W} samples)", _ra,
          f"file        : {a.cap}",
          f"samples     : {len(M)}   duration {mins[-1]-mins[0]:.1f} min   rate {fs:.1f}/s",
-         f"RBs sounded : {NRB}   RU size K={a.K} -> {R} RUs"]
+         f"RBs sounded : {NRB}   RBG size K={a.K} -> {R} RBGs"]
 
     w = max(1, int(round(fs))); kern = np.ones(w)/w
     sig, noi = [], []
@@ -146,7 +146,7 @@ def main():
     ax[0,0].plot(Tstar, a.budget, "o", ms=10, mfc="w", mew=2, color="#1f77b4")
     ax[0,0].text(Tstar, a.budget+0.05, f" T*={Tstar:.2f}s", fontsize=9)
     ax[0,0].set_xlabel("re-decision period T (s)"); ax[0,0].set_ylabel("mean power loss (dB)")
-    ax[0,0].set_xlim(Ts[0], Ts[-1]); ax[0,0].set_title("Mean power loss vs update rate"); ax[0,0].grid(alpha=0.3, which="both")
+    ax[0,0].set_title("Mean power loss vs update rate"); ax[0,0].grid(alpha=0.3, which="both")
     L += [f"T*          : {Tstar:.3f} s at {a.budget} dB budget",
           f"regret(fixed choice) : {r[-1]:.2f} dB"]
 
@@ -160,7 +160,7 @@ def main():
     ax[0,1].set_title("Decision lifetime CCDF"); ax[0,1].grid(alpha=0.3, which="both")
     ax[0,1].legend(fontsize=8)
 
-    # E temporal autocorr -> Tc (interpolated, multi-RU averaged)
+    # E temporal autocorr -> Tc (interpolated, multi-RBG averaged)
     ac_all = []
     for rr in range(R):
         ys = np.convolve(M[:,rr], np.ones(W)/W, mode="valid"); y = ys - ys.mean()
@@ -179,7 +179,7 @@ def main():
         ax[0,2].text(Tc, 0.55, f" $T_c$={Tc:.2f}s", fontsize=9)
     ax[0,2].set_xlabel("lag (s)"); ax[0,2].set_ylabel("autocorrelation")
     ax[0,2].set_title("Temporal autocorrelation -> $T_c$")
-    ax[0,2].set_xlim(-1.5, min(60, lag[-1])); ax[0,2].set_ylim(-0.3, 1.05); ax[0,2].grid(alpha=0.3)
+    ax[0,2].set_xlim(0, min(60, lag[-1])); ax[0,2].set_ylim(-0.05, 1.05); ax[0,2].grid(alpha=0.3)
     L.append(f"Tc(0.5)     : {Tc:.3f} s")
 
     # C frequency correlation -> Bc
@@ -210,38 +210,38 @@ def main():
                              ha="left", color=col, fontweight="bold")
     ax[1,0].set_xlim(0, xmax); ax[1,0].set_ylim(0, 1.15)
     ax[1,0].set_xlabel("frequency separation (MHz)"); ax[1,0].set_ylabel("correlation")
-    ax[1,0].set_title("Frequency correlation", pad=30); ax[1,0].grid(alpha=0.3, zorder=0)
-    L.append(f"Bc(0.5)     : {Bc:.2f} MHz  (RU width K={a.K} = {a.K*RBBW/1e6:.2f} MHz)")
+    ax[1,0].set_title("Resource-block frequency correlation", pad=30); ax[1,0].grid(alpha=0.3, zorder=0)
+    L.append(f"Bc(0.5)     : {Bc:.2f} MHz  (RBG width K={a.K} = {a.K*RBBW/1e6:.2f} MHz)")
 
-    # G RU×RU correlation matrix (heatmap), modular in K
+    # G RBG×RBG correlation matrix (heatmap), modular in K
     corrM, R_ru = ru_corr_matrix(cf, a.K, NRB)
-    im = ax[1,1].imshow(corrM, vmin=0, vmax=1, cmap="viridis", origin="upper")
+    im = ax[1,1].imshow(corrM, vmin=-1, vmax=1, cmap="RdBu_r", origin="upper")
     ax[1,1].set_xticks(range(R_ru)); ax[1,1].set_yticks(range(R_ru))
-    ax[1,1].set_xticklabels([f"RU{i}" for i in range(R_ru)], fontsize=8)
-    ax[1,1].set_yticklabels([f"RU{i}" for i in range(R_ru)], fontsize=8)
+    ax[1,1].set_xticklabels([f"RBG{i}" for i in range(R_ru)], fontsize=8)
+    ax[1,1].set_yticklabels([f"RBG{i}" for i in range(R_ru)], fontsize=8)
     for i in range(R_ru):
         for j in range(R_ru):
             val = corrM[i,j]
             ax[1,1].text(j, i, f"{val:.2f}", ha="center", va="center",
-                         color="white" if val < 0.6 else "black", fontsize=8)
-    ax[1,1].set_title(f"RU×RU freq correlation (K={a.K}, {R_ru} RUs)")
+                         color="white" if abs(val) > 0.5 else "black", fontsize=8)
+    ax[1,1].set_title(f"RBG×RBG freq correlation (K={a.K}, {R_ru} RBGs)")
     fig.colorbar(im, ax=ax[1,1], fraction=0.046, pad=0.04)
 
-    # H RU-pair correlation vs RU separation, modular in K
+    # H RBG-pair correlation vs RBG separation, modular in K
     pairs, _ = ru_pair_correlation(cf, a.K, NRB)
     seps = list(pairs.keys()); cvals = [pairs[s] for s in seps]
     sep_mhz = [s*a.K*RBBW/1e6 for s in seps]
     ax[1,2].plot(sep_mhz, cvals, "o-", lw=2, color="#d62728", ms=8)
     ax[1,2].axhline(0.5, ls="--", c="k", lw=1)
     for s, c, fm in zip(seps, cvals, sep_mhz):
-        ax[1,2].annotate(f"RU0-RU{s}\n{c:.2f}", xy=(fm,c), xytext=(0,8),
+        ax[1,2].annotate(f"RBG0-RBG{s}\n{c:.2f}", xy=(fm,c), xytext=(0,8),
                          textcoords="offset points", fontsize=7.5, ha="center")
-    ax[1,2].set_xlabel("RU separation (MHz)"); ax[1,2].set_ylabel("correlation")
-    ax[1,2].set_title("RU-pair correlation vs separation")
-    ax[1,2].set_ylim(0, 1.05); ax[1,2].grid(alpha=0.3)
-    L.append(f"RU-pair freq correlation (K={a.K}, {R_ru} RUs):")
+    ax[1,2].set_xlabel("RBG separation (MHz)"); ax[1,2].set_ylabel("correlation")
+    ax[1,2].set_title("RBG-pair correlation vs separation")
+    ax[1,2].set_ylim(-1.05, 1.05); ax[1,2].grid(alpha=0.3)
+    L.append(f"RBG-pair freq correlation (K={a.K}, {R_ru} RBGs):")
     for s, c in pairs.items():
-        L.append(f"  RU-sep {s} ({s*a.K*RBBW/1e6:.1f} MHz): corr={c:.2f}")
+        L.append(f"  RBG-sep {s} ({s*a.K*RBBW/1e6:.1f} MHz): corr={c:.2f}")
 
     cuts = [i for i in range(1, len(RN)) if RN[i] != RN[i-1]]
     L.append(f"re-attaches  : {len(cuts)}  at min " + ", ".join(f"{mins[c]:.1f}" for c in cuts))

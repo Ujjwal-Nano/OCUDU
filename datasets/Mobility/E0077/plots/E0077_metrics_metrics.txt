@@ -2,7 +2,7 @@ avg window   : 10 ms (1 samples)
 re-attach guard: 10s x2 around 0 event(s)
 file        : datasets/Mobility/E0077/20260826_1533_E0077.rb.jsonl.gz
 samples     : 108467   duration 18.1 min   rate 100.0/s
-RBs sounded : 48   RU size K=12 -> 4 RUs
+RBs sounded : 48   RBG size K=12 -> 4 RBGs
 SRS SNR est : median 2.2 dB  p10 0.9 dB
 T*          : 0.101 s at 0.5 dB budget
 regret(fixed choice) : 0.92 dB
@@ -11,10 +11,10 @@ lifetime eps=1.0 dB : median    0.110 s
 lifetime eps=2.0 dB : median    0.110 s
 lifetime eps=3.0 dB : median    0.140 s
 Tc(0.5)     : 0.048 s
-Bc(0.5)     : 13.32 MHz  (RU width K=12 = 4.32 MHz)
-RU-pair freq correlation (K=12, 4 RUs):
-  RU-sep 1 (4.3 MHz): corr=0.88
-  RU-sep 2 (8.6 MHz): corr=0.69
-  RU-sep 3 (13.0 MHz): corr=0.51
+Bc(0.5)     : 13.32 MHz  (RBG width K=12 = 4.32 MHz)
+RBG-pair freq correlation (K=12, 4 RBGs):
+  RBG-sep 1 (4.3 MHz): corr=0.88
+  RBG-sep 2 (8.6 MHz): corr=0.69
+  RBG-sep 3 (13.0 MHz): corr=0.51
 re-attaches  : 0  at min 
 appended mobility row to datasets/mobility_tc_rawwindow.csv
