@@ -177,6 +177,17 @@ def main():
     if not np.isnan(Tc):
         ax[0,2].plot(Tc, 0.5, "o", ms=9, mfc="w", mew=2, color="#ff7f0e")
         ax[0,2].text(Tc, 0.55, f" $T_c$={Tc:.2f}s", fontsize=9)
+    # inset: zoom on the first crossing so Tc is clearly visible
+    if not np.isnan(Tc):
+        axins = ax[0,2].inset_axes([0.55, 0.55, 0.42, 0.4])
+        zoom_max = max(5*Tc, 0.3)
+        mzoom = lag <= zoom_max
+        axins.plot(lag[mzoom], ac[mzoom], lw=1.8, color="#ff7f0e")
+        axins.axhline(0.5, ls="--", c="k", lw=1)
+        axins.plot(Tc, 0.5, "o", ms=7, mfc="w", mew=2, color="#ff7f0e")
+        axins.set_xlim(0, zoom_max); axins.set_ylim(0.3, 1.02)
+        axins.set_title(f"zoom: $T_c$={Tc:.3f}s", fontsize=8)
+        axins.tick_params(labelsize=7); axins.grid(alpha=0.3)
     ax[0,2].set_xlabel("lag (s)"); ax[0,2].set_ylabel("autocorrelation")
     ax[0,2].set_title("Temporal autocorrelation -> $T_c$")
     ax[0,2].set_xlim(0, min(60, lag[-1])); ax[0,2].set_ylim(-0.05, 1.05); ax[0,2].grid(alpha=0.3)
@@ -215,7 +226,7 @@ def main():
 
     # G RBG×RBG correlation matrix (heatmap), modular in K
     corrM, R_ru = ru_corr_matrix(cf, a.K, NRB)
-    im = ax[1,1].imshow(corrM, vmin=-1, vmax=1, cmap="RdBu_r", origin="upper")
+    im = ax[1,1].imshow(corrM, vmin=-1, vmax=1, cmap="coolwarm", origin="upper")
     ax[1,1].set_xticks(range(R_ru)); ax[1,1].set_yticks(range(R_ru))
     ax[1,1].set_xticklabels([f"RBG{i}" for i in range(R_ru)], fontsize=8)
     ax[1,1].set_yticklabels([f"RBG{i}" for i in range(R_ru)], fontsize=8)
