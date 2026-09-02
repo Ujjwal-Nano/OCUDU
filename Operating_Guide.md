@@ -14,9 +14,13 @@ Machines: [gNB] = Fujitsu Q957,  [core] = ThinkPad core laptop.
         open5gs-udmd open5gs-udrd open5gs-pcfd open5gs-bsfd open5gs-smfd open5gs-upfd
     # forwarding + NAT (<iface> = core internet-facing iface from `ip route`):
     sudo sysctl -w net.ipv4.ip_forward=1
-    sudo iptables -t nat -C POSTROUTING -s 10.45.0.0/16 ! -o <iface> -j MASQUERADE 2>/dev/null || \
-    sudo iptables -t nat -A POSTROUTING -s 10.45.0.0/16 ! -o <iface> -j MASQUERADE
-    sudo iptables -C FORWARD -j ACCEPT 2>/dev/null || sudo iptables -I FORWARD 1 -j ACCEPT
+    #   *** use  -o <iface>  (traffic going OUT the internet iface).
+    #   *** do NOT use ! -o  — that negation NATs everything EXCEPT internet traffic
+    #       and silently breaks the phone's connectivity (packets leave un-rewritten
+    #       as 10.45.0.2, so replies can't route back). This bit us once — see traps.
+    sudo iptables -t nat -A POSTROUTING -s 10.45.0.0/16 -o enp0s25 -j MASQUERADE
+    sudo iptables -I FORWARD 1 -j ACCEPT
+    sudo iptables -I FORWARD 1 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 ### [gNB] pre-flight
     ping -c2 192.168.200.207                          # core reachable
@@ -110,7 +114,8 @@ Machines: [gNB] = Fujitsu Q957,  [core] = ThinkPad core laptop.
 - sudo + ~ : ~ becomes /root under sudo. Use ABSOLUTE config path in `script -c`.
 - Phone drops at ~3 min = idle RRC timeout. Fix: keep-alive ping + charger + stay-awake.
   Two RNTIs in log = it dropped/re-attached.
-- NAT is RAM-only: re-apply section 0 every core boot.
+- NAT is RAM-only: re-apply section 0 every core boot (or run netfilter-persistent save
+  once to make it permanent). Use  -o enp0s25  NOT  ! -o  (see section 9).
 - Reused capture ID = two captures in one folder. Use a UNIQUE ID each time.
 - --mobile auto-places in Mobility/, plain save in Static/. Don't mkdir manually.
 - Bracketed-paste (`[200~` in files): run  printf '\e[?2004l'  before pasting heredocs,
@@ -129,3 +134,48 @@ Machines: [gNB] = Fujitsu Q957,  [core] = ThinkPad core laptop.
 - tx_gain 85, rx_gain 40 or 50, clock external
 - line 8 addrs = core IP (192.168.200.207), line 10 bind_addrs = gNB IP (.213)
 - core amf.yaml ngap addr must match line 8
+
+
+===============================================================================
+## 9. "PHONE CONNECTS BUT NO INTERNET" — DIAGNOSIS (happened 2026-09-02)
+===============================================================================
+Symptom: phone attaches (gets IP 10.45.0.2, control plane fine) but no web pages.
+Root cause that session: after a core restart the iptables NAT rule was gone, and
+the replacement used the WRONG form  ! -o enp0s25  (negated), so the phone's
+packets left un-NAT'd (source stayed 10.45.0.2) and DNS replies could not return.
+
+### Why a "no-change" restart breaks it:
+- iptables rules live in RAM, not on disk -> a reboot/restart FLUSHES them.
+- Open5GS restart (e.g. after a MongoDB fix) only restores the CONTROL plane
+  (phone attaches); the USER plane NAT is a SEPARATE layer and stays broken.
+- So "I didn't change anything" still breaks internet: the restart wiped runtime state.
+
+### Diagnose in order (each isolates one layer):
+    # a. core reaches phone (tunnel)?         -> ping -c3 10.45.0.2      (should reply)
+    # b. core reaches internet (uplink)?      -> ping -c3 8.8.8.8        (should reply)
+    # c. phone's DNS actually being NAT'd?    -> sudo tcpdump -i enp0s25 -n port 53
+    #      load a page on phone, then look at the SOURCE of the DNS query:
+    #        192.168.200.207 > 8.8.8.8.53   = GOOD (NAT rewrote it)
+    #        10.45.0.2       > 8.8.8.8.53   = BAD  (NAT NOT applied -> the bug)
+    # d. inspect the NAT rule:
+    #      sudo iptables -t nat -L POSTROUTING -n -v --line-numbers
+    #      the "out" column MUST read  enp0s25 , NOT  !enp0s25
+
+### FIX (remove wrong rule, add correct one):
+    sudo iptables -t nat -F POSTROUTING
+    sudo iptables -t nat -A POSTROUTING -s 10.45.0.0/16 -o enp0s25 -j MASQUERADE
+    sudo iptables -I FORWARD 1 -m state --state ESTABLISHED,RELATED -j ACCEPT
+    sudo iptables -I FORWARD 1 -j ACCEPT
+    sudo sysctl -w net.ipv4.ip_forward=1
+    # then reload the page on the phone.
+
+### MAKE IT PERMANENT (so restarts never break it again):
+    sudo apt install iptables-persistent      # once
+    sudo netfilter-persistent save            # saves CURRENT (correct) rules
+    # rules now auto-reload on every boot; no more per-boot re-apply needed.
+
+### Also check on the phone if still failing after NAT is correct:
+    - Wi-Fi OFF (phone may prefer Wi-Fi and never use the 5G data path)
+    - APN = "internet" (must match the DNN in smf.yaml)
+    - Private DNS = Off  (a custom DoT hostname can't resolve over this link)
+    - toggle airplane mode to re-establish the session after any change
