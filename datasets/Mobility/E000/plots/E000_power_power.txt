@@ -1,0 +1,4 @@
+dataset: E000   K=12 -> 4 RBGs   samples=82409
+best-RBG fraction: RBG0=71.8%, RBG1=0.0%, RBG2=1.8%, RBG3=26.4%
+gain from swapping: mean=1.82 dB  median=1.22 dB  p90=4.18 dB  p10=0.66 dB
+per-RBG median power (dB): RBG0=-19.3, RBG1=-21.3, RBG2=-21.6, RBG3=-20.3
