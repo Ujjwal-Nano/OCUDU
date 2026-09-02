@@ -1,0 +1,7 @@
+dataset: E005   K=12 -> 4 RBGs   samples=54736   fs=50.0/s
+best-RBG power: median -20.9  P10 -25.1  P1 -28.8 dB
+outage    P90 (floor  -25.1 dB): median lifetime 0.0200 s  p10 0.0200  p90 0.4000 s
+outage    P95 (floor  -26.2 dB): median lifetime 0.0400 s  p10 0.0200  p90 0.5400 s
+outage  P97.5 (floor  -27.4 dB): median lifetime 0.1400 s  p10 0.0200  p90 1.0600 s
+outage    P99 (floor  -28.8 dB): median lifetime 0.2800 s  p10 0.0200  p90 1.7600 s
+old eps=0.5 dB: median lifetime 0.1200 s
