@@ -1,0 +1,1 @@
+Dlos:3.2m , rx gain: 40, speed: 0.0 m/s, srs period:20m, static case
