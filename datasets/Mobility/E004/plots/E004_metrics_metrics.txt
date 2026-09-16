@@ -1,20 +1,22 @@
-avg window   : 20 ms (1 samples)
+user        : single
+avg window   : 1000 ms (50 samples)
 re-attach guard: 10s x2 around 0 event(s)
-file        : datasets/Mobility/E004/20260825_1700_E004.rb.jsonl.gz
-samples     : 57048   duration 19.0 min   rate 50.0/s
+file        : /home/tud/OCUDU/datasets/Mobility/E004/20260825_1700_E004.rb.jsonl.gz
+samples     : 55547   duration 18.5 min   rate 50.0/s
 RBs sounded : 48   RBG size K=12 -> 4 RBGs
 SRS SNR est : median 4.5 dB  p10 2.9 dB
-T*          : 0.169 s at 0.5 dB budget
-regret(fixed choice) : 2.35 dB
+T*          : 0.177 s at 0.5 dB budget
+regret(fixed choice) : 1.44 dB
 lifetime eps=0.5 dB : median    0.200 s
 lifetime eps=1.0 dB : median    0.240 s
 lifetime eps=2.0 dB : median    0.280 s
 lifetime eps=3.0 dB : median    0.500 s
-Tc(0.5)     : 0.123 s
+Tc(0.5)     : 0.634 s
 Bc(0.5)     : 10.44 MHz  (RBG width K=12 = 4.32 MHz)
-RBG-pair freq correlation (K=12, 4 RBGs):
-  RBG-sep 1 (4.3 MHz): corr=0.87
-  RBG-sep 2 (8.6 MHz): corr=0.62
-  RBG-sep 3 (13.0 MHz): corr=0.29
-re-attaches  : 0  at min 
-appended mobility row to datasets/mobility_tc_rawwindow.csv
+RBG-pair freq correlation (K=12, 4 RBGs) — per-pair:
+  RBG0-RBG1 (sep 4.3 MHz): corr=0.81
+  RBG0-RBG2 (sep 8.6 MHz): corr=0.58
+  RBG0-RBG3 (sep 13.0 MHz): corr=0.34
+  RBG1-RBG2 (sep 4.3 MHz): corr=0.91
+  RBG1-RBG3 (sep 8.6 MHz): corr=0.72
+  RBG2-RBG3 (sep 4.3 MHz): corr=0.93
