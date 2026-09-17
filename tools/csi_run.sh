@@ -97,11 +97,13 @@ case "$1" in
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rbfull.jsonl
     if [ "$MOBILE" = "1" ]; then
       python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
+              ${SESSIONS:+--sessions "$SESSIONS"} \
               ${SPEED:+--speed "$SPEED"} --avg-win 40 --trim-start 1.0 --trim-end 1.0 \
               --label "$BASE" \
               --mobile-csv "$REPO/datasets/mobility_sweep.csv" || true
     else
       python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
+              ${SESSIONS:+--sessions "$SESSIONS"} \
               --trim-start 1.5 --trim-end 1.0 || true
     fi
     rm -f /tmp/_rbfull.jsonl
@@ -114,8 +116,20 @@ case "$1" in
 
     cd "$REPO"
     git add "$D" datasets/campaign.csv datasets/mobility_sweep.csv tools/
+    # Keep large / raw / derivable artifacts LOCAL-ONLY. GitHub hard-rejects any
+    # file >100 MB (the full PHY log), and the raw per-RB capture (rb.jsonl.gz)
+    # plus its expanded per-RU .jsonl are bulky and regenerable/archival — so
+    # none of them belong in git. Only the small products (plots, txt, sessions
+    # json, rnti map, campaign/mobility csvs) stay staged.
+    git reset -q -- "$D/$BASE.rb.jsonl.gz" \
+                    "$D/$BASE.jsonl" \
+                    "$D/$BASE.gnb_srs_test.log.gz" \
+                    "$D/$BASE.gnb_console.txt.gz" \
+                    "$D/$BASE.swap.jsonl" 2>/dev/null || true
     git commit -m "dataset: $BASE — $NOTE"
-    git pull --rebase && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
+    # --autostash: reapply any unstaged edits (e.g. a tweaked configs/*.yaml)
+    # around the rebase, so a dirty working tree no longer blocks the push.
+    git pull --rebase --autostash && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
     ;;
   *) echo "usage: csi_run.sh start | csi_run.sh save <name> [note]"; exit 1 ;;

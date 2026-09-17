@@ -149,6 +149,20 @@ def ru_corr_matrix(cf, K, NRB):
     return M, R
 
 
+def ru_corr_matrix_direct(P, K):
+    """True R×R RBG-pair correlation from each RBG's own power time series.
+    Unlike the cf-based version, entry (i,j) uses RBGi and RBGj's ACTUAL
+    series, so RBG0-RBG1 and RBG1-RBG2 can (and do) differ."""
+    R = P.shape[1] // K
+    # per-RBG linear power over time: (time, R)
+    ru = np.stack([P[:, r * K : (r + 1) * K].sum(1) for r in range(R)], 1)
+    ru = np.maximum(ru, 1e-15)
+    C = np.corrcoef(ru.T)  # (R, R), Pearson over time
+    if C.ndim == 0:  # R==1 guard
+        C = np.array([[1.0]])
+    return C, R
+
+
 def process_user(ukey, T, P, mins, fs, RN, a, out_path):
     """Run the full P1 metric suite on one user's own (already trimmed)
     slice of the capture, and save its PNG/txt. Returns the summary dict
@@ -364,7 +378,9 @@ def process_user(ukey, T, P, mins, fs, RN, a, out_path):
     )
 
     # G RBG×RBG correlation matrix (heatmap), modular in K
-    corrM, R_ru = ru_corr_matrix(cf, a.K, NRB)
+    # G RBG×RBG correlation matrix (heatmap) — TRUE per-pair, from RBG time series
+    # G RBG×RBG correlation matrix (heatmap) — TRUE per-pair, from RBG time series
+    corrM, R_ru = ru_corr_matrix_direct(P, a.K)
     im = ax[1, 1].imshow(corrM, vmin=-1, vmax=1, cmap="coolwarm", origin="upper")
     ax[1, 1].set_xticks(range(R_ru))
     ax[1, 1].set_yticks(range(R_ru))
@@ -385,36 +401,38 @@ def process_user(ukey, T, P, mins, fs, RN, a, out_path):
     ax[1, 1].set_title(f"RBG×RBG freq correlation (K={a.K}, {R_ru} RBGs)")
     fig.colorbar(im, ax=ax[1, 1], fraction=0.046, pad=0.04)
 
-    # H RBG-pair correlation vs RBG separation, modular in K
-    pairs, _ = ru_pair_correlation(cf, a.K, NRB)
-    seps = list(pairs.keys())
-    cvals = [pairs[s] for s in seps]
-    sep_mhz = [s * a.K * RBBW / 1e6 for s in seps]
-    ax[1, 2].plot(sep_mhz, cvals, "o-", lw=2, color="#d62728", ms=8)
+    # H RBG-pair correlation vs separation — ALL pairs, true per-pair values
+    sep_list, corr_list, lbl_list = [], [], []
+    for i in range(R_ru):
+        for j in range(i + 1, R_ru):
+            s = j - i
+            sep_list.append(s * a.K * RBBW / 1e6)
+            corr_list.append(corrM[i, j])
+            lbl_list.append(f"RBG{i}-RBG{j}")
+    ax[1, 2].scatter(sep_list, corr_list, s=60, color="#d62728", zorder=3)
     ax[1, 2].axhline(0.5, ls="--", c="k", lw=1)
-    for s, c, fm in zip(seps, cvals, sep_mhz):
+    for x_, y_, lb in zip(sep_list, corr_list, lbl_list):
         ax[1, 2].annotate(
-            f"RBG0-RBG{s}\n{c:.2f}",
-            xy=(fm, c),
+            f"{lb}\n{y_:.2f}",
+            xy=(x_, y_),
             xytext=(0, 8),
             textcoords="offset points",
-            fontsize=7.5,
+            fontsize=7,
             ha="center",
         )
     ax[1, 2].set_xlabel("RBG separation (MHz)")
     ax[1, 2].set_ylabel("correlation")
-    ax[1, 2].set_title("RBG-pair correlation vs separation")
+    ax[1, 2].set_title("RBG-pair correlation vs separation (per-pair)")
     ax[1, 2].set_ylim(-1.05, 1.05)
     ax[1, 2].grid(alpha=0.3)
-    L.append(f"RBG-pair freq correlation (K={a.K}, {R_ru} RBGs):")
-    for s, c in pairs.items():
-        L.append(f"  RBG-sep {s} ({s*a.K*RBBW/1e6:.1f} MHz): corr={c:.2f}")
 
-    cuts = [i for i in range(1, len(RN)) if RN[i] != RN[i - 1]]
-    L.append(
-        f"re-attaches  : {len(cuts)}  at min "
-        + ", ".join(f"{mins[c]:.1f}" for c in cuts)
-    )
+    L.append(f"RBG-pair freq correlation (K={a.K}, {R_ru} RBGs) — per-pair:")
+    for i in range(R_ru):
+        for j in range(i + 1, R_ru):
+            L.append(
+                f"  RBG{i}-RBG{j} (sep {(j-i)*a.K*RBBW/1e6:.1f} MHz): "
+                f"corr={corrM[i,j]:.2f}"
+            )
 
     fig.suptitle(f"P1 metric suite — user {ukey} — {a.cap.split('/')[-1]}", fontsize=12)
     fig.tight_layout(rect=[0, 0, 1, 0.965])
