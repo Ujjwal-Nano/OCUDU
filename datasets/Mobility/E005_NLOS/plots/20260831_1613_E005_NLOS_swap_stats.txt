@@ -1,5 +1,0 @@
-dataset: datasets/Mobility/E005_NLOS/20260831_1613_E005_NLOS.swap.jsonl
-
-user 0: 1414 samples, 2 segment(s)
-  best-RBG fraction: RBG0=18.1%, RBG1=26.7%, RBG2=37.6%, RBG3=17.7%
-  total switches: 500   zoom: 15.07-15.40 min
