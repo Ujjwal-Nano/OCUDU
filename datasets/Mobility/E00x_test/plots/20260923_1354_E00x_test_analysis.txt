@@ -1,0 +1,4 @@
+file      : /home/tud/OCUDU/datasets/Mobility/E00x_test/20260923_1354_E00x_test.jsonl
+samples   : 12992   duration 1.8 min   RUs 4
+trim      : first 1.5 min, last 1.0 min
+   WHOLE (trimmed)  too few samples (0)

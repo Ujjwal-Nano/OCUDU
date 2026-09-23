@@ -1,0 +1,13 @@
+dataset: /home/tud/OCUDU/datasets/Mobility/E00x_test/20260923_1354_E00x_test.jsonl
+
+user 999420000020049: 2616 samples, 15 segment(s)
+  best-RBG fraction: RBG0=22.8%, RBG1=34.0%, RBG2=5.4%, RBG3=37.8%
+  total switches: 558   zoom: 0.41-0.75 min
+
+user 999420000020051: 8133 samples, 5525 segment(s)
+  best-RBG fraction: RBG0=38.2%, RBG1=16.5%, RBG2=26.6%, RBG3=18.7%
+  total switches: 6461   zoom: 0.06-0.40 min
+
+user 999420000020052: 2243 samples, 1 segment(s)
+  best-RBG fraction: RBG0=0.6%, RBG1=81.0%, RBG2=10.6%, RBG3=7.8%
+  total switches: 322   zoom: 0.00-0.34 min
