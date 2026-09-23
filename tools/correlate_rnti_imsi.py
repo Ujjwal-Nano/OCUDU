@@ -25,13 +25,19 @@ currently open (unambiguous); with several UEs open concurrently it
 declines to guess rather than risk attributing one UE's session to
 another, and falls back to the old SUCI-only behavior for that session.
 
+Key fix #3 (this version): optional --known-imsis whitelist. Sessions
+whose resolved IMSI is not a registered subscriber (e.g. a stray session
+that resolved to an IMSI not provisioned in the core) are dropped, so
+they never enter the grouped output that downstream tools consume.
+
 Usage:
   python3 correlate_rnti_imsi.py --gnb-log /tmp/gnb_srs_test.log \
       --amf-since "2026-09-14 11:00:00" -o rnti_imsi_map.csv \
-      --group-out ue_sessions.json
+      --group-out ue_sessions.json \
+      --known-imsis known_imsis.txt
 """
 
-import argparse, re, subprocess, csv, json, shlex
+import argparse, re, subprocess, csv, json, shlex, sys
 
 
 def parse_gnb_ngap(path):
@@ -293,16 +299,31 @@ def build_sessions(events, rnti_entries, amf_sessions):
     return raw_sessions
 
 
-def group_by_imsi(sessions):
+def load_known_imsis(path):
+    """Read a whitelist file of registered IMSIs, one per line. Blank lines
+    and lines starting with '#' are ignored. Returns a set of IMSI strings,
+    or None if path is falsy (whitelist disabled)."""
+    if not path:
+        return None
+    with open(path) as f:
+        known = {ln.strip() for ln in f if ln.strip() and not ln.startswith("#")}
+    print(f"whitelist: {len(known)} registered IMSIs from {path}")
+    return known
+
+
+def group_by_imsi(sessions, known_imsis=None):
     """UE-centric view: imsi -> list of its rnti sessions with time ranges.
-    This is the actual answer to 'same UE, different rnti on reconnect' —
-    every session below one IMSI key IS the same UE, by construction,
-    because the AMF only ever issues one IMSI per subscriber.
-    Falls back to grouping by SUCI when the IMSI couldn't be decoded (e.g.
-    a non-null SUCI protection scheme) — still a stable per-UE key, just
-    not human-readable as an IMSI."""
+    every session below one IMSI key IS the same UE, by construction.
+    Falls back to grouping by SUCI when the IMSI couldn't be decoded.
+
+    If known_imsis is given, sessions whose resolved IMSI is a real IMSI
+    but not in the registered set are dropped (removes spurious IMSIs like
+    a stray session that resolved to an IMSI not provisioned in the core).
+    SUCI-keyed and fully-unresolved sessions are NOT dropped — there is no
+    IMSI to check them against, so they pass through to their usual keys."""
     grouped = {}
     unknown = []
+    dropped = {}
     for s in sessions:
         entry = {
             "rnti": hex(s["rnti"]) if s["rnti"] else None,
@@ -311,6 +332,10 @@ def group_by_imsi(sessions):
             "start": s["start"],
             "end": s["end"],
         }
+        # drop sessions that resolved to a real IMSI not on the whitelist
+        if known_imsis is not None and s["imsi"] and s["imsi"] not in known_imsis:
+            dropped[s["imsi"]] = dropped.get(s["imsi"], 0) + 1
+            continue
         key = s["imsi"] or (
             f"suci-{s['suci']} (imsi undecodable)" if s.get("suci") else None
         )
@@ -320,6 +345,12 @@ def group_by_imsi(sessions):
             unknown.append(entry)
     if unknown:
         grouped["UNKNOWN_IMSI"] = unknown
+    if dropped:
+        print(
+            f"dropped {sum(dropped.values())} session(s) from "
+            f"{len(dropped)} unregistered IMSI(s): {', '.join(dropped)}",
+            file=sys.stderr,
+        )
     return grouped
 
 
@@ -352,7 +383,16 @@ def main():
         default="ue_sessions.json",
         help="NEW: JSON grouped by IMSI -> list of rnti sessions",
     )
+    ap.add_argument(
+        "--known-imsis",
+        default=None,
+        help="file of registered IMSIs (one per line, # comments ok); "
+        "sessions resolving to an unregistered IMSI are dropped",
+    )
+
     a = ap.parse_args()
+
+    known_imsis = load_known_imsis(a.known_imsis)
 
     events = parse_gnb_ngap(a.gnb_log)
     rnti_entries = parse_gnb_rrc_rnti(a.gnb_log)
@@ -378,8 +418,8 @@ def main():
             )
     print(f"wrote {len(sessions)} sessions to {a.out}")
 
-    # grouped-by-IMSI JSON (the new part)
-    grouped = group_by_imsi(sessions)
+    # grouped-by-IMSI JSON (the new part), with the whitelist applied
+    grouped = group_by_imsi(sessions, known_imsis)
     with open(a.group_out, "w") as f:
         json.dump(grouped, f, indent=2)
     print(f"wrote {len(grouped)} UE(s) to {a.group_out}")
