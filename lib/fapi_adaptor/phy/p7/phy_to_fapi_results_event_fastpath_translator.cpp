@@ -14,7 +14,8 @@
 #include <iomanip>
 #include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/units.h"
-
+#include <mutex>
+namespace { std::mutex cfr_log_mtx_; }
 using namespace ocudu;
 using namespace fapi_adaptor;
 
@@ -517,6 +518,29 @@ void phy_to_fapi_results_event_fastpath_translator::on_new_srs_results(const ul_
       if (++rbcnt % 50 == 0) rblog.flush();
     }
   }
+    // ---- Per-subcarrier CFR dump (ADDITIVE; parallel to srs_rb.jsonl) --------
+  {
+   static std::ofstream cfrlog("/tmp/srs_cfr.jsonl", std::ios::app);
+   static unsigned      cfrcnt = 0;
+   constexpr unsigned   CFR_EVERY_N = 20;                 // log every occasion; raise to decimate
+   const auto&          cfr = result.processor_result.cfr_per_sc;   // <-- the field from Edit 1
+   if (cfrlog.is_open() && !cfr.empty() && !cfr[0].empty() &&
+       (cfrcnt++ % CFR_EVERY_N) == 0) {
+    std::lock_guard<std::mutex> lk(cfr_log_mtx_);
+    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::system_clock::now().time_since_epoch())
+                         .count();
+    const unsigned rnti_i = static_cast<unsigned>(result.context.rnti);
+    const auto& v = cfr[0];                             // rx port 0 (SISO)
+    cfrlog << "{\"t\":" << now << ",\"rnti\":" << rnti_i << ",\"rx\":0,\"sc\":[";
+    for (size_t i = 0; i < v.size(); ++i) { if (i) cfrlog << ','; cfrlog << v[i].first; }
+    cfrlog << "],\"re\":[";
+    for (size_t i = 0; i < v.size(); ++i) { if (i) cfrlog << ','; cfrlog << v[i].second.real(); }
+    cfrlog << "],\"im\":[";
+    for (size_t i = 0; i < v.size(); ++i) { if (i) cfrlog << ','; cfrlog << v[i].second.imag(); }
+    cfrlog << "]}\n";
+  }
+}
   
   fapi::srs_indication         msg;
   fapi::srs_indication_builder builder(msg);
