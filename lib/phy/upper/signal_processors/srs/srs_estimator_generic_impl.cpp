@@ -107,7 +107,7 @@ srs_estimator_result srs_estimator_generic_impl::estimate(const resource_grid_re
   const unsigned nof_sounded_rbs = (last_sc / nof_sc_per_rb) + 1;
   const unsigned nof_rus = (nof_sounded_rbs + ru_size_rbs - 1) / ru_size_rbs;
   result.ru_power_grid.assign(nof_rx_ports, std::vector<float>(nof_rus, 0.0F));
- 
+  result.cfr_per_sc.assign(nof_rx_ports, {});
 
 
 
@@ -232,6 +232,7 @@ srs_estimator_result srs_estimator_generic_impl::estimate(const resource_grid_re
         unsigned rb = sc / nof_sc_per_rb;
         unsigned ru = rb / ru_size_rbs;
         result.ru_power_grid[i_rx_port][ru] += std::norm(mean_lse[i]);
+        result.cfr_per_sc[i_rx_port].push_back({sc, mean_lse[i]});
       }
        // ** CSI grid ** //
 
