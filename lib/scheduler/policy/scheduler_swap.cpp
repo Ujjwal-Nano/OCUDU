@@ -5,6 +5,8 @@
 #include "../slicing/slice_ue_repository.h" // for slice_ue accessors  // VERIFY path
 #include "ocudu/support/csi_grid_registry.h"
 #include <chrono>
+#include <fstream>
+#include <chrono>
 
 using namespace ocudu;
 
@@ -63,21 +65,25 @@ void scheduler_swap::rem_ue(du_ue_index_t ue_index)
 swap_sched::csi_grid scheduler_swap::build_csi_grid() const
 {
   const unsigned U = cfg.num_users;
-  const unsigned R = num_rus();
+  const unsigned R = num_rus(); // This equals 4
 
-  // Strictly-positive floor: a UE that has not sounded yet must not be a hard zero,
-  // since the swap's gain math divides by CSI values.
+  // Initialize the grid mapping matrix for 4 RUs
   swap_sched::csi_grid csi(U, std::vector<double>(R, 1e-9));
 
   for (unsigned u = 0; u != U; ++u) {
     if (user_to_rnti[u] == rnti_t::INVALID_RNTI) {
-      continue; // this user slot is empty / no RNTI learned yet
+      continue; 
     }
-    auto g = csi_grid_registry::instance().get(user_to_rnti[u]); // [rx_port][rb] (per-RB grid!)
-    for (const auto& per_port : g) {                             // collapse rx ports, aggregate RBs->RU
+    
+    auto g = csi_grid_registry::instance().get(user_to_rnti[u]); // [rx_port][rb]
+    
+    for (const auto& per_port : g) {                             
       for (unsigned r = 0; r != R; ++r) {
-        const unsigned rb_begin = r * cfg.rbs_per_ru;
+        // Truly dynamic mapping based on your YAML configuration parameter
+        const unsigned rb_begin = r * cfg.rbs_per_ru; 
         const unsigned rb_end   = std::min<unsigned>(rb_begin + cfg.rbs_per_ru, per_port.size());
+
+        
         for (unsigned rb = rb_begin; rb < rb_end; ++rb) {
           csi[u][r] += per_port[rb];
         }
@@ -87,13 +93,39 @@ swap_sched::csi_grid scheduler_swap::build_csi_grid() const
   return csi;
 }
 
+
 void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> candidates)
 {
+// --- temp instrumentation: log candidate presence/pending_bytes per slot ---
+  {
+    static std::ofstream candlog("/tmp/cand_presence.jsonl", std::ios::app);
+    const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::system_clock::now().time_since_epoch()).count();
+    for (const ue_newtx_candidate& c : candidates) {
+      candlog << "{\"t\":" << now_ms
+              << ",\"rnti\":" << static_cast<unsigned>(c.ue->crnti())
+              << ",\"pending_bytes\":" << c.pending_bytes.value() << "}\n";
+    }
+    candlog.flush();
+  }
+// --- end instrumentation ---
+
 // Learn / refresh each candidate UE's mapping and RNTI (lazy, works for any UE count).
   for (const ue_newtx_candidate& c : candidates) {
     du_ue_index_t idx = c.ue->ue_index();
     if (ue_to_user[idx] < 0) {
       add_ue(idx); // first sight of this UE: claim a free user slot
+
+      // --- temp instrumentation: log every add_ue (re-)registration event ---
+      {
+        static std::ofstream addlog("/tmp/add_ue_events.jsonl", std::ios::app);
+        const auto add_now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::system_clock::now().time_since_epoch()).count();
+        addlog << "{\"t\":" << add_now_ms
+               << ",\"rnti\":" << static_cast<unsigned>(c.ue->crnti()) << "}\n";
+        addlog.flush();
+      }
+      // --- end instrumentation ---
     }
     int u = ue_to_user[idx];
     if (u >= 0) {
@@ -101,17 +133,31 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
       user_last_seen[u] = sl;
     }
   }
-
-  // Evict user slots whose UE has vanished (released / re-attached under a new index),
-  // so slots and the CSI registry recycle correctly over long multi-UE runs.
+  
+  // =========================================================================
+  // FIX: Protect inactive/buffering UEs (like YouTube) via SRS confirmation
+  // =========================================================================
   for (unsigned u = 0; u != user_to_ue.size(); ++u) {
-    if (user_to_ue[u] != INVALID_DU_UE_INDEX && user_last_seen[u].valid() &&
-        (sl - user_last_seen[u]) > static_cast<int>(10 * cfg.swap_period_slots)) {
-      csi_grid_registry::instance().erase(user_to_rnti[u]);
-      rem_ue(user_to_ue[u]);
-      user_last_seen[u] = slot_point{};
+    if (user_to_ue[u] != INVALID_DU_UE_INDEX) {
+      
+      // Query the global SRS registry. If it returns an empty grid, the physical link is gone.
+      bool srs_is_alive = !csi_grid_registry::instance().get(user_to_rnti[u]).empty(); 
+      
+      // Only clean up the user slot if their physical uplink SRS disappears, 
+      // OR if they have been completely silent across a massive fallback timeout window (500x).
+      if (!srs_is_alive || (user_last_seen[u].valid() && 
+          (sl - user_last_seen[u]) > static_cast<int>(500 * cfg.swap_period_slots))) {
+          
+        csi_grid_registry::instance().erase(user_to_rnti[u]);
+        rem_ue(user_to_ue[u]);
+        user_last_seen[u] = slot_point{};
+      }
     }
   }
+  // =========================================================================
+
+  // =========================================================================
+
   // Gate to the SRS reporting period (run once per cfg.swap_period_slots).
   if (last_swap_slot.valid() && (sl - last_swap_slot) < static_cast<int>(cfg.swap_period_slots)) {
     return;
@@ -119,7 +165,10 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
   last_swap_slot = sl;
 
   swap_sched::csi_grid csi = build_csi_grid();
+  auto _t0 = std::chrono::high_resolution_clock::now();
   alloc.step(csi);
+  auto _t1 = std::chrono::high_resolution_clock::now();
+  double alloc_us = std::chrono::duration<double,std::micro>(_t1-_t0).count();
 
   // --- metrics: one JSON line per period ---
   if (!metrics_log.is_open()) {
@@ -130,7 +179,8 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
     double      weakest = std::numeric_limits<double>::max();
     metrics_log << "{\"t\":" << std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::system_clock::now().time_since_epoch()).count()
-                << ",\"slot\":" << sl.count() << ",\"users\":[";    for (unsigned u = 0; u < csi.size(); ++u) {
+                << ",\"slot\":" << sl.count() << ",\"users\":[";
+    for (unsigned u = 0; u < csi.size(); ++u) {
       double served = 0.0;
       for (unsigned ru : assign[u]) {
         if (ru < csi[u].size()) {
@@ -156,14 +206,12 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
         metrics_log << csi[u][r];
       }
       metrics_log << "]}";
-
     }
-    metrics_log << "],\"weakest_user_csi\":" << weakest << "}\n";
+    metrics_log << "],\"weakest_user_csi\":" << weakest << ",\"alloc_us\":" << alloc_us << "}\n";
     metrics_log.flush();
   }
-
-
 }
+
 
 void scheduler_swap::compute_ue_dl_priorities(slot_point               pdcch_slot,
                                               slot_point               pdsch_slot,
