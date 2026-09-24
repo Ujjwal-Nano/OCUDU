@@ -28,6 +28,8 @@ struct srs_estimator_result {
   std::optional<float> noise_variance;
   // Per-Rx-port, per-RU linear channel power |H|^2 from SRS. [rx_port][ru].
   std::vector<std::vector<float>> ru_power_grid;
+  // per-sounded-subcarrier complex CFR, [rx_port] -> [ (sc, cf_t) ... ]  (ADDITIVE)
+  std::vector<std::vector<std::pair<unsigned, cf_t>>> cfr_per_sc;
 
 
   /// Measured time alignment.
