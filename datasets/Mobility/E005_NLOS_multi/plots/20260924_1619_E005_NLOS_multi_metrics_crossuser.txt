@@ -1,0 +1,24 @@
+Cross-user RBG correlation (dB, time-aligned @ 100 ms bins)
+low/negative = decorrelated = HIGH swap opportunity
+high (>0.5)  = users contend on same RBGs = LOW swap gain
+
+999420000020049 vs 999420000020051: mean=-0.111  overlap=6439 bins
+   per-RBG: RBG0=-0.10, RBG1=-0.10, RBG2=-0.13, RBG3=-0.12
+999420000020049 vs 999420000020052: mean=-0.269  overlap=5214 bins
+   per-RBG: RBG0=-0.25, RBG1=-0.27, RBG2=-0.31, RBG3=-0.24
+999420000020049 vs unknown-rnti-0x4903: mean=0.384  overlap=338 bins
+   per-RBG: RBG0=0.41, RBG1=0.36, RBG2=0.39, RBG3=0.38
+999420000020051 vs 999420000020052: mean=0.115  overlap=6624 bins
+   per-RBG: RBG0=0.10, RBG1=0.11, RBG2=0.12, RBG3=0.12
+999420000020051 vs unknown-rnti-0x4903: mean=0.025  overlap=949 bins
+   per-RBG: RBG0=0.07, RBG1=0.05, RBG2=-0.02, RBG3=0.00
+999420000020051 vs unknown-rnti-0x4904: mean=0.011  overlap=1943 bins
+   per-RBG: RBG0=0.02, RBG1=0.07, RBG2=-0.00, RBG3=-0.04
+999420000020051 vs unknown-rnti-0x4908: mean=-0.048  overlap=306 bins
+   per-RBG: RBG0=0.01, RBG1=-0.07, RBG2=-0.07, RBG3=-0.07
+unknown-rnti-0x4904 vs unknown-rnti-0x4908: mean=0.160  overlap=306 bins
+   per-RBG: RBG0=0.32, RBG1=0.08, RBG2=0.08, RBG3=0.16
+unknown-rnti-0x4904 vs unknown-rnti-0x4909: mean=-0.013  overlap=127 bins
+   per-RBG: RBG0=-0.30, RBG1=-0.08, RBG2=0.18, RBG3=0.15
+unknown-rnti-0x490b vs unknown-rnti-0x490c: mean=-0.039  overlap=64 bins
+   per-RBG: RBG0=0.03, RBG1=0.05, RBG2=-0.11, RBG3=-0.13

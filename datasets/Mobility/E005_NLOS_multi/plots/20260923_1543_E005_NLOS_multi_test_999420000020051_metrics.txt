@@ -1,0 +1,22 @@
+user        : 999420000020051
+avg window   : 1000 ms (50 samples)
+re-attach guard: 10s x2 around 2 event(s)
+file        : /home/tud/OCUDU/datasets/Mobility/E005_NLOS_multi/20260923_1543_E005_NLOS_multi.rb.jsonl.gz
+samples     : 47758   duration 15.9 min   rate 50.0/s
+RBs sounded : 48   RBG size K=12 -> 4 RBGs
+SRS SNR est : median -0.6 dB  p10 -1.4 dB
+T*          : 0.118 s at 0.5 dB budget
+regret(fixed choice) : 1.60 dB
+lifetime eps=0.5 dB : median    0.080 s
+lifetime eps=1.0 dB : median    0.120 s
+lifetime eps=2.0 dB : median    0.200 s
+lifetime eps=3.0 dB : median    0.320 s
+Tc(0.5)     : 0.389 s
+Bc(0.5)     : nan MHz  (RBG width K=12 = 4.32 MHz)
+RBG-pair freq correlation (K=12, 4 RBGs) — per-pair:
+  RBG0-RBG1 (sep 4.3 MHz): corr=0.93
+  RBG0-RBG2 (sep 8.6 MHz): corr=0.80
+  RBG0-RBG3 (sep 13.0 MHz): corr=0.62
+  RBG1-RBG2 (sep 4.3 MHz): corr=0.91
+  RBG1-RBG3 (sep 8.6 MHz): corr=0.75
+  RBG2-RBG3 (sep 4.3 MHz): corr=0.92

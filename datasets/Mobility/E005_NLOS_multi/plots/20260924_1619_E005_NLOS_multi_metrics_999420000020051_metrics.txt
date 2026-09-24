@@ -1,0 +1,22 @@
+user        : 999420000020051
+avg window   : 40 ms (2 samples)
+re-attach guard: 10s x2 around 5103 event(s)
+file        : /tmp/_rbfull.jsonl
+samples     : 52734   duration 18.5 min   rate 50.0/s
+RBs sounded : 48   RBG size K=12 -> 4 RBGs
+SRS SNR est : median 1.8 dB  p10 1.3 dB
+T*          : 0.094 s at 0.5 dB budget
+regret(fixed choice) : 1.78 dB
+lifetime eps=0.5 dB : median    0.100 s
+lifetime eps=1.0 dB : median    0.120 s
+lifetime eps=2.0 dB : median    0.160 s
+lifetime eps=3.0 dB : median    0.220 s
+Tc(0.5)     : 0.099 s
+Bc(0.5)     : nan MHz  (RBG width K=12 = 4.32 MHz)
+RBG-pair freq correlation (K=12, 4 RBGs) — per-pair:
+  RBG0-RBG1 (sep 4.3 MHz): corr=0.95
+  RBG0-RBG2 (sep 8.6 MHz): corr=0.83
+  RBG0-RBG3 (sep 13.0 MHz): corr=0.73
+  RBG1-RBG2 (sep 4.3 MHz): corr=0.92
+  RBG1-RBG3 (sep 8.6 MHz): corr=0.81
+  RBG2-RBG3 (sep 4.3 MHz): corr=0.95

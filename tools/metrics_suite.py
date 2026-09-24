@@ -204,6 +204,7 @@ def process_user(ukey, T, P, mins, fs, RN, a, out_path):
     ]
 
     w = max(1, int(round(fs)))
+    w = min(w, len(P))  # guard: kernel can't exceed the data length
     kern = np.ones(w) / w
     sig, noi = [], []
     for rb in range(NRB):
@@ -454,6 +455,163 @@ def process_user(ukey, T, P, mins, fs, RN, a, out_path):
     return summary
 
 
+def _cross_user_binned(T, P, K, bin_ms, all_t0):
+    """Bin one user's per-RBG power onto a shared-origin time grid.
+    Returns (bin_index_array, rbg_db[time, R]) using LINEAR-power mean per bin
+    then dB. Shared all_t0 makes bin b mean the same wall-time across users."""
+    T = np.asarray(T, float)
+    R = P.shape[1] // K
+    if T.size == 0 or R == 0:
+        return np.array([], int), np.zeros((0, 0)), 0
+    ru = np.stack([P[:, r * K : (r + 1) * K].sum(1) for r in range(R)], 1)
+    ru = np.maximum(ru, 1e-15)
+    bidx = ((T - all_t0) // bin_ms).astype(int)
+    return bidx, 10.0 * np.log10(ru), R
+
+
+def cross_user_rbg_correlation(user_series, K, out_path, bin_ms=100.0, min_overlap=20):
+    """Pairwise, same-RBG, TIME-ALIGNED cross-user correlation (dB).
+
+    Within-user RBG correlation just re-measures coherence bandwidth. The
+    CROSS-user, same-RBG correlation predicts SWAP VALUE:
+       high  -> users fade together on the same RBGs -> they CONTEND -> swap
+                cannot lift the weak user without starving the strong one.
+       low/neg -> users' good RBGs differ -> swap gives each its good band ->
+                real opportunity.
+    Users sound at different instants (SRS offsets + reattach churn), so raw
+    series are unaligned; we bin both onto a common grid before correlating,
+    else the number is just sampling noise.
+
+    user_series: {ukey: (T_ms, P_linear[time, NRB])}.
+    Writes out_path (png) + a .txt. Returns the mean-corr matrix, or None.
+    """
+    keys = [k for k in user_series if len(user_series[k][0])]
+    n = len(keys)
+    if n < 2:
+        return None
+    all_t0 = min(np.asarray(user_series[k][0], float).min() for k in keys)
+
+    binned = {}
+    R = None
+    for k in keys:
+        T, P = user_series[k]
+        bidx, dbv, Rk = _cross_user_binned(T, P, K, bin_ms, all_t0)
+        binned[k] = (bidx, dbv)
+        R = Rk if R is None else min(R, Rk)
+    if not R:
+        return None
+
+    def per_bin(bidx, dbv):
+        if bidx.size == 0:
+            return np.zeros((0, R))
+        nb = bidx.max() + 1
+        Mx = np.full((nb, R), np.nan)
+        for b in range(nb):
+            m = bidx == b
+            if m.any():
+                Mx[b] = dbv[m, :R].mean(0)
+        return Mx
+
+    binmats = {k: per_bin(*binned[k]) for k in keys}
+
+    M = np.full((n, n), np.nan)
+    per_rbg, overlap = {}, np.zeros((n, n), int)
+    for i in range(n):
+        M[i, i] = 1.0
+        for j in range(i + 1, n):
+            Ma, Mb = binmats[keys[i]], binmats[keys[j]]
+            nb = min(Ma.shape[0], Mb.shape[0])
+            if nb == 0:
+                continue
+            Ma, Mb = Ma[:nb], Mb[:nb]
+            good = ~np.isnan(Ma).any(1) & ~np.isnan(Mb).any(1)
+            if good.sum() < min_overlap:
+                continue
+            Xa, Xb = Ma[good], Mb[good]
+            overlap[i, j] = overlap[j, i] = Xa.shape[0]
+            rk = np.full(R, np.nan)
+            for r in range(R):
+                if Xa[:, r].std() > 1e-9 and Xb[:, r].std() > 1e-9:
+                    rk[r] = np.corrcoef(Xa[:, r], Xb[:, r])[0, 1]
+            per_rbg[(i, j)] = rk
+            M[i, j] = M[j, i] = np.nanmean(rk)
+
+    lbls = [str(k)[-6:] for k in keys]
+    npairs = max(1, len(per_rbg))
+    fig = plt.figure(figsize=(10, 4 + 1.2 * npairs))
+    gs = fig.add_gridspec(npairs, 2, width_ratios=[1.1, 1.4])
+    axm = fig.add_subplot(gs[:, 0])
+    im = axm.imshow(M, vmin=-1, vmax=1, cmap="coolwarm", origin="upper")
+    axm.set_xticks(range(n))
+    axm.set_yticks(range(n))
+    axm.set_xticklabels(lbls, rotation=45, ha="right", fontsize=8)
+    axm.set_yticklabels(lbls, fontsize=8)
+    for i in range(n):
+        for j in range(n):
+            if not np.isnan(M[i, j]):
+                axm.text(
+                    j,
+                    i,
+                    f"{M[i,j]:.2f}",
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color="white" if abs(M[i, j]) > 0.5 else "black",
+                )
+    axm.set_title(
+        "Cross-user mean RBG corr\n(low=swap opportunity, high=contention)", fontsize=9
+    )
+    fig.colorbar(im, ax=axm, fraction=0.046, label="Pearson (dB)")
+    for idx, ((i, j), rk) in enumerate(sorted(per_rbg.items())):
+        ax = fig.add_subplot(gs[idx, 1])
+        cols = [
+            "tab:red" if v > 0.5 else ("tab:green" if v < 0.2 else "tab:orange")
+            for v in np.nan_to_num(rk)
+        ]
+        ax.bar(range(R), rk, color=cols)
+        ax.axhline(0.5, color="k", ls="--", lw=0.7, alpha=0.5)
+        ax.set_ylim(-1, 1)
+        ax.set_xticks(range(R))
+        ax.set_xticklabels([f"RBG{r}" for r in range(R)], fontsize=7)
+        ax.set_ylabel("corr", fontsize=8)
+        ax.set_title(
+            f"{lbls[i]} vs {lbls[j]}  (mean {M[i,j]:.2f}, " f"{overlap[i,j]} bins)",
+            fontsize=8,
+        )
+        ax.grid(alpha=0.3, axis="y")
+    fig.suptitle(
+        f"Cross-user RBG correlation — predicts swap value (bin={bin_ms:.0f} ms)",
+        fontsize=11,
+    )
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.savefig(out_path, dpi=130)
+    plt.close(fig)
+
+    txt = out_path.rsplit(".", 1)[0] + ".txt"
+    with open(txt, "w") as f:
+        f.write("Cross-user RBG correlation (dB, time-aligned @ %g ms bins)\n" % bin_ms)
+        f.write("low/negative = decorrelated = HIGH swap opportunity\n")
+        f.write("high (>0.5)  = users contend on same RBGs = LOW swap gain\n\n")
+        for (i, j), rk in sorted(per_rbg.items()):
+            f.write(
+                f"{keys[i]} vs {keys[j]}: mean={M[i,j]:.3f}  "
+                f"overlap={overlap[i,j]} bins\n"
+            )
+            f.write(
+                "   per-RBG: "
+                + ", ".join(f"RBG{r}={rk[r]:.2f}" for r in range(R))
+                + "\n"
+            )
+        if not per_rbg:
+            f.write(
+                "(no user pair had >= %d aligned bins -- likely reattach churn\n"
+                " or too little concurrent sounding; capture 3 UEs sounding\n"
+                " together for longer, or raise bin_ms)\n" % min_overlap
+            )
+    print("wrote", out_path, "and", txt)
+    return M
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cap")
@@ -467,6 +625,12 @@ def main():
     ap.add_argument("--mobile-csv", default=None)
     ap.add_argument("--label", default=None)
     ap.add_argument("--reattach-guard", type=float, default=10.0)
+    ap.add_argument(
+        "--xuser-bin-ms",
+        type=float,
+        default=100.0,
+        help="time-bin (ms) for cross-user RBG correlation alignment",
+    )
     ap.add_argument("--speed", type=float, default=None)
     ap.add_argument(
         "--sessions",
@@ -497,6 +661,7 @@ def main():
     base, ext = os.path.splitext(a.out)
 
     results = []
+    user_series = {}
     for ukey in distinct_users:
         mask = ukeys == ukey
         Tu, Pu, RNu = T[mask], P[mask], RN[mask]
@@ -506,11 +671,17 @@ def main():
             k = np.ones(len(minsu), bool)
         Tu, Pu, minsu, RNu = Tu[k], Pu[k], minsu[k], RNu[k]
         fsu = 1000.0 / np.median(np.diff(Tu)) if len(Tu) > 1 else float("nan")
+        user_series[ukey] = (Tu, Pu)  # for cross-user correlation
 
         out_path = f"{base}_{ukey}{ext}" if a.sessions else a.out
         summary = process_user(ukey, Tu, Pu, minsu, fsu, RNu, a, out_path)
         if summary is not None:
             results.append((ukey, summary))
+
+    if a.sessions and len(user_series) >= 2:
+        cross_user_rbg_correlation(
+            user_series, a.K, f"{base}_crossuser{ext}", bin_ms=a.xuser_bin_ms
+        )
 
     if a.mobile_csv and results:
         import csv
