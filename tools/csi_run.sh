@@ -10,7 +10,7 @@ GL=/tmp/gnb_srs_test.log        # gNB detail log (SRS/PHY/events, from yaml log 
 RM=/tmp/rnti_map.jsonl          # gNB rnti->5G-S-TMSI map (Option B: RRC-setup tap)
 STARTFILE=/tmp/csi_capture_start.txt
 REPO=/home/tud/OCUDU
-RBS_PER_RU=${RBS_PER_RU:-12}
+RBS_PER_RU=${RBS_PER_RU:-16}
 AMF_HOST=${AMF_HOST:-user@192.168.200.207}   # override per-call with --amf-host, or export AMF_HOST=
 
 case "$1" in
