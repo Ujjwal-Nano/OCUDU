@@ -1,0 +1,22 @@
+user        : unknown-rnti-0x4603
+avg window   : 40 ms (2 samples)
+re-attach guard: 10s x2 around 0 event(s)
+file        : /tmp/_rbfull.jsonl
+samples     : 159   duration 0.1 min   rate 50.0/s
+RBs sounded : 48   RBG size K=12 -> 4 RBGs
+SRS SNR est : median 9.4 dB  p10 8.2 dB
+T*          : 0.790 s at 0.5 dB budget
+regret(fixed choice) : 0.30 dB
+lifetime eps=0.5 dB : median    0.380 s
+lifetime eps=1.0 dB : median    0.460 s
+lifetime eps=2.0 dB : median    1.590 s
+lifetime eps=3.0 dB : median    1.590 s
+Tc(0.5)     : 0.060 s
+Bc(0.5)     : 15.84 MHz  (RBG width K=12 = 4.32 MHz)
+RBG-pair freq correlation (K=12, 4 RBGs) — per-pair:
+  RBG0-RBG1 (sep 4.3 MHz): corr=0.91
+  RBG0-RBG2 (sep 8.6 MHz): corr=0.68
+  RBG0-RBG3 (sep 13.0 MHz): corr=0.66
+  RBG1-RBG2 (sep 4.3 MHz): corr=0.86
+  RBG1-RBG3 (sep 8.6 MHz): corr=0.84
+  RBG2-RBG3 (sep 4.3 MHz): corr=0.93
