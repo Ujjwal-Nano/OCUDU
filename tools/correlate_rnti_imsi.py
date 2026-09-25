@@ -354,10 +354,76 @@ def group_by_imsi(sessions, known_imsis=None):
     return grouped
 
 
+def group_from_rnti_map(rnti_map_path, known_imsis=None, label_map=None):
+    """OPTION B: build the grouped ue_sessions structure directly from the gNB's
+    own /tmp/rnti_map.jsonl (lines: {"t":ms,"rnti":int,"stmsi":"hex"}), with NO
+    AMF query and NO cross-log time-matching. Every attach/reconnection logged a
+    line, so all of a phone's rnti sessions share one stmsi -> perfect grouping,
+    reconnections included, no UNKNOWN bucket.
+
+    Output shape matches group_by_imsi(): {user_key: [{rnti,ran_ue,amf_ue,start,end,stmsi}, ...]}.
+    user_key is the stmsi hex, unless label_map {stmsi: imsi} renames it. If
+    known_imsis is given AND a label_map maps into it, non-whitelisted users drop.
+    """
+    by_stmsi = {}
+    with open(rnti_map_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            stmsi, rnti, t = d.get("stmsi"), d.get("rnti"), d.get("t")
+            if stmsi is None or rnti is None:
+                continue
+            rec = by_stmsi.setdefault(stmsi, {})
+            if rnti not in rec:  # earliest t per rnti
+                rec[rnti] = t
+
+    grouped = {}
+    for stmsi, rntis in by_stmsi.items():
+        key = (label_map or {}).get(stmsi, stmsi)
+        # whitelist only applies when we actually resolved to an imsi via label_map
+        if known_imsis is not None and label_map and stmsi in label_map:
+            if key not in known_imsis:
+                continue
+        sess = grouped.setdefault(key, [])
+        for rnti, t in sorted(rntis.items(), key=lambda kv: (kv[1] is None, kv[1])):
+            sess.append(
+                {
+                    "rnti": hex(rnti),
+                    "ran_ue": None,
+                    "amf_ue": None,
+                    "start": t,
+                    "end": None,
+                    "stmsi": stmsi,
+                }
+            )
+    return grouped
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--gnb-log", required=True)
-    ap.add_argument("--amf-since", required=True, help='e.g. "2026-09-14 11:00:00"')
+    ap.add_argument(
+        "--gnb-log",
+        default=None,
+        help="required for AMF-correlation mode; unused with --rnti-map",
+    )
+    ap.add_argument("--amf-since", default=None, help='e.g. "2026-09-14 11:00:00"')
+    ap.add_argument(
+        "--rnti-map",
+        default=None,
+        help="OPTION B: build ue_sessions.json directly from the gNB's "
+        "/tmp/rnti_map.jsonl (rnti->5G-S-TMSI). Bypasses the AMF "
+        "query entirely; correctly folds in all reconnections.",
+    )
+    ap.add_argument(
+        "--label-map",
+        default=None,
+        help="with --rnti-map: JSON {stmsi_hex: imsi} to rename user keys",
+    )
     ap.add_argument(
         "--amf-until", default=None, help='e.g. "2026-09-14 11:40:00" (optional)'
     )
@@ -393,6 +459,28 @@ def main():
     a = ap.parse_args()
 
     known_imsis = load_known_imsis(a.known_imsis)
+
+    # ---- OPTION B: gNB-sourced rnti->5G-S-TMSI map, no AMF ----
+    if a.rnti_map:
+        label_map = None
+        if a.label_map:
+            with open(a.label_map) as f:
+                label_map = json.load(f)
+        grouped = group_from_rnti_map(a.rnti_map, known_imsis, label_map)
+        with open(a.group_out, "w") as f:
+            json.dump(grouped, f, indent=2)
+        print(
+            f"[rnti-map mode] wrote {len(grouped)} UE(s) to {a.group_out} "
+            f"(no AMF query)"
+        )
+        for key, sess_list in grouped.items():
+            rn = ", ".join(s["rnti"] for s in sess_list)
+            print(f"  {key}: {len(sess_list)} rnti session(s) [{rn}]")
+        return
+
+    # ---- AMF-correlation mode (original) ----
+    if not a.gnb_log or not a.amf_since:
+        sys.exit("AMF mode needs --gnb-log and --amf-since (or use --rnti-map)")
 
     events = parse_gnb_ngap(a.gnb_log)
     rnti_entries = parse_gnb_rrc_rnti(a.gnb_log)
