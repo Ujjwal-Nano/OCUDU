@@ -1,0 +1,173 @@
+dataset: /home/tud/OCUDU/datasets/Mobility/E005_NLOS_multi/20260925_1601_E005_NLOS_multi.jsonl
+
+user 40c00000aa: 2329 samples, 10 segment(s)
+  best-RBG fraction: RBG0=21.3%, RBG1=67.6%, RBG2=11.0%
+  total switches: 1083   zoom: 0.18-0.51 min
+
+user 40c00000b4: 2090 samples, 5 segment(s)
+  best-RBG fraction: RBG0=13.9%, RBG1=73.1%, RBG2=13.0%
+  total switches: 788   zoom: 0.30-0.64 min
+
+user 40c000012f: 29874 samples, 20 segment(s)
+  best-RBG fraction: RBG0=26.3%, RBG1=56.2%, RBG2=17.5%
+  total switches: 13045   zoom: 4.07-4.40 min
+
+user 40c0000148: 264 samples, 3 segment(s)
+  best-RBG fraction: RBG0=8.7%, RBG1=78.0%, RBG2=13.3%
+  total switches: 91   zoom: 0.00-0.33 min
+
+user 40c0000260: 1671 samples, 3 segment(s)
+  best-RBG fraction: RBG0=19.3%, RBG1=64.5%, RBG2=16.2%
+  total switches: 685   zoom: 0.00-0.33 min
+
+user 40c0000267: 13673 samples, 24 segment(s)
+  best-RBG fraction: RBG0=5.0%, RBG1=66.9%, RBG2=28.1%
+  total switches: 5964   zoom: 2.20-2.53 min
+
+user 40c0000290: 1706 samples, 12 segment(s)
+  best-RBG fraction: RBG0=11.5%, RBG1=70.5%, RBG2=17.9%
+  total switches: 730   zoom: 0.04-0.38 min
+
+user 40c00002a3: 4692 samples, 1 segment(s)
+  best-RBG fraction: RBG0=12.4%, RBG1=49.3%, RBG2=38.2%
+  total switches: 2361   zoom: 0.19-0.53 min
+
+user 40c000054b: 7330 samples, 1 segment(s)
+  best-RBG fraction: RBG0=11.7%, RBG1=63.3%, RBG2=25.0%
+  total switches: 3161   zoom: 2.03-2.36 min
+
+user 40c00005a7: 3585 samples, 35 segment(s)
+  best-RBG fraction: RBG0=12.6%, RBG1=72.9%, RBG2=14.6%
+  total switches: 1362   zoom: 0.63-0.96 min
+
+user 40c00007a0: 246 samples, 135 segment(s)
+  best-RBG fraction: RBG0=12.2%, RBG1=77.6%, RBG2=10.2%
+  total switches: 88   zoom: 0.00-0.33 min
+
+user 40c00007e2: 6696 samples, 263 segment(s)
+  best-RBG fraction: RBG0=23.1%, RBG1=65.9%, RBG2=10.9%
+  total switches: 3283   zoom: 0.94-1.27 min
+
+user 40c00007e6: 431 samples, 2 segment(s)
+  best-RBG fraction: RBG0=21.8%, RBG1=68.7%, RBG2=9.5%
+  total switches: 178   zoom: 0.00-0.33 min
+
+user 40c00007fc: 4788 samples, 1 segment(s)
+  best-RBG fraction: RBG0=17.2%, RBG1=72.6%, RBG2=10.2%
+  total switches: 1461   zoom: 0.15-0.48 min
+
+user unknown-rnti-0x4603: 164 samples, 1 segment(s)
+  best-RBG fraction: RBG0=11.6%, RBG1=73.8%, RBG2=14.6%
+  total switches: 55   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4608: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=16.8%, RBG1=70.1%, RBG2=13.1%
+  total switches: 54   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x460b: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=11.2%, RBG1=80.4%, RBG2=8.4%
+  total switches: 38   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x461b: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=11.2%, RBG1=74.8%, RBG2=14.0%
+  total switches: 47   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x462e: 155 samples, 1 segment(s)
+  best-RBG fraction: RBG0=30.3%, RBG1=59.4%, RBG2=10.3%
+  total switches: 88   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4699: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=3.7%, RBG1=87.9%, RBG2=8.4%
+  total switches: 23   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x46cc: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=13.1%, RBG1=72.0%, RBG2=15.0%
+  total switches: 50   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x46d4: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=15.0%, RBG1=74.8%, RBG2=10.3%
+  total switches: 43   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x46d5: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=8.4%, RBG1=83.2%, RBG2=8.4%
+  total switches: 34   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4705: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=11.2%, RBG1=66.4%, RBG2=22.4%
+  total switches: 51   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4894: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=14.0%, RBG1=61.7%, RBG2=24.3%
+  total switches: 53   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x499c: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=5.6%, RBG1=86.9%, RBG2=7.5%
+  total switches: 20   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x49af: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=17.8%, RBG1=59.8%, RBG2=22.4%
+  total switches: 62   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x49b6: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=20.6%, RBG1=59.8%, RBG2=19.6%
+  total switches: 61   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4aa2: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=4.7%, RBG1=86.9%, RBG2=8.4%
+  total switches: 26   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4aad: 97 samples, 1 segment(s)
+  best-RBG fraction: RBG0=4.1%, RBG1=84.5%, RBG2=11.3%
+  total switches: 28   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4aae: 159 samples, 1 segment(s)
+  best-RBG fraction: RBG0=0.6%, RBG1=57.9%, RBG2=41.5%
+  total switches: 84   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4aca: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=11.2%, RBG1=68.2%, RBG2=20.6%
+  total switches: 50   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ad8: 106 samples, 1 segment(s)
+  best-RBG fraction: RBG0=5.7%, RBG1=86.8%, RBG2=7.5%
+  total switches: 23   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ada: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=13.1%, RBG1=69.2%, RBG2=17.8%
+  total switches: 46   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ade: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=3.7%, RBG1=90.7%, RBG2=5.6%
+  total switches: 19   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ae1: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=15.0%, RBG1=68.2%, RBG2=16.8%
+  total switches: 50   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ae3: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=16.8%, RBG1=67.3%, RBG2=15.9%
+  total switches: 50   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ae7: 156 samples, 1 segment(s)
+  best-RBG fraction: RBG0=22.4%, RBG1=63.5%, RBG2=14.1%
+  total switches: 78   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4ae9: 12821 samples, 1 segment(s)
+  best-RBG fraction: RBG0=14.8%, RBG1=68.3%, RBG2=16.9%
+  total switches: 6253   zoom: 2.03-2.37 min
+
+user unknown-rnti-0x4aea: 159 samples, 1 segment(s)
+  best-RBG fraction: RBG0=16.4%, RBG1=77.4%, RBG2=6.3%
+  total switches: 63   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4b23: 159 samples, 1 segment(s)
+  best-RBG fraction: RBG0=19.5%, RBG1=73.6%, RBG2=6.9%
+  total switches: 63   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4b26: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=18.7%, RBG1=63.6%, RBG2=17.8%
+  total switches: 55   zoom: 0.00-0.33 min
+
+user unknown-rnti-0x4b39: 107 samples, 1 segment(s)
+  best-RBG fraction: RBG0=16.8%, RBG1=64.5%, RBG2=18.7%
+  total switches: 58   zoom: 0.00-0.33 min

@@ -354,6 +354,70 @@ def group_by_imsi(sessions, known_imsis=None):
     return grouped
 
 
+def build_tmsi_to_imsi(amf_text):
+    """Parse open5gs AMF journal for M_TMSI <-> IMSI/SUCI bindings.
+
+    open5gs logs, per registration, lines like:
+      [suci-0-999-42-0-0-0-0000020049]  5G-S_TMSI[AMF_ID:0x20040,M_TMSI:0xc0000630]
+      [imsi-999420000020049] Registration complete
+    We map the 32-bit M_TMSI -> IMSI. Both the SUCI form (decode) and the
+    direct [imsi-...] form are accepted; whichever carries the M_TMSI wins.
+    Returns {m_tmsi_int: imsi_str}.
+    """
+    m2i = {}
+    # a) lines carrying BOTH a suci/imsi tag AND an M_TMSI on the same line
+    #    e.g. [suci-0-999-42-...-0000020049] ... M_TMSI:0xc0000630
+    pat_both = re.compile(r"\[(?:suci|imsi)-([0-9\-]+)\].*?M_TMSI:0x([0-9a-fA-F]+)")
+    # b) also accept an explicit imsi tag form  [imsi-999...]
+    for line in amf_text.splitlines():
+        m = pat_both.search(line)
+        if not m:
+            continue
+        tag, tmsi_hex = m.group(1), m.group(2)
+        tmsi = int(tmsi_hex, 16)
+        # tag is either a suci digit-string (needs decode) or a bare imsi
+        if tag.count("-") >= 6:  # suci form: mcc-mnc-...-msin
+            imsi = decode_suci(tag)
+        else:  # already an imsi digit run
+            imsi = tag.replace("-", "")
+        if imsi:
+            m2i[tmsi] = imsi
+    return m2i
+
+
+def resolve_stmsi_labels(rnti_map_path, amf_text):
+    """From the gNB rnti_map (stmsi hex, full 48-bit) + AMF text, produce
+    {stmsi_hex: imsi}. The 5G-S-TMSI's low 32 bits are the M_TMSI the AMF logs,
+    so we join on (stmsi & 0xffffffff) == M_TMSI. Distinct-TMSI lookups only
+    (a few per capture), so this is a clean binding, not fragile time-matching.
+    """
+    m2i = build_tmsi_to_imsi(amf_text)
+    stmsis = set()
+    with open(rnti_map_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            s = d.get("stmsi")
+            if s:
+                stmsis.add(s)
+    labels = {}
+    for s in stmsis:
+        try:
+            full = int(s, 16)
+        except ValueError:
+            continue
+        m_tmsi = full & 0xFFFFFFFF
+        imsi = m2i.get(m_tmsi)
+        if imsi:
+            labels[s] = imsi
+    return labels, m2i
+
+
 def group_from_rnti_map(rnti_map_path, known_imsis=None, label_map=None):
     """OPTION B: build the grouped ue_sessions structure directly from the gNB's
     own /tmp/rnti_map.jsonl (lines: {"t":ms,"rnti":int,"stmsi":"hex"}), with NO
@@ -466,6 +530,29 @@ def main():
         if a.label_map:
             with open(a.label_map) as f:
                 label_map = json.load(f)
+        # If AMF window given, resolve stmsi -> IMSI so re-registrations (new
+        # TMSI, same phone) FOLD into one user keyed by IMSI. This is the
+        # reliable final mapping: TMSI handles RRC reconnections gNB-side,
+        # IMSI (one lookup per distinct TMSI) handles re-registrations.
+        if a.amf_since and not label_map:
+            try:
+                amf_text = fetch_amf_journal(a.amf_since, a.amf_until, a.amf_host)
+                label_map, m2i = resolve_stmsi_labels(a.rnti_map, amf_text)
+                print(
+                    f"[rnti-map] resolved {len(label_map)} stmsi -> IMSI via AMF "
+                    f"({len(m2i)} M_TMSI bindings found)"
+                )
+                if not label_map:
+                    print(
+                        "  WARNING: no stmsi resolved to IMSI -- keys stay as stmsi. "
+                        "Check the AMF window covers the capture."
+                    )
+            except Exception as e:
+                print(
+                    f"  WARNING: AMF resolve failed ({e}); keys stay as stmsi",
+                    file=sys.stderr,
+                )
+                label_map = None
         grouped = group_from_rnti_map(a.rnti_map, known_imsis, label_map)
         with open(a.group_out, "w") as f:
             json.dump(grouped, f, indent=2)

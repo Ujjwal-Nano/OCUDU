@@ -66,14 +66,37 @@ case "$1" in
     [ -s "$LABELMAP" ] && LABELARG="--label-map $LABELMAP"
     if [ -s "$RM" ]; then
       sudo cp "$RM" "$D/$BASE.rnti_map.jsonl"; sudo chown "$USER" "$D/$BASE.rnti_map.jsonl"
+      # AMF lookback: start the journal query a margin BEFORE capture-start so
+      # a phone that registered early (before we cleared logs) still has its
+      # TMSI->IMSI binding in the window. journalctl ignores extra history, so
+      # erring early is free. 15 min margin by default.
+      AMF_SINCE=$(cat "$STARTFILE" 2>/dev/null || echo "")
+      if [ -n "$AMF_SINCE" ]; then
+        AMF_LOOKBACK=$(date -d "$AMF_SINCE - 15 minutes" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$AMF_SINCE")
+      else
+        AMF_LOOKBACK=$(date -d "30 minutes ago" +"%Y-%m-%d %H:%M:%S")
+      fi
+      AMF_UNTIL=$(date +"%Y-%m-%d %H:%M:%S")
+      # RNTI -> TMSI (gNB, folds RRC reconnections) THEN TMSI -> IMSI (one AMF
+      # lookup per distinct TMSI, folds re-registrations) -> group by IMSI.
       if python3 "$REPO/tools/correlate_rnti_imsi.py" \
             --rnti-map "$D/$BASE.rnti_map.jsonl" \
+            --amf-since "$AMF_LOOKBACK" --amf-until "$AMF_UNTIL" \
+            --amf-host "$AMF_HOST" \
             $LABELARG \
             --group-out "$D/$BASE.ue_sessions.json"; then
         SESSIONS="$D/$BASE.ue_sessions.json"
-        echo "correlation: Option B (gNB rnti-map, no AMF)"
+        echo "correlation: Option B (rnti->TMSI gNB, TMSI->IMSI via AMF, grouped by IMSI)"
       else
-        echo "WARNING: rnti-map correlation failed — falling back to AMF" >&2
+        echo "WARNING: rnti-map+AMF correlation failed — retrying rnti-map alone (TMSI keys)" >&2
+        # graceful degrade: group by TMSI only (still folds reconnections)
+        if python3 "$REPO/tools/correlate_rnti_imsi.py" \
+              --rnti-map "$D/$BASE.rnti_map.jsonl" \
+              $LABELARG \
+              --group-out "$D/$BASE.ue_sessions.json"; then
+          SESSIONS="$D/$BASE.ue_sessions.json"
+          echo "correlation: Option B (rnti->TMSI only, AMF unreachable — TMSI keys)"
+        fi
       fi
     fi
     if [ -z "$SESSIONS" ] && [ -s "$GL" ]; then
