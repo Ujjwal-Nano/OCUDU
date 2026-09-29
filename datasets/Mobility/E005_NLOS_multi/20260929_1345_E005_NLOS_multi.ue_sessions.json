@@ -33,6 +33,24 @@
       "start": 1790681843383,
       "end": null,
       "stmsi": "40c00001aa"
+    },
+    {
+      "rnti": "0x4608",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 0,
+      "end": null,
+      "stmsi": "manual"
+    }
+  ],
+  "999420000020049": [
+    {
+      "rnti": "0x4601",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 0,
+      "end": null,
+      "stmsi": "manual"
     }
   ]
 }
