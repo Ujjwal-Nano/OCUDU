@@ -8,7 +8,9 @@
 #include "ocudu/asn1/rrc_nr/dl_ccch_msg.h"
 #include "ocudu/ran/cause/common.h"
 #include <variant>
-
+#include <fstream>
+#include <mutex>
+#include <chrono>
 using namespace ocudu;
 using namespace ocudu::ocucp;
 using namespace asn1::rrc_nr;
@@ -170,6 +172,24 @@ void rrc_setup_procedure::send_initial_ue_msg()
 
   if (context.five_g_s_tmsi.has_value()) {
     init_ue_msg.five_g_s_tmsi = context.five_g_s_tmsi.value();
+  }
+    // Stable RNTI -> 5G-S-TMSI map for offline user attribution (ADDITIVE).
+  // Fires on every RRC setup incl. reconnections, so a phone's reconnect
+  // RNTIs all share one stmsi key. Mutex: UEs can complete setup concurrently.
+  if (context.five_g_s_tmsi.has_value()) {
+    static std::mutex rnti_map_mtx;
+    std::lock_guard<std::mutex> _lk(rnti_map_mtx);
+    static std::ofstream rnti_map_log("/tmp/rnti_map.jsonl", std::ios::app);
+    if (rnti_map_log.is_open()) {
+      const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+      const uint64_t stmsi = context.five_g_s_tmsi.value().to_number();
+      rnti_map_log << "{\"t\":" << now
+                   << ",\"rnti\":" << static_cast<unsigned>(context.c_rnti)
+                   << ",\"stmsi\":\"" << std::hex << stmsi << std::dec << "\"}\n";
+      rnti_map_log.flush();
+    }
   }
 
   if (rrc_setup_complete.registered_amf_present) {
