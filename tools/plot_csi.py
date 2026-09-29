@@ -47,6 +47,12 @@ def main():
     ap.add_argument("--zoom-start", type=float, default=None)
     ap.add_argument("--zoom-dur", type=float, default=20.0)
     ap.add_argument("--settle-guard", type=float, default=2.0)
+    ap.add_argument(
+        "--rbs-per-ru",
+        type=int,
+        default=12,
+        help="RBs per RBG, for correct legend labels (match rb_to_ru)",
+    )
     args = ap.parse_args()
     users = load(args.jsonl)
     if not users:
@@ -93,7 +99,12 @@ def main():
         zend = zstart + args.zoom_dur / 60.0
         axL = axes[row, 0]
         for r in range(R):
-            axL.plot(tmin, M[:, r], lw=0.8, label=f"RBG{r} (RB {12*r}-{12*r+11})")
+            axL.plot(
+                tmin,
+                M[:, r],
+                lw=0.8,
+                label=f"RBG{r} (RB {args.rbs_per_ru*r}-{args.rbs_per_ru*r+args.rbs_per_ru-1})",
+            )
         for i, c in enumerate(cuts[1:-1]):
             axL.axvline(
                 tmin[c],

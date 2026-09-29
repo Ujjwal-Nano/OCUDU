@@ -10,7 +10,12 @@ GL=/tmp/gnb_srs_test.log        # gNB detail log (SRS/PHY/events, from yaml log 
 RM=/tmp/rnti_map.jsonl          # gNB rnti->5G-S-TMSI map (Option B: RRC-setup tap)
 STARTFILE=/tmp/csi_capture_start.txt
 REPO=/home/tud/OCUDU
-RBS_PER_RU=${RBS_PER_RU:-16}
+GNB_YAML="$REPO/configs/gnb_srs_test.yaml"
+# Single source of truth: the gNB yaml (swap_sched.rbs_per_ru) decides the
+# RB->RU grouping. Everything downstream (rb_to_ru, plots, metrics) inherits
+# it, so you set grouping in ONE place. Override with RBS_PER_RU=.. if needed.
+RBS_PER_RU=${RBS_PER_RU:-$(grep -oP 'rbs_per_ru:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
+RBS_PER_RU=${RBS_PER_RU:-16}   # fallback if the yaml read fails
 AMF_HOST=${AMF_HOST:-user@192.168.200.207}   # override per-call with --amf-host, or export AMF_HOST=
 
 case "$1" in
@@ -33,6 +38,7 @@ case "$1" in
       esac
     done
     NOTE="${1:-no note}"
+    echo "RB->RU grouping: rbs_per_ru=$RBS_PER_RU (from $GNB_YAML)"
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$NAME"
     if [ "$MOBILE" = "1" ]; then SUB="Mobility"; else SUB="Static"; fi
     D="$REPO/datasets/$SUB/$NAME"; P="$D/plots"; mkdir -p "$P"
@@ -150,12 +156,14 @@ case "$1" in
     if [ "$MOBILE" = "1" ]; then
       python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
               ${SESSIONS:+--sessions "$SESSIONS"} \
+              --K "$RBS_PER_RU" \
               ${SPEED:+--speed "$SPEED"} --avg-win 40 --trim-start 1.0 --trim-end 1.0 \
               --label "$BASE" \
               --mobile-csv "$REPO/datasets/mobility_sweep.csv" || true
     else
       python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
               ${SESSIONS:+--sessions "$SESSIONS"} \
+              --K "$RBS_PER_RU" \
               --trim-start 1.5 --trim-end 1.0 || true
     fi
     rm -f /tmp/_rbfull.jsonl
