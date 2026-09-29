@@ -1,4 +1,0 @@
-file      : /home/tud/OCUDU/datasets/Mobility/E001_NLOS_multi/20260929_1611_E001_NLOS_multi.jsonl
-samples   : 9464   duration 1.2 min   RUs 3
-trim      : first 1.5 min, last 1.0 min
-   WHOLE (trimmed)  too few samples (0)
