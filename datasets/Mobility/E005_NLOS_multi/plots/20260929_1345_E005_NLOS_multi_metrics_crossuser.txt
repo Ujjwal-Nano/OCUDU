@@ -1,0 +1,6 @@
+Cross-user RBG correlation (dB, time-aligned @ 100 ms bins)
+low/negative = decorrelated = HIGH swap opportunity
+high (>0.5)  = users contend on same RBGs = LOW swap gain
+
+999420000020051 vs 999420000020052: mean=0.079  overlap=1802 bins
+   per-RBG: RBG0=0.10, RBG1=0.11, RBG2=0.08, RBG3=0.03

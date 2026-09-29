@@ -648,16 +648,21 @@ def main():
     if a.sessions:
         rnti_to_imsi = load_rnti_to_imsi(a.sessions)
         ukeys = np.array(
-            [
-                rnti_to_imsi.get(int(rn), f"unknown-rnti-0x{int(rn) & 0xffff:x}")
-                for rn in RN
-            ],
+            [rnti_to_imsi.get(int(rn), None) for rn in RN],
             dtype=object,
         )
+        n_unmapped = int(sum(u is None for u in ukeys))
+        if n_unmapped:
+            print(
+                f"NOTE: dropping {n_unmapped} record(s) with RNTIs not "
+                f"resolvable to a UE (unattributable churn fragments)",
+                file=sys.stderr,
+            )
     else:
         ukeys = np.array(["single"] * len(RN), dtype=object)
 
-    distinct_users = sorted(set(ukeys.tolist()))
+    # exclude unmapped (None) RNTIs -- only real, IMSI-resolved users get plotted
+    distinct_users = sorted(u for u in set(ukeys.tolist()) if u is not None)
     base, ext = os.path.splitext(a.out)
 
     results = []

@@ -17,7 +17,9 @@ downstream as more UEs join a capture. Without --sessions, everything still
 collapses onto "u": 0, same as the old behavior (useful for quick
 single-UE tests where running the correlation step isn't worth it).
 """
+
 import argparse, json, sys
+
 
 def load_rnti_to_imsi(sessions_path):
     """Flatten ue_sessions.json (imsi -> [{rnti, start, end, ...}, ...]) into
@@ -45,10 +47,12 @@ def load_rnti_to_imsi(sessions_path):
                 collisions.add(rnti)
             rnti_to_imsi[rnti] = imsi
     if collisions:
-        print(f"WARNING: rnti(s) reused across more than one IMSI in "
-              f"{sessions_path}: {', '.join(hex(r) for r in sorted(collisions))} "
-              f"-- later session in the file wins for those lines",
-              file=sys.stderr)
+        print(
+            f"WARNING: rnti(s) reused across more than one IMSI in "
+            f"{sessions_path}: {', '.join(hex(r) for r in sorted(collisions))} "
+            f"-- later session in the file wins for those lines",
+            file=sys.stderr,
+        )
     return rnti_to_imsi
 
 
@@ -58,11 +62,14 @@ def main():
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--rbs-per-ru", type=int, default=12)
     ap.add_argument("--skip-rb0", action="store_true", help="drop CRB0 (never sounded)")
-    ap.add_argument("--sessions", default=None,
-                     help="ue_sessions.json from correlate_rnti_imsi.py --group-out; "
-                          "when given, 'u' is set to the resolved IMSI per rnti "
-                          "instead of always 0, so downstream tools separate "
-                          "users automatically")
+    ap.add_argument(
+        "--sessions",
+        default=None,
+        help="ue_sessions.json from correlate_rnti_imsi.py --group-out; "
+        "when given, 'u' is set to the resolved IMSI per rnti "
+        "instead of always 0, so downstream tools separate "
+        "users automatically",
+    )
     a = ap.parse_args()
 
     rnti_to_imsi = load_rnti_to_imsi(a.sessions) if a.sessions else {}
@@ -83,28 +90,44 @@ def main():
             R = len(rb) // a.rbs_per_ru
             if R == 0:
                 continue
-            csi = [sum(rb[r*a.rbs_per_ru:(r+1)*a.rbs_per_ru]) for r in range(R)]
+            csi = [sum(rb[r * a.rbs_per_ru : (r + 1) * a.rbs_per_ru]) for r in range(R)]
             rnti = d["rnti"]
             if a.sessions:
                 u = rnti_to_imsi.get(rnti)
                 if u is None:
+                    # RNTI not resolvable to a real UE (IMSI) -- e.g. a transient
+                    # RNTI from a half-completed RRC setup during churn. Drop the
+                    # record entirely so unattributable fragments never reach the
+                    # plots. Only records from a real, mapped UE are written.
                     unmatched += 1
-                    u = f"unknown-rnti-0x{rnti:x}"
+                    continue
             else:
                 u = 0
-            rec = {"t": d["t"], "slot": 0,
-                   "users": [{"u": u, "rnti": rnti, "served": sum(csi),
-                              "rus": list(range(R)), "csi": csi}],
-                   "weakest_user_csi": sum(csi)}
+            rec = {
+                "t": d["t"],
+                "slot": 0,
+                "users": [
+                    {
+                        "u": u,
+                        "rnti": rnti,
+                        "served": sum(csi),
+                        "rus": list(range(R)),
+                        "csi": csi,
+                    }
+                ],
+                "weakest_user_csi": sum(csi),
+            }
             g.write(json.dumps(rec) + "\n")
             n_out += 1
 
-    msg = f"{a.src}: {n_in} lines -> {a.out}: {n_out} lines, {R} RUs x {a.rbs_per_ru} RB"
+    msg = (
+        f"{a.src}: {n_in} lines -> {a.out}: {n_out} lines, {R} RUs x {a.rbs_per_ru} RB"
+    )
     if a.sessions:
         n_users = len(set(rnti_to_imsi.values()))
         msg += f", resolved against {n_users} user(s) in {a.sessions}"
         if unmatched:
-            msg += f", {unmatched} line(s) had no rnti match (see unknown-rnti-* in output)"
+            msg += f", {unmatched} line(s) DROPPED (rnti not resolvable to a UE)"
     print(msg)
 
 

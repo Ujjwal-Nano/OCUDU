@@ -72,7 +72,14 @@ case "$1" in
       # erring early is free. 15 min margin by default.
       AMF_SINCE=$(cat "$STARTFILE" 2>/dev/null || echo "")
       if [ -n "$AMF_SINCE" ]; then
-        AMF_LOOKBACK=$(date -d "$AMF_SINCE - 15 minutes" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$AMF_SINCE")
+        # robust lookback: start_epoch - 900s (15 min), reformatted. The
+        # "$X - 15 minutes" string form is unreliable in GNU date, so go via epoch.
+        _st_epoch=$(date -d "$AMF_SINCE" +%s 2>/dev/null || echo "")
+        if [ -n "$_st_epoch" ]; then
+          AMF_LOOKBACK=$(date -d "@$((_st_epoch - 900))" +"%Y-%m-%d %H:%M:%S")
+        else
+          AMF_LOOKBACK=$(date -d "30 minutes ago" +"%Y-%m-%d %H:%M:%S")
+        fi
       else
         AMF_LOOKBACK=$(date -d "30 minutes ago" +"%Y-%m-%d %H:%M:%S")
       fi
