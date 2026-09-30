@@ -16,6 +16,8 @@ GNB_YAML="$REPO/configs/gnb_srs_test.yaml"
 # it, so you set grouping in ONE place. Override with RBS_PER_RU=.. if needed.
 RBS_PER_RU=${RBS_PER_RU:-$(grep -oP 'rbs_per_ru:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
 RBS_PER_RU=${RBS_PER_RU:-16}   # fallback if the yaml read fails
+NUM_USERS=${NUM_USERS:-$(grep -oP 'num_users:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
+NUM_USERS=${NUM_USERS:-3}      # expected user count (for weakest-user min-users)
 AMF_HOST=${AMF_HOST:-user@192.168.200.207}   # override per-call with --amf-host, or export AMF_HOST=
  
 case "$1" in
@@ -184,7 +186,22 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
               --trim-start 1.5 --trim-end 1.0 || true
     fi
     rm -f /tmp/_rbfull.jsonl
- 
+
+    # ---- swap-benefit, weakest-user, and RBG-power/mobility figures ----
+    # swap_analysis + plot_weakest read the per-RU scheduler log (swap.jsonl,
+    # only present when the swap ran with traffic); plot_rbg_power reads the raw
+    # per-RB log. All are per-user via --sessions and use the yaml RU size.
+    if [ -s "$D/$BASE.swap.jsonl" ]; then
+      python3 "$REPO/tools/swap_analysis.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_swapbenefit.png" --snr0 10 || true
+      python3 "$REPO/tools/plot_weakest.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_weakest.png" --min-users "${NUM_USERS:-3}" \
+              ${SESSIONS:+--sessions "$SESSIONS"} || true
+    fi
+    python3 "$REPO/tools/plot_rbg_power.py" "$D/$BASE.rb.jsonl.gz" \
+            -o "$P/${BASE}_rbgpower.png" --K "$RBS_PER_RU" \
+            ${SESSIONS:+--sessions "$SESSIONS"} || true
+
     # gNB console summary (CQI/RSRP/MCS distributions + events), if the log was archived
     if [ -s "$D/$BASE.gnb_console.txt.gz" ]; then
       python3 "$REPO/tools/gnb_log_summary.py" "$D/$BASE.gnb_console.txt.gz" \
@@ -211,4 +228,3 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
     ;;
   *) echo "usage: csi_run.sh start | csi_run.sh save <name> [note]"; exit 1 ;;
 esac
-

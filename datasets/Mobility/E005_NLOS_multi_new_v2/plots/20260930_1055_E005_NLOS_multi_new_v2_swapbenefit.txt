@@ -1,0 +1,11 @@
+swap_analysis — /home/tud/OCUDU/datasets/Mobility/E005_NLOS_multi_new_v2/20260930_1055_E005_NLOS_multi_new_v2.swap.jsonl
+slots=3854 users=3 RUs=3 snr0=10.0
+best static split (fixed): user->RU (2, 0, 1)
+
+WEAKEST-USER RATE (b/s/Hz), mean:
+  fixed    : 2.6429
+  achieved : 2.8498
+  ceiling  : 2.8808
+  realized gain  : +0.2069 (+7.8%)
+  gap-to-optimal : +0.0310
+per-RU cross-user corr: RU0=+0.04, RU1=+0.08, RU2=+0.06
