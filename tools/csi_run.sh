@@ -1,7 +1,7 @@
 #!/bin/bash
 # csi_run.sh — capture -> correlate (rnti->IMSI) -> convert -> plot -> analyse -> git
 #   csi_run.sh start                                    (stop the gNB first!)
-#   csi_run.sh save <name> [--mobile] [--speed V] [--users N] [--amf-host user@host] ["note"]
+#   csi_run.sh save <name> [--mobile] [--speed V] [--amf-host user@host] ["note"]
 set -e
 RB=/tmp/srs_rb.jsonl            # per-RB producer log (~50/s)
 SW=/tmp/swap_metrics.jsonl      # per-RU scheduler log (traffic-gated)
@@ -16,12 +16,8 @@ GNB_YAML="$REPO/configs/gnb_srs_test.yaml"
 # it, so you set grouping in ONE place. Override with RBS_PER_RU=.. if needed.
 RBS_PER_RU=${RBS_PER_RU:-$(grep -oP 'rbs_per_ru:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
 RBS_PER_RU=${RBS_PER_RU:-16}   # fallback if the yaml read fails
-# Expected user count, also from the gNB yaml (swap_sched.num_users).
-# Raw RB data is trimmed to start once this many distinct users have appeared.
-# Override with NUM_USERS=.. or --users N.
-NUM_USERS=${NUM_USERS:-$(grep -oP 'num_users:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
 AMF_HOST=${AMF_HOST:-user@192.168.200.207}   # override per-call with --amf-host, or export AMF_HOST=
-
+ 
 case "$1" in
   start)
     sudo rm -f "$RB" "$SW" "$GC" "$GL" "$RM" 2>/dev/null || true
@@ -29,7 +25,7 @@ case "$1" in
     echo "cleared logs — start the gNB (with 'script' for CQI) and run the experiment"
     ;;
   save)
-    [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [--mobile] [--speed V] [--users N] [--amf-host user@host] [note]"; exit 1; }
+    [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [--mobile] [--speed V] [--amf-host user@host] [note]"; exit 1; }
     [ -s "$RB" ] || { echo "ERROR: $RB empty — did the gNB run with SRS enabled?"; exit 1; }
     NAME="$2"; shift 2
     SPEED=""; MOBILE=0
@@ -37,22 +33,20 @@ case "$1" in
       case "$1" in
         --mobile)   MOBILE=1; shift ;;
         --speed)    SPEED="$2"; shift 2 ;;
-        --users)    NUM_USERS="$2"; shift 2 ;;
         --amf-host) AMF_HOST="$2"; shift 2 ;;
         *) break ;;
       esac
     done
     NOTE="${1:-no note}"
     echo "RB->RU grouping: rbs_per_ru=$RBS_PER_RU (from $GNB_YAML)"
-    echo "Expected users: ${NUM_USERS:-unknown} (from $GNB_YAML / --users)"
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$NAME"
     if [ "$MOBILE" = "1" ]; then SUB="Mobility"; else SUB="Static"; fi
     D="$REPO/datasets/$SUB/$NAME"; P="$D/plots"; mkdir -p "$P"
     echo "$NOTE" > "$D/$BASE.txt"
-
-    # raw per-RB (archival, always untrimmed)
+ 
+    # raw per-RB (archival)
     sudo cp "$RB" "$D/$BASE.rb.jsonl"; sudo chown "$USER" "$D/$BASE.rb.jsonl"; gzip -9f "$D/$BASE.rb.jsonl"
-
+ 
     # gNB logs (CQI/RSRP/MCS + events), if captured
     for lf in "$GC" "$GL"; do
       if [ -s "$lf" ]; then
@@ -60,7 +54,7 @@ case "$1" in
         sudo cp "$lf" "$n"; sudo chown "$USER" "$n"; gzip -9f "$n"
       fi
     done
-
+ 
     # ---- rnti -> user correlation ----
     # Produces ue_sessions.json (user -> its rnti sessions this run). This is
     # what lets rb_to_ru.py / metrics label each record with its real user
@@ -139,108 +133,39 @@ case "$1" in
     elif [ -z "$SESSIONS" ]; then
       echo "WARNING: no rnti-map and $GL not captured — can't correlate. Falling back to single-user (u=0) output." >&2
     fi
-
+ 
+    # Drop unresolved user keys: a real user is a 15-digit IMSI. Any TMSI-hex
+    # key (e.g. "40c000021a" from a brief blip whose IMSI the AMF didn't bind)
+    # is removed so it is never plotted or counted. Runs only when AMF
+    # resolution produced IMSI keys; if nothing survives, keeps the original.
+    if [ -n "$SESSIONS" ]; then
+      python3 -c "
+import json,sys
+d=json.load(open('$SESSIONS'))
+users=d['users'] if isinstance(d,dict) and isinstance(d.get('users'),dict) else d
+clean={k:v for k,v in users.items() if str(k).isdigit() and len(str(k))==15}
+dropped=set(users)-set(clean)
+if dropped: print('dropped unresolved (non-IMSI) user key(s):', ', '.join(sorted(dropped)), file=sys.stderr)
+if clean: json.dump(clean, open('$SESSIONS','w'), indent=2)
+else: print('WARNING: no IMSI users after filter; keeping original sessions', file=sys.stderr)
+" || true
+    fi
+ 
     # per-RU view — split by real user (IMSI) whenever correlation succeeded,
     # otherwise same single-user (u=0) output as before
-    zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rb_untrimmed.jsonl
-
-    # Trim raw RB data for downstream: keep only from the moment NUM_USERS
-    # distinct users (IMSI, or TMSI if AMF was unreachable) have each shown up
-    # in the RB log, so every kept sample has all users present.
-    # If that can't be determined, keep the FULL log (never silently trim).
-    # The archived rb.jsonl.gz above stays untrimmed.
-    python3 - "${NUM_USERS:-}" "${SESSIONS:-}" <<'PY'
-import json, shutil, sys
-n_arg, sess_path = sys.argv[1], sys.argv[2]
-src, dst = "/tmp/_rb_untrimmed.jsonl", "/tmp/_rb.jsonl"
-
-def full(msg):
-    print(f"WARNING: {msg} -- using FULL RB log (no trimming).")
-    shutil.copyfile(src, dst)
-    sys.exit(0)
-
-if not n_arg.isdigit() or int(n_arg) < 1:
-    full("expected user count not found in gNB yaml / --users")
-if not sess_path:
-    full("no ue_sessions.json (correlation failed)")
-N = int(n_arg)
-
-def to_rnti(v):
-    if isinstance(v, int): return v
-    try: return int(str(v), 0)
-    except Exception:
-        try: return int(str(v), 16)
-        except Exception: return None
-
-# rnti -> user, from ue_sessions.json ({user: [{"rnti": "0x4601", ...}, ...]})
-rnti2user = {}
-def collect(user, obj):
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            if k == "rnti":
-                r = to_rnti(v)
-                if r is not None: rnti2user[r] = user
-            else:
-                collect(user, v)
-    elif isinstance(obj, list):
-        for v in obj: collect(user, v)
-    else:
-        r = to_rnti(obj)
-        if r is not None: rnti2user[r] = user
-try:
-    sess = json.load(open(sess_path))
-    if isinstance(sess, dict) and isinstance(sess.get("users"), dict):
-        sess = sess["users"]
-    for user, obj in sess.items():
-        if user == "UNKNOWN_IMSI":      # unresolved bucket is not a real user
-            continue
-        collect(user, obj)
-except Exception as e:
-    full(f"could not parse sessions ({e})")
-
-n_found = len(set(rnti2user.values()))
-if n_found < N:
-    full(f"ue_sessions.json has only {n_found} resolved user(s), expected {N}")
-
-# scan RB log for the time the N-th distinct user first appears
-seen, cutoff = set(), None
-with open(src) as f:
-    for line in f:
-        try:
-            d = json.loads(line); u = rnti2user.get(to_rnti(d["rnti"]))
-            if u is None: continue
-            seen.add(u)
-            if len(seen) >= N:
-                cutoff = d["t"]; break
-        except Exception:
-            continue
-if cutoff is None:
-    full(f"only {len(seen)} of {N} users ever seen in RB log")
-
-kept = 0
-with open(src) as inf, open(dst, "w") as outf:
-    for line in inf:
-        try:
-            if json.loads(line)["t"] >= cutoff:
-                outf.write(line); kept += 1
-        except Exception:
-            continue
-print(f"All {N} users present at t={cutoff}; kept {kept} RB records from there on.")
-PY
-    rm -f /tmp/_rb_untrimmed.jsonl
-
+    zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rb.jsonl
     python3 "$REPO/tools/rb_to_ru.py" /tmp/_rb.jsonl -o "$D/$BASE.jsonl" \
             --rbs-per-ru "$RBS_PER_RU" --skip-rb0 \
             ${SESSIONS:+--sessions "$SESSIONS"}
     rm -f /tmp/_rb.jsonl
-
+ 
     # plots + analysis — plot_csi.py already draws one row per distinct "u",
     # so this is automatically multi-user once rb_to_ru.py resolved IMSIs;
     # no per-user loop needed here or anywhere else in this script.
-    python3 "$REPO/tools/plot_csi.py" "$D/$BASE.jsonl" -o "$P/$BASE.png"
+    python3 "$REPO/tools/plot_csi.py" "$D/$BASE.jsonl" -o "$P/$BASE.png" --rbs-per-ru "$RBS_PER_RU"
     if [ -s "$SW" ]; then
       sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"
-      python3 "$REPO/tools/plot_csi.py" "$D/$BASE.swap.jsonl" -o "$P/${BASE}_swap.png" || true
+      python3 "$REPO/tools/plot_csi.py" "$D/$BASE.swap.jsonl" -o "$P/${BASE}_swap.png" --rbs-per-ru "$RBS_PER_RU" || true
     fi
     python3 "$REPO/tools/analyze_position.py" "$D/$BASE.jsonl" \
             --csv "$REPO/datasets/campaign.csv" | tee "$P/${BASE}_analysis.txt"
@@ -259,13 +184,13 @@ PY
               --trim-start 1.5 --trim-end 1.0 || true
     fi
     rm -f /tmp/_rbfull.jsonl
-
+ 
     # gNB console summary (CQI/RSRP/MCS distributions + events), if the log was archived
     if [ -s "$D/$BASE.gnb_console.txt.gz" ]; then
       python3 "$REPO/tools/gnb_log_summary.py" "$D/$BASE.gnb_console.txt.gz" \
               > "$P/${BASE}_gnb_summary.txt" 2>/dev/null || true
     fi
-
+ 
     cd "$REPO"
     git add "$D" datasets/campaign.csv datasets/mobility_sweep.csv tools/
     # Keep large / raw / derivable artifacts LOCAL-ONLY. GitHub hard-rejects any
@@ -284,5 +209,6 @@ PY
     git pull --rebase --autostash && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
     ;;
-  *) echo "usage: csi_run.sh start | csi_run.sh save <name> [--mobile] [--speed V] [--users N] [--amf-host user@host] [note]"; exit 1 ;;
+  *) echo "usage: csi_run.sh start | csi_run.sh save <name> [note]"; exit 1 ;;
 esac
+

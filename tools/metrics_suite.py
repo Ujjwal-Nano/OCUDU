@@ -558,10 +558,8 @@ def cross_user_rbg_correlation(user_series, K, out_path, bin_ms=100.0, min_overl
                     fontsize=8,
                     color="white" if abs(M[i, j]) > 0.5 else "black",
                 )
-    axm.set_title(
-        "Cross-user mean RBG corr\n(low=swap opportunity, high=contention)", fontsize=9
-    )
-    fig.colorbar(im, ax=axm, fraction=0.046, label="Pearson (dB)")
+    axm.set_title("Cross-user mean RBG correlation", fontsize=12)
+    fig.colorbar(im, ax=axm, fraction=0.046, label="mean correlation")
     for idx, ((i, j), rk) in enumerate(sorted(per_rbg.items())):
         ax = fig.add_subplot(gs[idx, 1])
         cols = [
@@ -572,16 +570,16 @@ def cross_user_rbg_correlation(user_series, K, out_path, bin_ms=100.0, min_overl
         ax.axhline(0.5, color="k", ls="--", lw=0.7, alpha=0.5)
         ax.set_ylim(-1, 1)
         ax.set_xticks(range(R))
-        ax.set_xticklabels([f"RBG{r}" for r in range(R)], fontsize=7)
-        ax.set_ylabel("corr", fontsize=8)
+        ax.set_xticklabels([f"RBG{r}" for r in range(R)], fontsize=8)
+        ax.set_ylabel("correlation between users", fontsize=8)
         ax.set_title(
-            f"{lbls[i]} vs {lbls[j]}  (mean {M[i,j]:.2f}, " f"{overlap[i,j]} bins)",
-            fontsize=8,
+            f"{lbls[i]} vs {lbls[j]}  (mean {M[i,j]:.2f} correlation cross RBGs)",
+            fontsize=12,
         )
         ax.grid(alpha=0.3, axis="y")
     fig.suptitle(
-        f"Cross-user RBG correlation — predicts swap value (bin={bin_ms:.0f} ms)",
-        fontsize=11,
+        f"Cross-user RBG correlation",
+        fontsize=14,
     )
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     fig.savefig(out_path, dpi=130)
