@@ -538,8 +538,8 @@ def cross_user_rbg_correlation(user_series, K, out_path, bin_ms=100.0, min_overl
 
     lbls = [str(k)[-6:] for k in keys]
     npairs = max(1, len(per_rbg))
-    fig = plt.figure(figsize=(10, 4 + 1.2 * npairs))
-    gs = fig.add_gridspec(npairs, 2, width_ratios=[1.1, 1.4])
+    fig = plt.figure(figsize=(13, 4 + 1.3 * npairs))
+    gs = fig.add_gridspec(npairs, 2, width_ratios=[1.0, 1.6], wspace=0.35, hspace=0.5)
     axm = fig.add_subplot(gs[:, 0])
     im = axm.imshow(M, vmin=-1, vmax=1, cmap="coolwarm", origin="upper")
     axm.set_xticks(range(n))
@@ -559,7 +559,7 @@ def cross_user_rbg_correlation(user_series, K, out_path, bin_ms=100.0, min_overl
                     color="white" if abs(M[i, j]) > 0.5 else "black",
                 )
     axm.set_title("Cross-user mean RBG correlation", fontsize=12)
-    fig.colorbar(im, ax=axm, fraction=0.046, label="mean correlation")
+    fig.colorbar(im, ax=axm, fraction=0.046, pad=0.04, label="mean correlation")
     for idx, ((i, j), rk) in enumerate(sorted(per_rbg.items())):
         ax = fig.add_subplot(gs[idx, 1])
         cols = [
@@ -577,11 +577,8 @@ def cross_user_rbg_correlation(user_series, K, out_path, bin_ms=100.0, min_overl
             fontsize=12,
         )
         ax.grid(alpha=0.3, axis="y")
-    fig.suptitle(
-        f"Cross-user RBG correlation",
-        fontsize=14,
-    )
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.suptitle(f"Cross-user RBG correlation", fontsize=14)
+    fig.subplots_adjust(top=0.93, bottom=0.08, left=0.06, right=0.97)
     fig.savefig(out_path, dpi=130)
     plt.close(fig)
 
