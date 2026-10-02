@@ -1,0 +1,9 @@
+dataset: /home/tud/OCUDU/datasets/Mobility/E005_NLOS_multi_new_v5/20261002_1455_E005_NLOS_multi_new_v5.jsonl
+
+user 999420000020049: 54148 samples, 1 segment(s)
+  best-RBG fraction: RBG0=52.4%, RBG1=23.8%, RBG2=23.9%
+  total switches: 14049   zoom: 13.59-13.93 min
+
+user 999420000020051: 50531 samples, 4 segment(s)
+  best-RBG fraction: RBG0=34.6%, RBG1=32.5%, RBG2=32.9%
+  total switches: 12462   zoom: 13.40-13.73 min

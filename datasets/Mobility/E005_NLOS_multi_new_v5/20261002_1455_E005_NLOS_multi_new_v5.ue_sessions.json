@@ -1,0 +1,46 @@
+{
+  "999420000020049": [
+    {
+      "rnti": "0x4601",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790944661029,
+      "end": null,
+      "stmsi": "40c0000377"
+    }
+  ],
+  "999420000020051": [
+    {
+      "rnti": "0x4603",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790944730929,
+      "end": null,
+      "stmsi": "40c00004d6"
+    },
+    {
+      "rnti": "0x4604",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790944745930,
+      "end": null,
+      "stmsi": "40c00004d6"
+    },
+    {
+      "rnti": "0x4605",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790944774024,
+      "end": null,
+      "stmsi": "40c00004d6"
+    },
+    {
+      "rnti": "0x4607",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790944780980,
+      "end": null,
+      "stmsi": "40c00004d6"
+    }
+  ]
+}

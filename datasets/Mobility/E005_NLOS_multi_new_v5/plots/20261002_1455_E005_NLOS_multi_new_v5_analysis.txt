@@ -1,0 +1,16 @@
+file      : /home/tud/OCUDU/datasets/Mobility/E005_NLOS_multi_new_v5/20261002_1455_E005_NLOS_multi_new_v5.jsonl
+samples   : 104679   duration 18.1 min   RUs 3
+trim      : first 1.5 min, last 1.0 min
+
+WHOLE (trimmed)  (n=93222, 15.6 min)
+   RU0: meanP  -25.89  (geoM  -29.64)  std 5.30  p10  -36.18  argmax  44.9%
+   RU1: meanP  -25.47  (geoM  -29.47)  std 5.43  p10  -35.88  argmax  28.4%
+   RU2: meanP  -25.87  (geoM  -30.49)  std 6.05  p10  -37.94  argmax  26.8%
+   gap best-worst : mean 3.64 dB  (min 0.01, max 15.75)
+   separation gap/sigma : 0.7
+   flips          : 60426  (64.8% of samples)
+   decision life  : pick RU2 -> >1 dB suboptimal after 0.08 min
+   mean regret    : 2.29 dB   (max available gain vs avg RU: 1.66 dB)
+   best fixed RU  : RU1  regret 1.26 dB  (cost of not adapting)
+
+appended 1 row(s) to /home/tud/OCUDU/datasets/campaign.csv
