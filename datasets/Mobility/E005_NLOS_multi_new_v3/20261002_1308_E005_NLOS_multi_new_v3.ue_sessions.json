@@ -1,0 +1,64 @@
+{
+  "999420000020049": [
+    {
+      "rnti": "0x4601",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790937935279,
+      "end": null,
+      "stmsi": "40c00002ab"
+    }
+  ],
+  "999420000020051": [
+    {
+      "rnti": "0x4602",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790937938999,
+      "end": null,
+      "stmsi": "40c0000365"
+    },
+    {
+      "rnti": "0x4604",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790937996094,
+      "end": null,
+      "stmsi": "40c00005dc"
+    },
+    {
+      "rnti": "0x4606",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790938078184,
+      "end": null,
+      "stmsi": "40c00005dc"
+    }
+  ],
+  "999420000020052": [
+    {
+      "rnti": "0x4603",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790937956279,
+      "end": null,
+      "stmsi": "40c000029a"
+    },
+    {
+      "rnti": "0x4607",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790938870505,
+      "end": null,
+      "stmsi": "40c000060e"
+    },
+    {
+      "rnti": "0x4608",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1790939187769,
+      "end": null,
+      "stmsi": "40c000060e"
+    }
+  ]
+}
