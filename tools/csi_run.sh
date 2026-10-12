@@ -1,31 +1,50 @@
 #!/bin/bash
 # csi_run.sh — capture -> correlate (rnti->IMSI) -> convert -> plot -> analyse -> git
-#   csi_run.sh start                                    (stop the gNB first!)
+#   csi_run.sh start                 # clear logs BEFORE launching the gNB
+#   csi_run.sh mark                  # after gNB up + all phones attached: reset data logs to "now"
 #   csi_run.sh save <name> [--mobile] [--speed V] [--amf-host user@host] ["note"]
 set -e
 RB=/tmp/srs_rb.jsonl            # per-RB producer log (~50/s)
 SW=/tmp/swap_metrics.jsonl      # per-RU scheduler log (traffic-gated)
-GC=/tmp/gnb_console.txt         # gNB console (CQI/RSRP/MCS via 't', needs 'script' launch)
 GL=/tmp/gnb_srs_test.log        # gNB detail log (SRS/PHY/events, from yaml log sink)
 RM=/tmp/rnti_map.jsonl          # gNB rnti->5G-S-TMSI map (Option B: RRC-setup tap)
 STARTFILE=/tmp/csi_capture_start.txt
 REPO=/home/tud/OCUDU
 GNB_YAML="$REPO/configs/gnb_srs_test.yaml"
-# Single source of truth: the gNB yaml (swap_sched.rbs_per_ru) decides the
-# RB->RU grouping. Everything downstream (rb_to_ru, plots, metrics) inherits
-# it, so you set grouping in ONE place. Override with RBS_PER_RU=.. if needed.
+# Single source of truth: the gNB yaml decides the RU layout. Everything
+# downstream (rb_to_ru, plots, metrics) inherits it, so you set it in ONE place.
+# Override any of these with RBS_PER_RU=.. / NUM_USERS=.. / RUS_PER_USER=.. if needed.
 RBS_PER_RU=${RBS_PER_RU:-$(grep -oP 'rbs_per_ru:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
-RBS_PER_RU=${RBS_PER_RU:-16}   # fallback if the yaml read fails
+RBS_PER_RU=${RBS_PER_RU:-16}       # fallback if the yaml read fails
 NUM_USERS=${NUM_USERS:-$(grep -oP 'num_users:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
-NUM_USERS=${NUM_USERS:-3}      # expected user count (for weakest-user min-users)
+NUM_USERS=${NUM_USERS:-3}          # expected user count (for weakest-user min-users)
+RUS_PER_USER=${RUS_PER_USER:-$(grep -oP 'rus_per_user:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
+RUS_PER_USER=${RUS_PER_USER:-1}    # RUs per user (R). NOTE: downstream tools assume R=1 today;
+                                   # R>1 needs the per-user-power definition before results are valid.
 AMF_HOST=${AMF_HOST:-user@192.168.200.207}   # override per-call with --amf-host, or export AMF_HOST=
- 
+
 case "$1" in
   start)
-    sudo rm -f "$RB" "$SW" "$GC" "$GL" "$RM" 2>/dev/null || true
+    sudo rm -f "$RB" "$SW" "$GL" "$RM" 2>/dev/null || true
     date +"%Y-%m-%d %H:%M:%S" > "$STARTFILE"
-    echo "cleared logs — start the gNB (with 'script' for CQI) and run the experiment"
+    echo "cleared logs — now start the gNB and run the experiment"
     ;;
+
+  mark)
+    # Run AFTER the gNB is up and ALL phones have attached. The gNB already
+    # holds the logs open, so we TRUNCATE in place (rm would orphan the fd).
+    # Only the DATA logs (per-RB + swap) are reset, so the capture begins at
+    # the all-attached moment with no startup transient. The rnti_map and gNB
+    # log are KEPT on purpose — they hold the RRC-setup rnti->TMSI bindings
+    # recorded DURING attach, which the IMSI correlation needs.
+    for f in "$RB" "$SW"; do
+      [ -e "$f" ] && sudo truncate -s 0 "$f"
+    done
+    date +"%Y-%m-%d %H:%M:%S" > "$STARTFILE"
+    echo "marked: data logs (per-RB + swap) reset at all-attached point."
+    echo "        rnti_map + gnb log kept for correlation. record the experiment now."
+    ;;
+
   save)
     [ -z "$2" ] && { echo "usage: csi_run.sh save <name> [--mobile] [--speed V] [--amf-host user@host] [note]"; exit 1; }
     [ -s "$RB" ] || { echo "ERROR: $RB empty — did the gNB run with SRS enabled?"; exit 1; }
@@ -40,23 +59,23 @@ case "$1" in
       esac
     done
     NOTE="${1:-no note}"
-    echo "RB->RU grouping: rbs_per_ru=$RBS_PER_RU (from $GNB_YAML)"
+    EXPECT_RUS=$(( NUM_USERS * RUS_PER_USER ))
+    echo "RU layout (from $GNB_YAML): rbs_per_ru=$RBS_PER_RU  num_users=$NUM_USERS  rus_per_user=$RUS_PER_USER  -> expect $EXPECT_RUS RU(s)"
+    [ "$RUS_PER_USER" != "1" ] && echo "WARNING: rus_per_user=$RUS_PER_USER but downstream tools assume R=1 — results need the per-user-power update first." >&2
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$NAME"
     if [ "$MOBILE" = "1" ]; then SUB="Mobility"; else SUB="Static"; fi
     D="$REPO/datasets/$SUB/$NAME"; P="$D/plots"; mkdir -p "$P"
     echo "$NOTE" > "$D/$BASE.txt"
- 
+
     # raw per-RB (archival)
     sudo cp "$RB" "$D/$BASE.rb.jsonl"; sudo chown "$USER" "$D/$BASE.rb.jsonl"; gzip -9f "$D/$BASE.rb.jsonl"
- 
-    # gNB logs (CQI/RSRP/MCS + events), if captured
-    for lf in "$GC" "$GL"; do
-      if [ -s "$lf" ]; then
-        n="$D/$BASE.$(basename "$lf")"
-        sudo cp "$lf" "$n"; sudo chown "$USER" "$n"; gzip -9f "$n"
-      fi
-    done
- 
+
+    # gNB detail log (SRS/PHY events), if captured — archived + used for AMF fallback
+    if [ -s "$GL" ]; then
+      n="$D/$BASE.$(basename "$GL")"
+      sudo cp "$GL" "$n"; sudo chown "$USER" "$n"; gzip -9f "$n"
+    fi
+
     # ---- rnti -> user correlation ----
     # Produces ue_sessions.json (user -> its rnti sessions this run). This is
     # what lets rb_to_ru.py / metrics label each record with its real user
@@ -67,7 +86,7 @@ case "$1" in
     # no clock skew, every reconnection captured. Users are keyed by 5G-S-TMSI;
     # drop a labels.json ({stmsi_hex: imsi}) at $REPO/tools/tmsi_labels.json to
     # relabel them to real IMSIs.
-    # FALLBACK: the original AMF-journal correlation, if no rnti-map exists.
+    # FALLBACK: the AMF-journal correlation, if no rnti-map exists.
     SESSIONS=""
     LABELMAP="$REPO/tools/tmsi_labels.json"
     LABELARG=""
@@ -80,8 +99,6 @@ case "$1" in
       # erring early is free. 15 min margin by default.
       AMF_SINCE=$(cat "$STARTFILE" 2>/dev/null || echo "")
       if [ -n "$AMF_SINCE" ]; then
-        # robust lookback: start_epoch - 900s (15 min), reformatted. The
-        # "$X - 15 minutes" string form is unreliable in GNU date, so go via epoch.
         _st_epoch=$(date -d "$AMF_SINCE" +%s 2>/dev/null || echo "")
         if [ -n "$_st_epoch" ]; then
           AMF_LOOKBACK=$(date -d "@$((_st_epoch - 900))" +"%Y-%m-%d %H:%M:%S")
@@ -135,7 +152,7 @@ case "$1" in
     elif [ -z "$SESSIONS" ]; then
       echo "WARNING: no rnti-map and $GL not captured — can't correlate. Falling back to single-user (u=0) output." >&2
     fi
- 
+
     # Drop unresolved user keys: a real user is a 15-digit IMSI. Any TMSI-hex
     # key (e.g. "40c000021a" from a brief blip whose IMSI the AMF didn't bind)
     # is removed so it is never plotted or counted. Runs only when AMF
@@ -152,7 +169,7 @@ if clean: json.dump(clean, open('$SESSIONS','w'), indent=2)
 else: print('WARNING: no IMSI users after filter; keeping original sessions', file=sys.stderr)
 " || true
     fi
- 
+
     # per-RU view — split by real user (IMSI) whenever correlation succeeded,
     # otherwise same single-user (u=0) output as before
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rb.jsonl
@@ -160,17 +177,16 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
             --rbs-per-ru "$RBS_PER_RU" --skip-rb0 \
             ${SESSIONS:+--sessions "$SESSIONS"}
     rm -f /tmp/_rb.jsonl
- 
-    # plots + analysis — plot_csi.py already draws one row per distinct "u",
-    # so this is automatically multi-user once rb_to_ru.py resolved IMSIs;
-    # no per-user loop needed here or anywhere else in this script.
+
+    # CSI plot — plot_csi.py draws one row per distinct "u", so it's
+    # automatically multi-user once rb_to_ru.py resolved IMSIs.
     python3 "$REPO/tools/plot_csi.py" "$D/$BASE.jsonl" -o "$P/$BASE.png" --rbs-per-ru "$RBS_PER_RU"
     if [ -s "$SW" ]; then
       sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"
       python3 "$REPO/tools/plot_csi.py" "$D/$BASE.swap.jsonl" -o "$P/${BASE}_swap.png" --rbs-per-ru "$RBS_PER_RU" || true
     fi
-    python3 "$REPO/tools/analyze_position.py" "$D/$BASE.jsonl" \
-            --csv "$REPO/datasets/campaign.csv" | tee "$P/${BASE}_analysis.txt"
+
+    # metrics suite (per-user via --sessions, yaml RU size)
     zcat "$D/$BASE.rb.jsonl.gz" > /tmp/_rbfull.jsonl
     if [ "$MOBILE" = "1" ]; then
       python3 "$REPO/tools/metrics_suite.py" /tmp/_rbfull.jsonl -o "$P/${BASE}_metrics.png" \
@@ -187,38 +203,39 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
     fi
     rm -f /tmp/_rbfull.jsonl
 
-    # ---- swap-benefit, weakest-user, and RBG-power/mobility figures ----
-    # swap_analysis + plot_weakest read the per-RU scheduler log (swap.jsonl,
-    # only present when the swap ran with traffic); plot_rbg_power reads the raw
-    # per-RB log. All are per-user via --sessions and use the yaml RU size.
+    # ---- swap-benefit, weakest-user, outage, decision-quality, RBG-power figures ----
+    # swap_analysis + plot_weakest + plot_outage + swap_decision_quality read the
+    # per-RU scheduler log (swap.jsonl, only present when the swap ran with traffic);
+    # plot_rbg_power reads the raw per-RB log. outage/quality are aggregate
+    # weakest-user metrics (no per-user labels), so they take --min-users but not
+    # --sessions. Each also writes a .txt sidecar with the numbers.
     if [ -s "$D/$BASE.swap.jsonl" ]; then
       python3 "$REPO/tools/swap_analysis.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_swapbenefit.png" --snr0 10 || true
       python3 "$REPO/tools/plot_weakest.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_weakest.png" --min-users "${NUM_USERS:-3}" \
               ${SESSIONS:+--sessions "$SESSIONS"} || true
+      # weakest-user outage CDF (the paper's benefit metric, eq 13)
+      python3 "$REPO/tools/plot_outage.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_outage.png" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
+      # decision quality: optimality (vs per-slot max-min) + alloc-time cost
+      python3 "$REPO/tools/swap_decision_quality.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_quality.png" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
     fi
     python3 "$REPO/tools/plot_rbg_power.py" "$D/$BASE.rb.jsonl.gz" \
             -o "$P/${BASE}_rbgpower.png" --K "$RBS_PER_RU" \
             ${SESSIONS:+--sessions "$SESSIONS"} || true
 
-    # gNB console summary (CQI/RSRP/MCS distributions + events), if the log was archived
-    if [ -s "$D/$BASE.gnb_console.txt.gz" ]; then
-      python3 "$REPO/tools/gnb_log_summary.py" "$D/$BASE.gnb_console.txt.gz" \
-              > "$P/${BASE}_gnb_summary.txt" 2>/dev/null || true
-    fi
- 
     cd "$REPO"
-    git add "$D" datasets/campaign.csv datasets/mobility_sweep.csv tools/
+    git add "$D" datasets/mobility_sweep.csv tools/
     # Keep large / raw / derivable artifacts LOCAL-ONLY. GitHub hard-rejects any
     # file >100 MB (the full PHY log), and the raw per-RB capture (rb.jsonl.gz)
     # plus its expanded per-RU .jsonl are bulky and regenerable/archival — so
     # none of them belong in git. Only the small products (plots, txt, sessions
-    # json, rnti map, campaign/mobility csvs) stay staged.
+    # json, rnti map, mobility csv) stay staged.
     git reset -q -- "$D/$BASE.rb.jsonl.gz" \
                     "$D/$BASE.jsonl" \
                     "$D/$BASE.gnb_srs_test.log.gz" \
-                    "$D/$BASE.gnb_console.txt.gz" \
                     "$D/$BASE.swap.jsonl" 2>/dev/null || true
     git commit -m "dataset: $BASE — $NOTE"
     # --autostash: reapply any unstaged edits (e.g. a tweaked configs/*.yaml)
@@ -226,5 +243,6 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
     git pull --rebase --autostash && git push && echo "PUSH OK" || { echo "PUSH FAILED — commit is local only"; exit 1; }
     echo "saved + pushed: $BASE"
     ;;
-  *) echo "usage: csi_run.sh start | csi_run.sh save <name> [note]"; exit 1 ;;
+
+  *) echo "usage: csi_run.sh start | csi_run.sh mark | csi_run.sh save <name> [note]"; exit 1 ;;
 esac
