@@ -1,0 +1,9 @@
+weakest-user outage — E005_NLOS_multi
+slots=4312 users=3 RUs=3
+best fixed assignment (brute-forced): user->RU (2, 1, 0)
+
+outage threshold Gamma_th (dB) at each outage probability:
+  Pout=   1%:  no-swap= -39.66   swap= -38.59   gain=+1.07 dB
+  Pout=   5%:  no-swap= -38.65   swap= -37.69   gain=+0.96 dB
+  Pout=  10%:  no-swap= -37.83   swap= -36.70   gain=+1.13 dB
+  mean floor:  no-swap=-31.77   swap=-30.52   gain=+1.25 dB

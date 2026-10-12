@@ -1,0 +1,10 @@
+# Raw / large / regenerable capture artifacts — keep LOCAL only (matches csi_run.sh policy)
+*.rb.jsonl
+*.rb.jsonl.gz
+*.swap.jsonl
+*.gnb_srs_test.log.gz
+*.gnb_console.txt.gz
+plots.zip
+# expanded per-RU view is regenerable; keep the small rnti_map though
+*.jsonl
+!*rnti_map.jsonl
