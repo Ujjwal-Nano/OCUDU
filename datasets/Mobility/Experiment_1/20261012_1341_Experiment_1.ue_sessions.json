@@ -1,0 +1,128 @@
+{
+  "999420000020052": [
+    {
+      "rnti": "0x4601",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791803937479,
+      "end": null,
+      "stmsi": "40c0000311"
+    },
+    {
+      "rnti": "0x4603",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791803937983,
+      "end": null,
+      "stmsi": "40c0000289"
+    },
+    {
+      "rnti": "0x4606",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791803945488,
+      "end": null,
+      "stmsi": "40c0000289"
+    },
+    {
+      "rnti": "0x4613",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804405969,
+      "end": null,
+      "stmsi": "40c0000289"
+    }
+  ],
+  "999420000020049": [
+    {
+      "rnti": "0x4602",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791803937983,
+      "end": null,
+      "stmsi": "40c00000fc"
+    }
+  ],
+  "999420000020051": [
+    {
+      "rnti": "0x4608",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791803977073,
+      "end": null,
+      "stmsi": "40c0000798"
+    },
+    {
+      "rnti": "0x4609",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791803994613,
+      "end": null,
+      "stmsi": "40c0000798"
+    },
+    {
+      "rnti": "0x460c",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804005698,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x460d",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804019459,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x460e",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804052603,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x460f",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804164003,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x4610",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804305244,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x4611",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804378408,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x4612",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804405548,
+      "end": null,
+      "stmsi": "40c0000118"
+    },
+    {
+      "rnti": "0x4614",
+      "ran_ue": null,
+      "amf_ue": null,
+      "start": 1791804808594,
+      "end": null,
+      "stmsi": "40c0000118"
+    }
+  ]
+}
