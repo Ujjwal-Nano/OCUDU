@@ -1,8 +1,0 @@
-swap decision quality — 20261012_1432_Experiment_1
-slots=60826 users=3 RUs=3
-
-OPTIMALITY: 95.0% of slots hit the true max-min optimum
-  gap-to-optimum: mean 0.035 dB, p90 0.00 dB, max 5.01 dB
-WEAKEST ON OWN BEST RU: 92.0% of slots
-CAPTURED-GAIN RATIO: 97% (best-fixed -30.01 -> swap -29.00 -> ceiling -28.97 dB)
-ALLOC TIME: mean 2.94 us, p99 12.21 us, max 191.73 us
