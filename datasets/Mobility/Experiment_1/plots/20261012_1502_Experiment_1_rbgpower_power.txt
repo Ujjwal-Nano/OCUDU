@@ -1,0 +1,3 @@
+user 999420000020049: best-RBG frac RBG0=98%, RBG1=1%, RBG2=2%  | spread=97pts (STATIC-like (one dominant RBG))
+user 999420000020051: best-RBG frac RBG0=38%, RBG1=31%, RBG2=31%  | spread=7pts (MOBILE-like (spread))
+user 999420000020052: best-RBG frac RBG0=32%, RBG1=43%, RBG2=25%  | spread=17pts (MOBILE-like (spread))

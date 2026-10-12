@@ -1,0 +1,11 @@
+swap_analysis — /home/tud/OCUDU/datasets/Mobility/Experiment_1/20261012_1502_Experiment_1.swap.jsonl
+slots=57742 users=3 RUs=3 snr0=10.0
+best static split (fixed): user->RU (1, 0, 2)
+
+WEAKEST-USER RATE (b/s/Hz), mean:
+  fixed    : 2.1206
+  achieved : 2.4155
+  ceiling  : 2.4261
+  realized gain  : +0.2949 (+13.9%)
+  gap-to-optimal : +0.0107
+per-RU cross-user corr: RU0=-0.00, RU1=+0.03, RU2=+0.03
