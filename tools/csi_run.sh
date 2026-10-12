@@ -91,8 +91,23 @@ case "$1" in
     LABELMAP="$REPO/tools/tmsi_labels.json"
     LABELARG=""
     [ -s "$LABELMAP" ] && LABELARG="--label-map $LABELMAP"
-    if [ -s "$RM" ]; then
+    # Build the rnti->TMSI map from the gNB LOG, not the RRC-setup tap. The tap
+    # reads the identity from the rrcSetupRequest, which is a RANDOM value when a
+    # UE re-attaches after its registration lapsed (the RLF-churn case) — so those
+    # c-rntis get no TMSI and all their samples are dropped. The rrcSetupComplete
+    # NAS always carries the real M-TMSI, so rebuilding from the log captures every
+    # setup. Falls back to the raw tap if the log rebuild yields nothing (e.g. RRC
+    # debug logging was off).
+    GLGZ="$D/$BASE.gnb_srs_test.log.gz"
+    if [ -s "$GLGZ" ]; then
+      python3 "$REPO/tools/rnti_map_from_gnblog.py" "$GLGZ" \
+              -o "$D/$BASE.rnti_map.jsonl" 2>&1 | sed 's/^/  [rnti-map] /' || true
+    fi
+    if [ ! -s "$D/$BASE.rnti_map.jsonl" ] && [ -s "$RM" ]; then
+      echo "  [rnti-map] log rebuild empty — falling back to RRC-setup tap" >&2
       sudo cp "$RM" "$D/$BASE.rnti_map.jsonl"; sudo chown "$USER" "$D/$BASE.rnti_map.jsonl"
+    fi
+    if [ -s "$D/$BASE.rnti_map.jsonl" ]; then
       # AMF lookback: start the journal query a margin BEFORE capture-start so
       # a phone that registered early (before we cleared logs) still has its
       # TMSI->IMSI binding in the window. journalctl ignores extra history, so
