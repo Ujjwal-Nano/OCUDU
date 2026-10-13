@@ -1,0 +1,9 @@
+weakest-user outage — 20261013_1553_Experiment_2_WRF_2
+slots=71786 users=3 RUs=6 rus_per_user=2
+best fixed assignment (brute-forced): user->RUs [[3, 4], [0, 1], [2, 5]]
+
+outage threshold Gamma_th (dB) at each outage probability:
+  Pout=   1%:  no-swap= -37.81   swap= -36.29   gain=+1.52 dB
+  Pout=   5%:  no-swap= -35.55   swap= -34.23   gain=+1.31 dB
+  Pout=  10%:  no-swap= -34.65   swap= -33.42   gain=+1.23 dB
+  mean floor:  no-swap=-30.72   swap=-29.77   gain=+0.94 dB

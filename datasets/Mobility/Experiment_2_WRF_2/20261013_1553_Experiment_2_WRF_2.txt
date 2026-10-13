@@ -1,0 +1,1 @@
+Three users in NLOS: 1- Robot arm, 2- random motion, 3 - static outside room constant DL traffic 2Mbit/s add tot hat we have 2 rus per user and 8 rbs per user

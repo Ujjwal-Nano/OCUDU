@@ -28,11 +28,46 @@ import matplotlib.pyplot as plt
 EPS = 1e-12
 
 
+def assignments(U, R, rpu):
+    """All ways to give each of U users a distinct set of `rpu` RUs out of R.
+    For rpu==1 this reduces to permutations(range(R), U)."""
+    seen, out = set(), []
+    for combo in itertools.permutations(range(R), U * rpu):
+        grp = tuple(tuple(sorted(combo[i * rpu : (i + 1) * rpu])) for i in range(U))
+        if grp in seen:
+            continue
+        seen.add(grp)
+        out.append([list(g) for g in grp])
+    return out
+
+
+def floor_of(asg, c, U):
+    """Weakest-user floor for one slot: min over users of sum-of-CSI on their RUs."""
+    return min(sum(c[u][r] for r in asg[u]) for u in range(U))
+
+
+def all_floors(C, asgs, U):
+    """Weakest-user floor for EVERY assignment, vectorised over all slots.
+    C is (n_slots, U, R); returns (n_assignments, n_slots). Same result as
+    [[floor_of(asg, c, U) for c in csis] for asg in asgs] but ~100x faster."""
+    out = np.empty((len(asgs), C.shape[0]))
+    for i, asg in enumerate(asgs):
+        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+        out[i] = served.min(axis=1)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("swaplog")
     ap.add_argument("-o", "--out", default="quality.png")
     ap.add_argument("--min-users", type=int, default=3)
+    ap.add_argument(
+        "--rus-per-user",
+        type=int,
+        default=1,
+        help="RUs owned per user (R>=2 brute-forces group assignments)",
+    )
     ap.add_argument("--label", default=None)
     ap.add_argument(
         "--alloc-min", type=float, default=None, help="alloc-time panel x-axis min (us)"
@@ -75,28 +110,29 @@ def main():
         csis.append([np.asarray(u["csi"], float) for u in us])
     ach = np.array(ach)
 
-    perms = list(itertools.permutations(range(R), U))
-    ceil = np.array(
-        [max(min(c[u][p[u]] for u in range(U)) for p in perms) for c in csis]
-    )
+    rpu = a.rus_per_user
+    if U * rpu > R:
+        sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
+    asgs = assignments(U, R, rpu)
+    C = np.asarray(csis, float)                 # (n_slots, U, R)
+    af = all_floors(C, asgs, U)                 # (n_assignments, n_slots)
+    ceil = af.max(axis=0)                        # per-slot max-min optimum
     gap_db = 10 * np.log10(np.maximum(ceil, EPS) / np.maximum(ach, EPS))
     gap_db = np.maximum(gap_db, 0.0)
     opt_pct = 100.0 * np.mean(gap_db < 1e-3)
 
-    # weakest-on-own-best-RU
+    # weakest-on-own-best-RU  (R>=2: weakest user holds its own best rpu RUs)
     onbest = 0
     for us in slots:
         us = us[:U]
         w = min(us, key=lambda u: u["served"])
-        if int(np.argmax(w["csi"])) == w["rus"][0]:
+        best_rus = set(int(i) for i in np.argsort(w["csi"])[::-1][:rpu])
+        if set(int(r) for r in w["rus"]) == best_rus:
             onbest += 1
     onbest_pct = 100.0 * onbest / len(slots)
 
     # captured-gain ratio vs best fixed
-    best_perm = max(
-        perms, key=lambda p: np.mean([min(c[u][p[u]] for u in range(U)) for c in csis])
-    )
-    fix = np.array([min(c[u][best_perm[u]] for u in range(U)) for c in csis])
+    fix = af[af.mean(axis=1).argmax()]
     fm, am, cm = (10 * np.log10(np.maximum(x, EPS)).mean() for x in (fix, ach, ceil))
     captured = (am - fm) / max(cm - fm, 1e-9) * 100.0
 

@@ -32,6 +32,35 @@ import matplotlib.pyplot as plt
 EPS = 1e-12
 
 
+def assignments(U, R, rpu):
+    """All ways to give each of U users a distinct set of `rpu` RUs out of R.
+    For rpu==1 this is exactly the old permutations(range(R), U)."""
+    seen, out = set(), []
+    for combo in itertools.permutations(range(R), U * rpu):
+        grp = tuple(tuple(sorted(combo[i * rpu : (i + 1) * rpu])) for i in range(U))
+        if grp in seen:
+            continue
+        seen.add(grp)
+        out.append([list(g) for g in grp])
+    return out
+
+
+def floor_series(asg, csis, U):
+    """Per-slot weakest-user floor (served = sum of CSI over a user's RUs)."""
+    return np.array([min(sum(c[u][r] for r in asg[u]) for u in range(U)) for c in csis])
+
+
+def all_floors(C, asgs, U):
+    """Weakest-user floor for EVERY assignment, vectorised over all slots.
+    C is (n_slots, U, R); returns (n_assignments, n_slots). ~100x faster than
+    looping floor_series per assignment."""
+    out = np.empty((len(asgs), C.shape[0]))
+    for i, asg in enumerate(asgs):
+        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+        out[i] = served.min(axis=1)
+    return out
+
+
 def load(path, min_users):
     slots = []
     for ln in open(path):
@@ -57,6 +86,12 @@ def main():
     ap.add_argument("swaplog")
     ap.add_argument("-o", "--out", default="outage.png")
     ap.add_argument("--min-users", type=int, default=3)
+    ap.add_argument(
+        "--rus-per-user",
+        type=int,
+        default=1,
+        help="RUs owned per user (R>=2 brute-forces group assignments)",
+    )
     ap.add_argument("--label", default=None)
     a = ap.parse_args()
 
@@ -73,16 +108,18 @@ def main():
         csis.append([np.asarray(u["csi"], float) for u in us])
     ach = np.array(ach)
 
-    # BEST FIXED assignment: brute force all user->distinct-RU permutations,
-    # pick the one with the highest mean floor over the whole run.
+    # BEST FIXED assignment: brute force all ways to give each user rpu distinct
+    # RUs, pick the one with the highest mean weakest-user floor over the run.
     R = len(csis[0][0])
-    best_perm, best_mean = None, -1.0
-    for perm in itertools.permutations(range(R), U):
-        fl = [min(c[u][perm[u]] for u in range(U)) for c in csis]
-        m = float(np.mean(fl))
-        if m > best_mean:
-            best_mean, best_perm = m, perm
-    fix = np.array([min(c[u][best_perm[u]] for u in range(U)) for c in csis])
+    rpu = a.rus_per_user
+    if U * rpu > R:
+        sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
+    asgs = assignments(U, R, rpu)
+    C = np.asarray(csis, float)  # (n_slots, U, R)
+    af = all_floors(C, asgs, U)  # (n_assignments, n_slots)
+    best_i = int(af.mean(axis=1).argmax())
+    best_asg = asgs[best_i]
+    fix = af[best_i]
 
     sw_db = 10 * np.log10(np.maximum(ach, EPS))
     fx_db = 10 * np.log10(np.maximum(fix, EPS))
@@ -97,8 +134,10 @@ def main():
     xs, ps = outage(sw_db)
 
     fig, ax = plt.subplots(figsize=(9.5, 6))
-    ax.semilogy(xf, pf, color="tab:red", lw=2.4, label="no swap (best fixed)")
-    ax.semilogy(xs, ps, color="tab:blue", lw=2.4, label="swap  (Worst Resource First)")
+    ax.semilogy(
+        xf, pf, color="tab:red", lw=2.4, label="no swap  (best fixed assignment)"
+    )
+    ax.semilogy(xs, ps, color="tab:blue", lw=2.4, label="swap  (max-min)")
     ax.set_xlabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
     ax.set_ylabel(
         "outage probability  $P(\\,\\Gamma_{min} < \\Gamma_{th}\\,)$", fontsize=14
@@ -121,6 +160,15 @@ def main():
             arrowprops=dict(arrowstyle="->", color="green", lw=1.8),
         )
     p1 = lines[0]
+    ax.text(
+        p1[1] - 0.2,
+        0.013,
+        f"+{p1[3]:.2f} dB @ 1% outage",
+        ha="right",
+        fontsize=11,
+        color="green",
+        fontweight="bold",
+    )
 
     fig.tight_layout()
     fig.savefig(a.out, dpi=140)
@@ -129,8 +177,11 @@ def main():
     txt = a.out.rsplit(".", 1)[0] + ".txt"
     with open(txt, "w") as f:
         lbl = a.label or a.swaplog.split("/")[-1]
-        f.write(f"weakest-user outage — {lbl}\nslots={len(slots)} users={U} RUs={R}\n")
-        f.write(f"best fixed assignment (brute-forced): user->RU {best_perm}\n\n")
+        f.write(
+            f"weakest-user outage — {lbl}\nslots={len(slots)} users={U} RUs={R} "
+            f"rus_per_user={rpu}\n"
+        )
+        f.write(f"best fixed assignment (brute-forced): user->RUs {best_asg}\n\n")
         f.write("outage threshold Gamma_th (dB) at each outage probability:\n")
         for pout, gf, gs, g in lines:
             f.write(

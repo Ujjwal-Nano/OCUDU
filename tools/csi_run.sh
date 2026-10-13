@@ -19,8 +19,9 @@ RBS_PER_RU=${RBS_PER_RU:-16}       # fallback if the yaml read fails
 NUM_USERS=${NUM_USERS:-$(grep -oP 'num_users:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
 NUM_USERS=${NUM_USERS:-3}          # expected user count (for weakest-user min-users)
 RUS_PER_USER=${RUS_PER_USER:-$(grep -oP 'rus_per_user:\s*\K[0-9]+' "$GNB_YAML" 2>/dev/null | head -1)}
-RUS_PER_USER=${RUS_PER_USER:-1}    # RUs per user (R). NOTE: downstream tools assume R=1 today;
-                                   # R>1 needs the per-user-power definition before results are valid.
+RUS_PER_USER=${RUS_PER_USER:-1}    # RUs per user (R). Passed to the plots below, which handle R>=2.
+                                   # Power metrics valid at any R; DL grants are contiguous, so
+                                   # throughput at R>=2 is not claimed.
 AMF_HOST=${AMF_HOST:-user@192.168.200.207}   # override per-call with --amf-host, or export AMF_HOST=
 
 case "$1" in
@@ -61,7 +62,7 @@ case "$1" in
     NOTE="${1:-no note}"
     EXPECT_RUS=$(( NUM_USERS * RUS_PER_USER ))
     echo "RU layout (from $GNB_YAML): rbs_per_ru=$RBS_PER_RU  num_users=$NUM_USERS  rus_per_user=$RUS_PER_USER  -> expect $EXPECT_RUS RU(s)"
-    [ "$RUS_PER_USER" != "1" ] && echo "WARNING: rus_per_user=$RUS_PER_USER but downstream tools assume R=1 — results need the per-user-power update first." >&2
+    [ "$RUS_PER_USER" != "1" ] && echo "NOTE: rus_per_user=$RUS_PER_USER — power metrics (outage/quality/weakest) valid; DL grants are contiguous, so throughput at R>=2 is not claimed." >&2
     STAMP=$(date +%Y%m%d_%H%M); BASE="${STAMP}_$NAME"
     if [ "$MOBILE" = "1" ]; then SUB="Mobility"; else SUB="Static"; fi
     D="$REPO/datasets/$SUB/$NAME"; P="$D/plots"; mkdir -p "$P"
@@ -232,10 +233,12 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
               ${SESSIONS:+--sessions "$SESSIONS"} || true
       # weakest-user outage CDF (the paper's benefit metric, eq 13)
       python3 "$REPO/tools/plot_outage.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_outage.png" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
+              -o "$P/${BASE}_outage.png" --min-users "${NUM_USERS:-3}" \
+              --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
       # decision quality: optimality (vs per-slot max-min) + alloc-time cost
       python3 "$REPO/tools/swap_decision_quality.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_quality.png" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
+              -o "$P/${BASE}_quality.png" --min-users "${NUM_USERS:-3}" \
+              --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
     fi
     python3 "$REPO/tools/plot_rbg_power.py" "$D/$BASE.rb.jsonl.gz" \
             -o "$P/${BASE}_rbgpower.png" --K "$RBS_PER_RU" \
