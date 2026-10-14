@@ -1,0 +1,9 @@
+weakest-user outage — 20261014_1447_E1_3U_1RBG_per_U
+slots=65074 users=3 RUs=3 rus_per_user=1
+best fixed assignment (brute-forced): user->RUs [[1], [2], [0]]
+
+outage threshold Gamma_th (dB) at each outage probability:
+  Pout=   1%:  no-swap= -33.17   swap= -31.79   optimal= -31.69   gain=+1.39 dB   (swap->opt gap=0.09 dB)
+  Pout=   5%:  no-swap= -31.52   swap= -30.67   optimal= -30.63   gain=+0.85 dB   (swap->opt gap=0.05 dB)
+  Pout=  10%:  no-swap= -30.68   swap= -30.13   optimal= -30.08   gain=+0.55 dB   (swap->opt gap=0.05 dB)
+  mean floor:  no-swap=-24.25   swap=-23.29   optimal=-23.21   gain=+0.96 dB   (swap->opt gap=0.08 dB)
