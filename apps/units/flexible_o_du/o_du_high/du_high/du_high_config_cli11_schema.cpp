@@ -694,6 +694,8 @@ static void configure_cli11_swap_policy_args(CLI::App& app, swap_scheduler_confi
       ->capture_default_str();
   add_option(app, "--swap_period_slots", expert_params.swap_period_slots, "Run the swap every N slots (tie to SRS period)")
       ->capture_default_str();
+  add_option(app, "--swap_policy", expert_params.policy, "Swap sub-policy: 'wrf' (worst-RU) or 'wuf' (weakest-user)")
+      ->capture_default_str();
 }
 
 static void configure_cli11_scheduler_policy_args(CLI::App& app, std::optional<scheduler_policy_config>& policy_cfg)

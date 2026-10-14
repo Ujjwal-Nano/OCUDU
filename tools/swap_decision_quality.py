@@ -80,7 +80,7 @@ def main():
     )
     a = ap.parse_args()
 
-    slots, alloc = [], []
+    slots, alloc, opt_alloc = [], [], []
     for ln in open(a.swaplog):
         ln = ln.strip()
         if not ln:
@@ -91,6 +91,10 @@ def main():
             continue
         if "alloc_us" in d:
             alloc.append(float(d["alloc_us"]))
+        # optimal (exhaustive) decision time, logged live when present (>=0);
+        # -1 or absent means it was skipped / an old capture -> ignored.
+        if "opt_alloc_us" in d and float(d["opt_alloc_us"]) >= 0:
+            opt_alloc.append(float(d["opt_alloc_us"]))
         real = [
             u
             for u in d.get("users", [])
@@ -137,6 +141,7 @@ def main():
     captured = (am - fm) / max(cm - fm, 1e-9) * 100.0
 
     alloc = np.array(alloc) if alloc else np.array([np.nan])
+    opt_alloc = np.array(opt_alloc) if opt_alloc else np.array([])
 
     def cdf(x):
         xs = np.sort(x)
@@ -164,25 +169,40 @@ def main():
         arrowprops=dict(arrowstyle="->", color="tab:green"),
     )
 
-    # RIGHT: alloc-time CDF
+    # RIGHT: decision-cost box-and-whisker (swap vs optimal), mean labelled in box.
+    # box = IQR (p25-p75), line = median, diamond = mean, whiskers = p1..p99.
     if np.isfinite(alloc).any():
-        ax_, ay = cdf(alloc[np.isfinite(alloc)])
-        ax[1].plot(ax_, ay, color="tab:blue", lw=2.4)
-        mean_us, p99 = np.nanmean(alloc), np.nanpercentile(alloc, 99)
-        ax[1].axvline(
-            mean_us, color="k", ls="--", lw=1.5, label=f"mean {mean_us:.1f} µs"
+        groups = [alloc[np.isfinite(alloc)]]
+        names  = ["swap"]
+        colors = ["tab:blue"]
+        if opt_alloc.size:
+            groups.append(opt_alloc)
+            names.append("optimal")
+            colors.append("tab:orange")
+        bp = ax[1].boxplot(
+            groups, showmeans=True, whis=(1, 99), showfliers=False, widths=0.5,
+            patch_artist=True,
+            medianprops=dict(color="black", lw=1.5),
+            meanprops=dict(marker="D", markerfacecolor="white",
+                           markeredgecolor="black", markersize=7),
         )
-        ax[1].axvline(p99, color="tab:red", ls=":", lw=1.5, label=f"p99 {p99:.1f} µs")
-        ax[1].set_xlabel("allocation time per decision (µs)", fontsize=13)
-        ax[1].set_ylabel("CDF : fraction of decisions", fontsize=13)
+        for patch, c in zip(bp["boxes"], colors):
+            patch.set_facecolor(c)
+            patch.set_alpha(0.35)
+        # mean value labelled inside each box
+        for i, g in enumerate(groups, start=1):
+            m = float(np.mean(g))
+            ax[1].annotate(
+                f"mean {m:.1f} µs", xy=(i, m), ha="center", va="bottom",
+                fontsize=11, fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="0.6", alpha=0.9),
+            )
+        ax[1].set_xticks(range(1, len(names) + 1))
+        ax[1].set_xticklabels(names, fontsize=12)
+        ax[1].set_ylabel("allocation time per decision (µs)", fontsize=13)
         ax[1].set_title(f"Decision cost on real hardware", fontsize=13)
-        ax[1].grid(alpha=0.3)
-        ax[1].legend(fontsize=12, loc="lower right")
-        ax[1].set_ylim(0, 1.0)
-        ax[1].set_xlim(
-            a.alloc_min if a.alloc_min is not None else float(alloc.min()),
-            max(a.alloc_max, np.percentile(alloc, 99.9)),
-        )
+        ax[1].grid(alpha=0.3, axis="y")
+        ax[1].set_ylim(bottom=0)
     else:
         ax[1].text(0.5, 0.5, "no alloc_us in log", ha="center", va="center")
         ax[1].axis("off")
@@ -211,8 +231,14 @@ def main():
         )
         if np.isfinite(alloc).any():
             f.write(
-                f"ALLOC TIME: mean {np.nanmean(alloc):.2f} us, p99 {np.nanpercentile(alloc,99):.2f} us, "
+                f"ALLOC TIME (swap): mean {np.nanmean(alloc):.2f} us, p99 {np.nanpercentile(alloc,99):.2f} us, "
                 f"max {np.nanmax(alloc):.2f} us\n"
+            )
+        if opt_alloc.size:
+            f.write(
+                f"ALLOC TIME (optimal, exhaustive, same CPU): mean {opt_alloc.mean():.2f} us, "
+                f"p99 {np.percentile(opt_alloc,99):.2f} us, max {opt_alloc.max():.2f} us "
+                f"(optimal/swap = {opt_alloc.mean()/max(np.nanmean(alloc),1e-9):.1f}x)\n"
             )
     print(
         f"optimality={opt_pct:.1f}%  weakest-on-best={onbest_pct:.1f}%  captured={captured:.0f}%  "

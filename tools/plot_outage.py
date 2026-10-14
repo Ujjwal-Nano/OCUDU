@@ -120,9 +120,11 @@ def main():
     best_i = int(af.mean(axis=1).argmax())
     best_asg = asgs[best_i]
     fix = af[best_i]
+    opt = af.max(axis=0)  # per-slot max-min optimum (oracle)
 
     sw_db = 10 * np.log10(np.maximum(ach, EPS))
     fx_db = 10 * np.log10(np.maximum(fix, EPS))
+    op_db = 10 * np.log10(np.maximum(opt, EPS))
 
     # OUTAGE curve: Pout(x) = fraction of slots with floor < x  (== empirical CDF)
     def outage(x):
@@ -132,12 +134,16 @@ def main():
 
     xf, pf = outage(fx_db)
     xs, ps = outage(sw_db)
+    xo, po = outage(op_db)
 
     fig, ax = plt.subplots(figsize=(9.5, 6))
     ax.semilogy(
         xf, pf, color="tab:red", lw=2.4, label="no swap  (best fixed assignment)"
     )
     ax.semilogy(xs, ps, color="tab:blue", lw=2.4, label="swap  (max-min)")
+    ax.semilogy(
+        xo, po, color="tab:green", lw=2.0, ls="--", label="optimal  (per-slot max-min)"
+    )
     ax.set_xlabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
     ax.set_ylabel(
         "outage probability  $P(\\,\\Gamma_{min} < \\Gamma_{th}\\,)$", fontsize=14
@@ -153,22 +159,6 @@ def main():
         gf = np.percentile(fx_db, pout * 100)
         gs = np.percentile(sw_db, pout * 100)
         lines.append((pout, gf, gs, gs - gf))
-        ax.annotate(
-            "",
-            xy=(gs, pout),
-            xytext=(gf, pout),
-            arrowprops=dict(arrowstyle="->", color="green", lw=1.8),
-        )
-    p1 = lines[0]
-    ax.text(
-        p1[1] - 0.2,
-        0.013,
-        f"+{p1[3]:.2f} dB @ 1% outage",
-        ha="right",
-        fontsize=11,
-        color="green",
-        fontweight="bold",
-    )
 
     fig.tight_layout()
     fig.savefig(a.out, dpi=140)
@@ -184,12 +174,15 @@ def main():
         f.write(f"best fixed assignment (brute-forced): user->RUs {best_asg}\n\n")
         f.write("outage threshold Gamma_th (dB) at each outage probability:\n")
         for pout, gf, gs, g in lines:
+            go = np.percentile(op_db, pout * 100)
             f.write(
-                f"  Pout={pout:>5.0%}:  no-swap={gf:7.2f}   swap={gs:7.2f}   gain={g:+.2f} dB\n"
+                f"  Pout={pout:>5.0%}:  no-swap={gf:7.2f}   swap={gs:7.2f}   "
+                f"optimal={go:7.2f}   gain={g:+.2f} dB   (swap->opt gap={go-gs:.2f} dB)\n"
             )
         f.write(
             f"  mean floor:  no-swap={fx_db.mean():.2f}   swap={sw_db.mean():.2f}   "
-            f"gain={sw_db.mean()-fx_db.mean():+.2f} dB\n"
+            f"optimal={op_db.mean():.2f}   gain={sw_db.mean()-fx_db.mean():+.2f} dB   "
+            f"(swap->opt gap={op_db.mean()-sw_db.mean():.2f} dB)\n"
         )
     for pout, gf, gs, g in lines:
         print(f"Pout={pout:.0%}: no-swap={gf:.2f} swap={gs:.2f} gain={g:+.2f} dB")

@@ -1,16 +1,50 @@
 /*
- * swap_allocator.cpp  -  implementation of the periodic worst-first swap.
+ * swap_allocator.cpp  -  periodic worst-first resource swap, with a
+ * yaml-selectable policy:
  *
- * Faithful port of periodic_swap_min_csi.m. The control flow mirrors the
- * MATLAB:  identify epsilon worst RUs  ->  generate candidate Type-1 (swap)
- * and Type-2 (replace-from-spare) operations  ->  apply them worst-first,
- * highest-gain-first, locking each RU once it has been touched this period.
+ *   policy: wrf   (Weakest Resource First)  -- the paper / original behaviour:
+ *                 key on the worst RU, pairwise swaps, normalised-gain ranking.
+ *   policy: wuf   (Weakest User First)      -- key on the weakest USER's served
+ *                 sum, pairwise swaps ranked by the resulting max-min floor.
+ *
+ * At rus_per_user == 1 the two target the same resource; they can still pick a
+ * different swap partner (WRF ranks by normalised gain, WUF by min(served_A,
+ * served_B)). At rus_per_user >= 2 they genuinely diverge, and WUF is the one
+ * aligned with the max-min objective. See tools/swap_policies.py for the
+ * offline twin of these two functions (identical logic, same decisions).
+ *
+ * ---- ADD TO swap_allocator.h ----------------------------------------------
+ *   enum class swap_policy { WRF, WUF };
+ *
+ *   // in struct swap_params:
+ *   swap_policy policy = swap_policy::WRF;   // set from yaml "policy:"
+ *
+ *   // free helper (declare in header, defined at bottom of this file):
+ *   swap_policy policy_from_string(const std::string& s);
+ *
+ *   // in class swap_allocator, private:
+ *   realloc_stats decide_wrf_(const csi_grid& csi);
+ *   realloc_stats decide_wuf_(const csi_grid& csi);
+ * ---------------------------------------------------------------------------
+ *
+ * ---- WHERE YOU BUILD swap_params FROM YAML --------------------------------
+ *   p.policy = swap_sched::policy_from_string(
+ *                  cfg["policy"] ? cfg["policy"].as<std::string>() : "wrf");
+ *   (defaults to WRF if the key is absent, so old configs are unchanged.)
+ *
+ * ---- LOGGER (swap.jsonl writer, wherever it lives) ------------------------
+ *   stamp the active policy on each decision line so captures are self-describing:
+ *       "policy":"wuf"
+ *   e.g. append  (params_.policy==swap_policy::WUF ? "wuf" : "wrf").
+ * ---------------------------------------------------------------------------
  */
 #include "swap_allocator.h"
 
 #include <algorithm>
 #include <numeric>
 #include <random>
+#include <string>
+#include <cctype>
 
 namespace swap_sched {
 
@@ -56,6 +90,9 @@ std::vector<unsigned> swap_allocator::ru_to_user() const {
   return owner;
 }
 
+// ---------------------------------------------------------------------------
+// step(): shared gating + CSI-snapshot selection, then dispatch on policy.
+// ---------------------------------------------------------------------------
 realloc_stats swap_allocator::step(const csi_grid& csi_now) {
   realloc_stats stats;
 
@@ -71,11 +108,22 @@ realloc_stats swap_allocator::step(const csi_grid& csi_now) {
   if (!need) {
     return stats; // ran == false
   }
-  stats.ran = true;
 
   // CSI snapshot used for the decision (possibly stale by allocation_delay).
   const std::size_t ref = static_cast<std::size_t>(std::max<long>(1, t_alloc));
   const csi_grid&   csi = csi_history_[ref - 1];
+
+  return (params_.policy == swap_policy::WUF) ? decide_wuf_(csi)
+                                              : decide_wrf_(csi);
+}
+
+// ---------------------------------------------------------------------------
+// WRF — faithful original: worst RU first, Type-1 swap + Type-2 spare,
+// normalised-gain ranking, lock touched RUs. (Unchanged logic.)
+// ---------------------------------------------------------------------------
+realloc_stats swap_allocator::decide_wrf_(const csi_grid& csi) {
+  realloc_stats stats;
+  stats.ran = true;
 
   const unsigned U = params_.num_users;
   const unsigned R = params_.num_rus();
@@ -203,6 +251,118 @@ realloc_stats swap_allocator::step(const csi_grid& csi_now) {
 }
 
 // ---------------------------------------------------------------------------
+// WUF — weakest USER first. Same lightweight pairwise machine, but:
+//   * the needy unit is the user with the smallest served sum (not the worst RU)
+//   * a candidate is ranked by the resulting max-min floor (the objective
+//     itself), min(served_A', served_B'), rather than normalised gain
+//   * epsilon = how many of the weakest users we try to lift this period
+// Reduces to the WRF *target* at rus_per_user == 1 (the weakest user owns the
+// worst RU); diverges once a user holds >= 2 RUs. Mirrors tools/swap_policies.py
+// policy_wuf exactly so the offline comparator predicts this live behaviour.
+// ---------------------------------------------------------------------------
+realloc_stats swap_allocator::decide_wuf_(const csi_grid& csi) {
+  realloc_stats stats;
+  stats.ran = true;
+
+  const unsigned U = params_.num_users;
+  const unsigned R = params_.num_rus();
+
+  // served[u] = sum of the user's CSI over the RUs it currently holds.
+  auto served_of = [&](unsigned u) {
+    double s = 0.0;
+    for (unsigned r : user_rus_[u]) s += csi[u][r];
+    return s;
+  };
+
+  // Spare RUs (unowned).
+  std::vector<char> is_owned(R, 0);
+  for (unsigned u = 0; u < U; ++u)
+    for (unsigned r : user_rus_[u]) is_owned[r] = 1;
+  std::vector<unsigned> spares;
+  for (unsigned r = 0; r < R; ++r)
+    if (!is_owned[r]) spares.push_back(r);
+
+  // The epsilon weakest users, ascending served.
+  std::vector<unsigned> users(U);
+  std::iota(users.begin(), users.end(), 0u);
+  std::sort(users.begin(), users.end(),
+            [&](unsigned a, unsigned b) { return served_of(a) < served_of(b); });
+  const unsigned num_weak = std::max<unsigned>(1u, std::min<unsigned>(params_.epsilon, U));
+  std::vector<unsigned> weak(users.begin(), users.begin() + num_weak);
+
+  std::vector<char> locked(R, 0);
+
+  for (unsigned A : weak) {
+    if (user_rus_[A].empty()) continue;
+
+    const double served_A = served_of(A);  // refreshed each weak-user turn
+
+    struct op {
+      int      type;        // 1 = swap A's ra with B's rb, 2 = take a spare
+      unsigned ra;          // A's RU being given up
+      unsigned target_ru;   // rb (type 1) or spare (type 2)
+      double   score;       // resulting max-min floor to rank by (higher better)
+      unsigned target_user; // B, type 1 only
+    };
+    std::vector<op> ops;
+
+    for (unsigned ra : user_rus_[A]) {
+      if (locked[ra]) continue;
+
+      // Type 1: swap A's ra with user B's rb if it raises min(served_A,served_B).
+      for (unsigned B = 0; B < U; ++B) {
+        if (B == A || user_rus_[B].empty()) continue;
+        const double served_B = served_of(B);
+        for (unsigned rb : user_rus_[B]) {
+          if (locked[rb]) continue;
+          const double sA2   = served_A - csi[A][ra] + csi[A][rb];
+          const double sB2   = served_B - csi[B][rb] + csi[B][ra];
+          const double dswap = std::min(sA2, sB2);
+          const double dcur  = std::min(served_A, served_B);
+          if (dswap > dcur) {
+            ops.push_back(op{1, ra, rb, dswap, B});
+          }
+        }
+      }
+
+      // Type 2: move A off ra onto a better spare (only helps A, hurts nobody).
+      for (unsigned sr : spares) {
+        if (locked[sr]) continue;
+        if (csi[A][sr] > csi[A][ra]) {
+          const double sA2 = served_A - csi[A][ra] + csi[A][sr];
+          ops.push_back(op{2, ra, sr, sA2, UNASSIGNED});
+        }
+      }
+    }
+
+    if (ops.empty()) continue;
+
+    // Pick the op that lifts the weakest user's floor the most.
+    std::sort(ops.begin(), ops.end(),
+              [](const op& a, const op& b) { return a.score > b.score; });
+    const op& o = ops.front();
+    const unsigned ra = o.ra, tr = o.target_ru;
+
+    if (o.type == 1) {
+      const unsigned B = o.target_user;
+      replace_in(user_rus_[A], ra, tr);
+      replace_in(user_rus_[B], tr, ra);
+      ++stats.swaps;
+    } else { // type 2: A takes the spare, ra becomes a spare.
+      replace_in(user_rus_[A], ra, tr);
+      // keep the spare set current for any later weak user this period
+      spares.erase(std::remove(spares.begin(), spares.end(), tr), spares.end());
+      spares.push_back(ra);
+      ++stats.replaces;
+    }
+    locked[ra] = 1;
+    locked[tr] = 1;
+  }
+
+  return stats;
+}
+
+// ---------------------------------------------------------------------------
 
 std::vector<double> user_served_csi(const std::vector<std::vector<unsigned>>& assignment,
                                     const csi_grid&                            csi) {
@@ -225,6 +385,14 @@ double weakest_user_csi(const std::vector<std::vector<unsigned>>& assignment,
     if (worst < 0.0 || s < worst) worst = s;
   }
   return worst; // -1 if nobody holds resources
+}
+
+// policy name (yaml string, case-insensitive) -> enum. Unknown -> WRF.
+swap_policy policy_from_string(const std::string& s) {
+  std::string t;
+  for (char c : s) t += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  if (t == "wuf" || t == "weakest_user" || t == "weakest-user") return swap_policy::WUF;
+  return swap_policy::WRF;
 }
 
 } // namespace swap_sched

@@ -4,9 +4,10 @@
 #include "scheduler_swap.h"
 #include "../slicing/slice_ue_repository.h" // for slice_ue accessors  // VERIFY path
 #include "ocudu/support/csi_grid_registry.h"
+#include <algorithm>
 #include <chrono>
 #include <fstream>
-#include <chrono>
+#include <vector>
 
 using namespace ocudu;
 
@@ -21,8 +22,101 @@ swap_sched::swap_params to_params(const swap_scheduler_config& c)
   p.epsilon           = c.epsilon;
   p.allocation_period = c.allocation_period;
   p.allocation_delay  = 0;
+  // NEW: pick the weakest-first policy from the yaml. Requires a
+  //   std::string policy = "wrf";
+  // field on swap_scheduler_config (see scheduler_expert_config.h). Absent /
+  // unknown -> WRF, so existing configs are unchanged.
+  p.policy            = swap_sched::policy_from_string(c.policy);
   return p;
 }
+
+// ---------------------------------------------------------------------------
+// Exhaustive max-min optimum, for LOGGING ONLY (decision-cost comparison).
+// Brute-forces every way to give each user rpu distinct RUs (disjoint) and
+// returns the best achievable weakest-user floor. This does NOT drive the
+// allocation — the swap still owns the air interface; we only compute the
+// oracle value + its compute time to log alongside the swap's alloc_us, giving
+// an apples-to-apples (C++, same CPU) swap-vs-optimal timing.
+//
+// WARNING: the number of assignments explodes with U and R. A guard caps it
+// so this can never stall the real-time scheduler; above the cap it is skipped
+// and logged as -1. Safe at the testbed scale (U=3,R=6 -> 90 assignments).
+// ---------------------------------------------------------------------------
+using csi_grid = swap_sched::csi_grid;
+using assignment = std::vector<std::vector<unsigned>>; // [user] -> owned RUs
+
+void mm_user(const csi_grid&, unsigned, unsigned, unsigned, unsigned,
+             std::vector<char>&, std::vector<double>&, assignment&, double&,
+             assignment&);
+
+void mm_comb(const csi_grid& csi, unsigned U, unsigned rpu, unsigned R,
+             unsigned user, unsigned start, unsigned k,
+             std::vector<unsigned>& pick, std::vector<char>& used,
+             std::vector<double>& served, assignment& cur, double& best,
+             assignment& bestA)
+{
+  if (k == 0) {
+    double s = 0.0;
+    for (unsigned r : pick) s += csi[user][r];
+    served[user] = s;
+    cur[user]    = pick;                 // record this user's chosen RU set
+    mm_user(csi, U, rpu, R, user + 1, used, served, cur, best, bestA);
+    return;
+  }
+  for (unsigned r = start; r < R; ++r) {
+    if (used[r]) continue;
+    used[r] = 1; pick.push_back(r);
+    mm_comb(csi, U, rpu, R, user, r + 1, k - 1, pick, used, served, cur, best, bestA);
+    pick.pop_back(); used[r] = 0;
+  }
+}
+
+void mm_user(const csi_grid& csi, unsigned U, unsigned rpu, unsigned R,
+             unsigned user, std::vector<char>& used, std::vector<double>& served,
+             assignment& cur, double& best, assignment& bestA)
+{
+  if (user == U) {
+    double w = served[0];
+    for (unsigned u = 1; u < U; ++u) w = std::min(w, served[u]);
+    if (w > best) { best = w; bestA = cur; }   // keep the WINNING assignment
+    return;
+  }
+  std::vector<unsigned> pick;
+  pick.reserve(rpu);
+  mm_comb(csi, U, rpu, R, user, 0, rpu, pick, used, served, cur, best, bestA);
+}
+
+// Returns the optimal weakest-user floor AND fills `bestA` with the assignment
+// that achieves it — so the timed work is "find + form the optimal allocation",
+// not merely compute a scalar.
+double exhaustive_maxmin(const csi_grid& csi, unsigned U, unsigned rpu, unsigned R,
+                         assignment& bestA)
+{
+  std::vector<char>   used(R, 0);
+  std::vector<double> served(U, 0.0);
+  assignment          cur(U);
+  double best = -1.0;
+  mm_user(csi, U, rpu, R, 0, used, served, cur, best, bestA);
+  return best;
+}
+
+// Number of valid assignments = prod_u C(R - u*rpu, rpu). Early-outs at the cap.
+unsigned long long mm_count(unsigned U, unsigned rpu, unsigned R)
+{
+  unsigned long long total = 1;
+  unsigned avail = R;
+  for (unsigned u = 0; u < U; ++u) {
+    if (avail < rpu) return 0;
+    unsigned long long c = 1;
+    for (unsigned i = 0; i < rpu; ++i) c = c * (avail - i) / (i + 1);
+    total *= c;
+    avail -= rpu;
+    if (total > 1000000ULL) return total; // huge -> caller will skip
+  }
+  return total;
+}
+
+constexpr unsigned long long MM_ASSIGN_CAP = 200000ULL; // real-time safety guard
 
 } // namespace
 
@@ -65,7 +159,7 @@ void scheduler_swap::rem_ue(du_ue_index_t ue_index)
 swap_sched::csi_grid scheduler_swap::build_csi_grid() const
 {
   const unsigned U = cfg.num_users;
-  const unsigned R = num_rus(); // This equals 4
+  const unsigned R = num_rus(); // = num_users*rus_per_user + num_redun (e.g. 6 at rus_per_user=2)
 
   // Initialize the grid mapping matrix for 4 RUs
   swap_sched::csi_grid csi(U, std::vector<double>(R, 1e-9));
@@ -170,6 +264,23 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
   auto _t1 = std::chrono::high_resolution_clock::now();
   double alloc_us = std::chrono::duration<double,std::micro>(_t1-_t0).count();
 
+  // LOGGING ONLY: exhaustive max-min optimum + its compute time, on the SAME
+  // CSI and CPU, so opt_alloc_us is directly comparable to the swap's alloc_us.
+  // Does NOT touch the allocation. Guarded so it can never stall the RT loop.
+  double opt_weakest = -1.0, opt_alloc_us = -1.0;
+  {
+    const unsigned Uu = cfg.num_users;
+    const unsigned Rr = num_rus();
+    if (mm_count(Uu, cfg.rus_per_user, Rr) <= MM_ASSIGN_CAP) {
+      assignment opt_assign(Uu);
+      auto _o0 = std::chrono::high_resolution_clock::now();
+      opt_weakest = exhaustive_maxmin(csi, Uu, cfg.rus_per_user, Rr, opt_assign);
+      auto _o1 = std::chrono::high_resolution_clock::now();
+      opt_alloc_us = std::chrono::duration<double,std::micro>(_o1-_o0).count();
+      // opt_assign now holds the optimal allocation (not applied — oracle only).
+    }
+  }
+
   // --- metrics: one JSON line per period ---
   if (!metrics_log.is_open()) {
     metrics_log.open("/tmp/swap_metrics.jsonl", std::ios::app);
@@ -207,7 +318,18 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
       }
       metrics_log << "]}";
     }
-    metrics_log << "],\"weakest_user_csi\":" << weakest << ",\"alloc_us\":" << alloc_us << "}\n";
+    // NEW: stamp the active policy and R so each capture is self-describing.
+    // The offline tools (swap_policies.py / plot_outage.py) can then auto-set
+    // --rus-per-user and label WRF vs WUF without a side file.
+    metrics_log << "],\"weakest_user_csi\":" << weakest
+                << ",\"alloc_us\":" << alloc_us
+                << ",\"opt_weakest\":" << opt_weakest
+                << ",\"opt_alloc_us\":" << opt_alloc_us
+                << ",\"policy\":\""
+                << (swap_sched::policy_from_string(cfg.policy) == swap_sched::swap_policy::WUF
+                        ? "wuf" : "wrf")
+                << "\",\"rus_per_user\":" << cfg.rus_per_user
+                << "}\n";
     metrics_log.flush();
   }
 }

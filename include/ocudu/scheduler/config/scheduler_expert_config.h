@@ -17,6 +17,7 @@
 #include "ocudu/ran/slot_pdu_capacity_constants.h"
 #include "ocudu/ran/srs/srs_configuration.h"
 #include <chrono>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -59,6 +60,8 @@ struct swap_scheduler_config {
   unsigned allocation_period = 1;   // in SRS periods
   unsigned rbs_per_ru        = 1;   // RBs per RU (match the PHY-side ru_size_rbs)
   unsigned swap_period_slots = 20;  // run step() this often; tie to your SRS period
+  std::string policy         = "wrf"; // "wrf" (paper / worst-RU) or "wuf" (weakest-user);
+                                      // unknown/absent -> wrf, so old configs are unchanged
 };
 
 

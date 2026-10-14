@@ -226,11 +226,7 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
     # weakest-user metrics (no per-user labels), so they take --min-users but not
     # --sessions. Each also writes a .txt sidecar with the numbers.
     if [ -s "$D/$BASE.swap.jsonl" ]; then
-      python3 "$REPO/tools/swap_analysis.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_swapbenefit.png" --snr0 10 || true
-      python3 "$REPO/tools/plot_weakest.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_weakest.png" --min-users "${NUM_USERS:-3}" \
-              ${SESSIONS:+--sessions "$SESSIONS"} || true
+
       # weakest-user outage CDF (the paper's benefit metric, eq 13)
       python3 "$REPO/tools/plot_outage.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_outage.png" --min-users "${NUM_USERS:-3}" \
@@ -245,7 +241,6 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
             ${SESSIONS:+--sessions "$SESSIONS"} || true
 
     cd "$REPO"
-    git add "$D" datasets/mobility_sweep.csv tools/
     # Keep large / raw / derivable artifacts LOCAL-ONLY. GitHub hard-rejects any
     # file >100 MB (the full PHY log), and the raw per-RB capture (rb.jsonl.gz)
     # plus its expanded per-RU .jsonl are bulky and regenerable/archival — so
