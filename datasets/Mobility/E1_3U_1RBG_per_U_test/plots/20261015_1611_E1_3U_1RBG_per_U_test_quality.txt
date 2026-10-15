@@ -1,0 +1,9 @@
+swap decision quality — 20261015_1611_E1_3U_1RBG_per_U_test
+slots=45813 users=3 RUs=3
+
+OPTIMALITY: 91.6% of slots hit the true max-min optimum
+  gap-to-optimum: mean 0.065 dB, p90 0.00 dB, max 5.65 dB
+WEAKEST ON OWN BEST RU: 86.4% of slots
+CAPTURED-GAIN RATIO: 94% (best-fixed -39.20 -> swap -38.16 -> ceiling -38.10 dB)
+ALLOC TIME (swap): mean 2.99 us, p99 12.21 us, max 164.53 us
+ALLOC TIME (optimal, exhaustive, same CPU): mean 3.16 us, p99 12.04 us, max 35.28 us (optimal/swap = 1.1x)
