@@ -329,6 +329,7 @@ void scheduler_swap::maybe_run_swap(slot_point sl, span<ue_newtx_candidate> cand
                 << (swap_sched::policy_from_string(cfg.policy) == swap_sched::swap_policy::WUF
                         ? "wuf" : "wrf")
                 << "\",\"rus_per_user\":" << cfg.rus_per_user
+                << ",\"epsilon\":" << cfg.epsilon
                 << "}\n";
     metrics_log.flush();
   }

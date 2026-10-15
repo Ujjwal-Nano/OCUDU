@@ -1,9 +1,10 @@
 weakest-user outage — 20261012_1502_Experiment_1
-slots=57742 users=3 RUs=3
-best fixed assignment (brute-forced): user->RU (1, 0, 2)
+slots=57742 users=3 RUs=3 rus_per_user=1
+best  fixed assignment (brute-forced): user->RUs [[1], [0], [2]]
+worst fixed assignment (brute-forced): user->RUs [[0], [2], [1]]
 
 outage threshold Gamma_th (dB) at each outage probability:
-  Pout=   1%:  no-swap= -38.13   swap= -36.71   gain=+1.42 dB
-  Pout=   5%:  no-swap= -36.16   swap= -35.06   gain=+1.10 dB
-  Pout=  10%:  no-swap= -35.18   swap= -34.30   gain=+0.88 dB
-  mean floor:  no-swap=-31.11   swap=-29.94   gain=+1.17 dB
+  Pout=   1%:  worst-fixed= -37.87   random= -38.29   best-fixed= -38.13   swap= -36.71   optimal= -36.64   gain(swap vs best-fixed)=+1.42 dB   (swap->opt gap=0.07 dB)
+  Pout=   5%:  worst-fixed= -36.39   random= -36.60   best-fixed= -36.16   swap= -35.06   optimal= -35.00   gain(swap vs best-fixed)=+1.10 dB   (swap->opt gap=0.05 dB)
+  Pout=  10%:  worst-fixed= -35.64   random= -35.65   best-fixed= -35.18   swap= -34.30   optimal= -34.25   gain(swap vs best-fixed)=+0.88 dB   (swap->opt gap=0.05 dB)
+  mean floor:  worst-fixed=-31.45   random=-31.40   best-fixed=-31.11   swap=-29.94   optimal=-29.90   gain(swap vs best-fixed)=+1.17 dB   (swap->opt gap=0.04 dB)

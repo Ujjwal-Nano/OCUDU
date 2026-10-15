@@ -7,14 +7,24 @@ OUTAGE curve (the paper's metric, eq 13):
     outage prob Pout = P( weakest-user power < Gamma_th )
 
 so reading the curve at a given outage probability gives the outage threshold
-Gamma_th at that reliability level. Two curves:
+Gamma_th at that reliability level. Curves:
 
-    no swap : each user frozen on the BEST FIXED assignment (brute-forced over
-              all permutations -> the strongest static baseline, not random)
-    swap    : the weakest-user floor the scheduler actually achieved (served)
+    no swap (best fixed)        : every user frozen on the single best static
+                                  assignment (brute-forced -> strongest static
+                                  baseline).
+    no swap (worst fixed)       : frozen on the single WORST static assignment
+                                  (brute-forced -> weakest static baseline).
+    no swap (random per slot)   : channel-blind allocator that picks a random
+                                  assignment each slot; its floor distribution
+                                  is exactly the pool of all assignments over
+                                  all slots (ensemble, no Monte-Carlo noise).
+    swap (max-min)              : weakest-user floor the scheduler achieved.
+    optimal (per-slot max-min)  : oracle best assignment every slot.
 
 The swap curve sits at higher power for every outage probability; the gain is
-largest in the tail (low Pout) -- exactly where URLLC reliability is set.
+largest in the tail (low Pout) -- exactly where URLLC reliability is set. The
+best/worst fixed and random curves bracket what any static or blind scheme can
+do, so the swap gain can be read against all three.
 
 Power only: 10*log10 of the measured CSI. No rate/throughput modelling.
 
@@ -62,7 +72,13 @@ def all_floors(C, asgs, U):
 
 
 def load(path, min_users):
+    """Return (slots, meta). meta carries the gNB-side policy ('wrf'/'wuf') and
+    rus_per_user as logged by the scheduler, so the plot can label the swap
+    curve by the yaml policy and brute-force the baselines at the SAME RU
+    granularity the gNB actually used (prevents swap appearing to beat the
+    oracle when R>=2 is plotted with the wrong rus_per_user)."""
     slots = []
+    meta = {"policy": None, "rus_per_user": None, "epsilon": None}
     for ln in open(path):
         ln = ln.strip()
         if not ln:
@@ -71,6 +87,14 @@ def load(path, min_users):
             d = json.loads(ln)
         except json.JSONDecodeError:
             continue
+        if meta["policy"] is None and d.get("policy") is not None:
+            meta["policy"] = str(d["policy"])
+        if meta["rus_per_user"] is None and d.get("rus_per_user") is not None:
+            meta["rus_per_user"] = int(d["rus_per_user"])
+        if meta["epsilon"] is None:
+            ev = d.get("epsilon", d.get("eps"))
+            if ev is not None:
+                meta["epsilon"] = float(ev)
         real = [
             u
             for u in d.get("users", [])
@@ -78,7 +102,7 @@ def load(path, min_users):
         ]
         if len(real) >= min_users:
             slots.append(real)
-    return slots
+    return slots, meta
 
 
 def main():
@@ -89,13 +113,21 @@ def main():
     ap.add_argument(
         "--rus-per-user",
         type=int,
-        default=1,
-        help="RUs owned per user (R>=2 brute-forces group assignments)",
+        default=None,
+        help="RUs owned per user; default: read from log, else 1 "
+        "(R>=2 brute-forces group assignments)",
+    )
+    ap.add_argument(
+        "--epsilon",
+        type=float,
+        default=None,
+        help="swap acceptance threshold ε shown in the swap legend; "
+        "default: read from log if present, else omitted",
     )
     ap.add_argument("--label", default=None)
     a = ap.parse_args()
 
-    slots = load(a.swaplog, a.min_users)
+    slots, meta = load(a.swaplog, a.min_users)
     if not slots:
         sys.exit("no usable >= %d-user slots in %s" % (a.min_users, a.swaplog))
     U = min(len(s) for s in slots)
@@ -108,22 +140,42 @@ def main():
         csis.append([np.asarray(u["csi"], float) for u in us])
     ach = np.array(ach)
 
-    # BEST FIXED assignment: brute force all ways to give each user rpu distinct
-    # RUs, pick the one with the highest mean weakest-user floor over the run.
+    # brute force all ways to give each user rpu distinct RUs -> floor per slot
     R = len(csis[0][0])
-    rpu = a.rus_per_user
+    # RU granularity: explicit CLI flag wins; otherwise take what the gNB logged
+    # (so the baselines are brute-forced at the same granularity the scheduler
+    # actually used); fall back to 1 for old captures without the field.
+    if a.rus_per_user is not None:
+        rpu, rpu_src = a.rus_per_user, "cli"
+    elif meta["rus_per_user"]:
+        rpu, rpu_src = meta["rus_per_user"], "log"
+    else:
+        rpu, rpu_src = 1, "default"
     if U * rpu > R:
         sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
+    # swap acceptance threshold ε for the legend: CLI wins, else log, else none
+    eps = a.epsilon if a.epsilon is not None else meta["epsilon"]
     asgs = assignments(U, R, rpu)
     C = np.asarray(csis, float)  # (n_slots, U, R)
     af = all_floors(C, asgs, U)  # (n_assignments, n_slots)
-    best_i = int(af.mean(axis=1).argmax())
+
+    mean_floor = af.mean(axis=1)
+    best_i = int(mean_floor.argmax())
+    worst_i = int(mean_floor.argmin())
     best_asg = asgs[best_i]
-    fix = af[best_i]
+    worst_asg = asgs[worst_i]
+    fix = af[best_i]  # no swap, best fixed
+    wfix = af[worst_i]  # no swap, worst fixed
     opt = af.max(axis=0)  # per-slot max-min optimum (oracle)
+    # no swap, random allocation per slot: picking a uniform-random assignment
+    # each slot gives a floor whose distribution is exactly the pool of every
+    # assignment over every slot (ensemble average, no Monte-Carlo noise).
+    rnd = af.ravel()
 
     sw_db = 10 * np.log10(np.maximum(ach, EPS))
     fx_db = 10 * np.log10(np.maximum(fix, EPS))
+    wf_db = 10 * np.log10(np.maximum(wfix, EPS))
+    rn_db = 10 * np.log10(np.maximum(rnd, EPS))
     op_db = 10 * np.log10(np.maximum(opt, EPS))
 
     # OUTAGE curve: Pout(x) = fraction of slots with floor < x  (== empirical CDF)
@@ -133,14 +185,32 @@ def main():
         return xs, p
 
     xf, pf = outage(fx_db)
+    xw, pw = outage(wf_db)
+    xr, pr = outage(rn_db)
     xs, ps = outage(sw_db)
     xo, po = outage(op_db)
 
     fig, ax = plt.subplots(figsize=(9.5, 6))
+    ax.semilogy(xf, pf, color="tab:red", lw=2.4, label="no swap  (best fixed)")
     ax.semilogy(
-        xf, pf, color="tab:red", lw=2.4, label="no swap  (best fixed assignment)"
+        xr,
+        pr,
+        color="tab:purple",
+        lw=2.0,
+        ls="-.",
+        label="no swap  (randomly allocated per slot)",
     )
-    ax.semilogy(xs, ps, color="tab:blue", lw=2.4, label="swap  (max-min)")
+    ax.semilogy(
+        xw, pw, color="tab:brown", lw=2.0, ls=":", label="no swap  (worst fixed)"
+    )
+    # swap curve labelled by the gNB policy (from the log); falls back to the
+    # generic objective name for captures that predate policy logging.
+    pol = meta["policy"]
+    base = pol.upper() if pol else "max-min"
+    swap_label = (
+        f"swap  ({base}, $\\epsilon$={eps:g})" if eps is not None else f"swap  ({base})"
+    )
+    ax.semilogy(xs, ps, color="tab:blue", lw=2.4, label=swap_label)
     ax.semilogy(
         xo, po, color="tab:green", lw=2.0, ls="--", label="optimal  (per-slot max-min)"
     )
@@ -148,12 +218,12 @@ def main():
     ax.set_ylabel(
         "outage probability  $P(\\,\\Gamma_{min} < \\Gamma_{th}\\,)$", fontsize=14
     )
-    ax.set_title("Weakest-user outage", fontsize=12.5)
+    ax.set_title(f"Weakest-user outage  —  {rpu} RBG/user", fontsize=12.5)
     ax.grid(alpha=0.3, which="both")
-    ax.legend(fontsize=12, loc="lower right")
+    ax.legend(fontsize=11, loc="lower right")
     ax.set_ylim(max(1.0 / len(sw_db), 5e-4), 1.0)
 
-    # annotate the gain at 1% and 5% outage
+    # gain of swap over the best-fixed baseline at a few outage probabilities
     lines = []
     for pout in [0.01, 0.05, 0.10]:
         gf = np.percentile(fx_db, pout * 100)
@@ -169,26 +239,35 @@ def main():
         lbl = a.label or a.swaplog.split("/")[-1]
         f.write(
             f"weakest-user outage — {lbl}\nslots={len(slots)} users={U} RUs={R} "
-            f"rus_per_user={rpu}\n"
+            f"rus_per_user={rpu} (from {rpu_src})   policy={pol or 'n/a'}\n"
         )
-        f.write(f"best fixed assignment (brute-forced): user->RUs {best_asg}\n\n")
+        f.write(f"best  fixed assignment (brute-forced): user->RUs {best_asg}\n")
+        f.write(f"worst fixed assignment (brute-forced): user->RUs {worst_asg}\n\n")
         f.write("outage threshold Gamma_th (dB) at each outage probability:\n")
         for pout, gf, gs, g in lines:
+            gw = np.percentile(wf_db, pout * 100)
+            gr = np.percentile(rn_db, pout * 100)
             go = np.percentile(op_db, pout * 100)
             f.write(
-                f"  Pout={pout:>5.0%}:  no-swap={gf:7.2f}   swap={gs:7.2f}   "
-                f"optimal={go:7.2f}   gain={g:+.2f} dB   (swap->opt gap={go-gs:.2f} dB)\n"
+                f"  Pout={pout:>5.0%}:  worst-fixed={gw:7.2f}   random={gr:7.2f}   "
+                f"best-fixed={gf:7.2f}   swap={gs:7.2f}   optimal={go:7.2f}   "
+                f"gain(swap vs best-fixed)={g:+.2f} dB   (swap->opt gap={go-gs:.2f} dB)\n"
             )
         f.write(
-            f"  mean floor:  no-swap={fx_db.mean():.2f}   swap={sw_db.mean():.2f}   "
-            f"optimal={op_db.mean():.2f}   gain={sw_db.mean()-fx_db.mean():+.2f} dB   "
+            f"  mean floor:  worst-fixed={wf_db.mean():.2f}   random={rn_db.mean():.2f}   "
+            f"best-fixed={fx_db.mean():.2f}   swap={sw_db.mean():.2f}   "
+            f"optimal={op_db.mean():.2f}   gain(swap vs best-fixed)="
+            f"{sw_db.mean()-fx_db.mean():+.2f} dB   "
             f"(swap->opt gap={op_db.mean()-sw_db.mean():.2f} dB)\n"
         )
     for pout, gf, gs, g in lines:
-        print(f"Pout={pout:.0%}: no-swap={gf:.2f} swap={gs:.2f} gain={g:+.2f} dB")
+        print(f"Pout={pout:.0%}: best-fixed={gf:.2f} swap={gs:.2f} gain={g:+.2f} dB")
     print(
-        f"mean: no-swap={fx_db.mean():.2f} swap={sw_db.mean():.2f} gain={sw_db.mean()-fx_db.mean():+.2f} dB"
+        f"mean: worst-fixed={wf_db.mean():.2f} random={rn_db.mean():.2f} "
+        f"best-fixed={fx_db.mean():.2f} swap={sw_db.mean():.2f} "
+        f"gain={sw_db.mean()-fx_db.mean():+.2f} dB"
     )
+    print(f"policy={pol or 'n/a'}  rus_per_user={rpu} (from {rpu_src})")
     print("wrote", a.out, "and", txt)
 
 

@@ -235,6 +235,11 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
       python3 "$REPO/tools/swap_decision_quality.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_quality.png" --min-users "${NUM_USERS:-3}" \
               --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
+              
+      # weakest-user outage vs swap depth epsilon (offline replay, eps=1..4)
+      python3 "$REPO/tools/plot_outage_epsilon.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_outage_epssweep.png" --min-users "${NUM_USERS:-3}" \
+              --eps-list 1,2,3,4 --label "$BASE" || true
     fi
     python3 "$REPO/tools/plot_rbg_power.py" "$D/$BASE.rb.jsonl.gz" \
             -o "$P/${BASE}_rbgpower.png" --K "$RBS_PER_RU" \

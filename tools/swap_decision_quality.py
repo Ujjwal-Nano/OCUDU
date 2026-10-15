@@ -65,8 +65,16 @@ def main():
     ap.add_argument(
         "--rus-per-user",
         type=int,
-        default=1,
-        help="RUs owned per user (R>=2 brute-forces group assignments)",
+        default=None,
+        help="RUs owned per user; default: read from log, else 1 "
+        "(R>=2 brute-forces group assignments)",
+    )
+    ap.add_argument(
+        "--epsilon",
+        type=float,
+        default=None,
+        help="swap ε (worst RUs reconsidered each period) shown in the title; "
+        "default: read from log if present",
     )
     ap.add_argument("--label", default=None)
     ap.add_argument(
@@ -81,6 +89,7 @@ def main():
     a = ap.parse_args()
 
     slots, alloc, opt_alloc = [], [], []
+    meta = {"policy": None, "rus_per_user": None, "epsilon": None}
     for ln in open(a.swaplog):
         ln = ln.strip()
         if not ln:
@@ -89,6 +98,14 @@ def main():
             d = json.loads(ln)
         except json.JSONDecodeError:
             continue
+        if meta["policy"] is None and d.get("policy") is not None:
+            meta["policy"] = str(d["policy"])
+        if meta["rus_per_user"] is None and d.get("rus_per_user") is not None:
+            meta["rus_per_user"] = int(d["rus_per_user"])
+        if meta["epsilon"] is None:
+            ev = d.get("epsilon", d.get("eps"))
+            if ev is not None:
+                meta["epsilon"] = float(ev)
         if "alloc_us" in d:
             alloc.append(float(d["alloc_us"]))
         # optimal (exhaustive) decision time, logged live when present (>=0);
@@ -114,13 +131,21 @@ def main():
         csis.append([np.asarray(u["csi"], float) for u in us])
     ach = np.array(ach)
 
-    rpu = a.rus_per_user
+    # RU granularity: CLI wins, else what the gNB logged, else 1 (old captures)
+    if a.rus_per_user is not None:
+        rpu = a.rus_per_user
+    elif meta["rus_per_user"]:
+        rpu = meta["rus_per_user"]
+    else:
+        rpu = 1
+    eps = a.epsilon if a.epsilon is not None else meta["epsilon"]
+    pol = meta["policy"]
     if U * rpu > R:
         sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
     asgs = assignments(U, R, rpu)
-    C = np.asarray(csis, float)                 # (n_slots, U, R)
-    af = all_floors(C, asgs, U)                 # (n_assignments, n_slots)
-    ceil = af.max(axis=0)                        # per-slot max-min optimum
+    C = np.asarray(csis, float)  # (n_slots, U, R)
+    af = all_floors(C, asgs, U)  # (n_assignments, n_slots)
+    ceil = af.max(axis=0)  # per-slot max-min optimum
     gap_db = 10 * np.log10(np.maximum(ceil, EPS) / np.maximum(ach, EPS))
     gap_db = np.maximum(gap_db, 0.0)
     opt_pct = 100.0 * np.mean(gap_db < 1e-3)
@@ -173,18 +198,26 @@ def main():
     # box = IQR (p25-p75), line = median, diamond = mean, whiskers = p1..p99.
     if np.isfinite(alloc).any():
         groups = [alloc[np.isfinite(alloc)]]
-        names  = ["swap"]
+        names = ["swap"]
         colors = ["tab:blue"]
         if opt_alloc.size:
             groups.append(opt_alloc)
             names.append("optimal")
             colors.append("tab:orange")
         bp = ax[1].boxplot(
-            groups, showmeans=True, whis=(1, 99), showfliers=False, widths=0.5,
+            groups,
+            showmeans=True,
+            whis=(1, 99),
+            showfliers=False,
+            widths=0.5,
             patch_artist=True,
             medianprops=dict(color="black", lw=1.5),
-            meanprops=dict(marker="D", markerfacecolor="white",
-                           markeredgecolor="black", markersize=7),
+            meanprops=dict(
+                marker="D",
+                markerfacecolor="white",
+                markeredgecolor="black",
+                markersize=7,
+            ),
         )
         for patch, c in zip(bp["boxes"], colors):
             patch.set_facecolor(c)
@@ -193,8 +226,12 @@ def main():
         for i, g in enumerate(groups, start=1):
             m = float(np.mean(g))
             ax[1].annotate(
-                f"mean {m:.1f} µs", xy=(i, m), ha="center", va="bottom",
-                fontsize=11, fontweight="bold",
+                f"mean {m:.1f} µs",
+                xy=(i, m),
+                ha="center",
+                va="bottom",
+                fontsize=11,
+                fontweight="bold",
                 bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="0.6", alpha=0.9),
             )
         ax[1].set_xticks(range(1, len(names) + 1))
@@ -207,7 +244,14 @@ def main():
         ax[1].text(0.5, 0.5, "no alloc_us in log", ha="center", va="center")
         ax[1].axis("off")
 
-    fig.suptitle("Swap decision quality", fontsize=18)
+    # self-describing title from the log: policy, RBG/user, epsilon
+    bits = []
+    if pol:
+        bits.append(pol.upper())
+    bits.append(f"{rpu} RBG/user")
+    if eps is not None:
+        bits.append(f"$\\epsilon$={eps:g}")
+    fig.suptitle("Swap decision quality  —  " + ", ".join(bits), fontsize=18)
     # NOTE: don't call tight_layout here — it overrides wspace. Set margins + gap manually.
     fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.12, wspace=0.30)
     fig.savefig(a.out, dpi=140)

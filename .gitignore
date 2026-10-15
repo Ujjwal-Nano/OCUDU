@@ -10,3 +10,4 @@
 build/
 *.bak
 *.swp
+tools/__pycache__/
