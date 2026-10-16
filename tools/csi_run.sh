@@ -240,6 +240,10 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
       python3 "$REPO/tools/plot_outage_epsilon.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_outage_epssweep.png" --min-users "${NUM_USERS:-3}" \
               --eps-list 1,2,3,4 --label "$BASE" || true
+              
+      python3 "$REPO/tools/compare_algorithms.py" "$D/$BASE.swap.jsonl" \
+        -o "$P/${BASE}_algocmp" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
+        
     fi
     python3 "$REPO/tools/plot_rbg_power.py" "$D/$BASE.rb.jsonl.gz" \
             -o "$P/${BASE}_rbgpower.png" --K "$RBS_PER_RU" \

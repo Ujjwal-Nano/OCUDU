@@ -1,0 +1,42 @@
+algorithm comparison — 20261016_1334_E1_3U_1RBG_per_UE
+slots=49767 users=3 RUs=3 rus_per_user=1 epsilon=1  (policy logged=wrf)
+
+PERFORMANCE (floor, computed offline)  +  DECISION COST
+  gNB us/slot = real C++ time on the base station CPU (apples-to-apples).
+  py-ref us   = same-CPU python, RELATIVE reference only — not a hardware result.
+
+algorithm    mean floor(dB)   @1%(dB)  gNB us/slot  py-ref us
+-------------------------------------------------------------
+Exhaustive           -37.39    -43.41        3.405     13.363
+Max-Min              -37.39    -43.41        2.863    759.384
+Preference           -37.41    -43.41        0.695     19.323
+Bulk                 -37.41    -43.41        2.839     23.091
+GGM                  -37.44    -43.49        3.103     12.268
+WRF                  -37.44    -43.49        3.103     10.491
+WUF                  -37.40    -43.41        3.103     16.213
+
+gap to Exhaustive (mean floor, dB) — lower is better:
+  Max-Min     +0.000
+  Preference  +0.022
+  Bulk        +0.022
+  GGM         +0.051
+  WRF         +0.051
+  WUF         +0.013
+
+  WRF vs Max-Min: floor -0.051 dB, 1x faster on the gNB (3.103 vs 2.863 us/decision)
+  WUF vs Max-Min: floor -0.013 dB, 1x faster on the gNB (3.103 vs 2.863 us/decision)
+  GGM vs Max-Min: floor -0.051 dB, 1x faster on the gNB (3.103 vs 2.863 us/decision)
+
+DECISION TIME on the gNB CPU (us) — epsilon-swept for WRF/GGM, single for the rest (eps='-'):
+  algorithm     eps      mean       p50       p99       max
+  WRF             1     1.970     1.756     9.591    26.555
+  GGM             1     0.611     0.554     0.929    15.731
+  WRF             2     1.165     0.915     3.307    22.050
+  GGM             2     0.620     0.513     1.042    21.543
+  WRF             4     0.862     0.734     1.329    19.033
+  GGM             4     0.578     0.502     0.853    14.218
+  Max-Min         -     2.863     2.612    11.539    28.401
+  Preference      -     0.695     0.649     0.775    21.813
+  Bulk            -     2.839     2.611    11.117    26.774
+  Exhaustive      -     3.405     3.065    12.488    35.952
+  swap-applied    -     3.103     2.380    13.016   539.482
