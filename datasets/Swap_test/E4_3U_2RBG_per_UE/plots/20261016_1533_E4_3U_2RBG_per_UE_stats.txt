@@ -1,0 +1,13 @@
+dataset: /home/tud/OCUDU/datasets/Swap_test/E4_3U_2RBG_per_UE/20261016_1533_E4_3U_2RBG_per_UE.jsonl
+
+user 999420000020049: 64846 samples, 8 segment(s)
+  best-RBG fraction: RBG0=17.8%, RBG1=17.2%, RBG2=13.0%, RBG3=19.4%, RBG4=16.0%, RBG5=16.7%
+  total switches: 40508   zoom: 11.18-11.52 min
+
+user 999420000020051: 63842 samples, 39 segment(s)
+  best-RBG fraction: RBG0=2.7%, RBG1=9.8%, RBG2=25.9%, RBG3=44.7%, RBG4=13.9%, RBG5=3.0%
+  total switches: 41673   zoom: 10.75-11.08 min
+
+user 999420000020052: 64997 samples, 2 segment(s)
+  best-RBG fraction: RBG0=11.0%, RBG1=13.2%, RBG2=17.8%, RBG3=27.2%, RBG4=18.4%, RBG5=12.4%
+  total switches: 32863   zoom: 19.02-19.35 min
