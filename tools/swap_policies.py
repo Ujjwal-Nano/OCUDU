@@ -42,6 +42,7 @@ USAGE
   python3 swap_policies.py swap.jsonl --rus-per-user 1 -o out/cmp
   python3 swap_policies.py --rb cap.rb.jsonl --rbs-per-ru 8 --rus-per-user 2 -o out/cmp
 """
+
 import argparse, json, sys, itertools, copy, time
 import numpy as np
 
@@ -104,7 +105,7 @@ def policy_wrf(user_rus, csi, epsilon=1, num_redun=0):
         if locked[wr]:
             continue
         ru_ops = sorted([o for o in ops if o[1] == wr], key=lambda o: -o[3])
-        for (typ, _wr, tr, gain, B) in ru_ops:
+        for typ, _wr, tr, gain, B in ru_ops:
             if locked[wr] or locked[tr] or gain <= 0.0:
                 continue
             A = owner[wr]
@@ -126,64 +127,88 @@ def policy_wrf(user_rus, csi, epsilon=1, num_redun=0):
 
 
 def policy_wuf(user_rus, csi, epsilon=1, num_redun=0):
-    """Weakest-USER-first analog: same lightweight pairwise machine, keyed on the
-    weakest user's served SUM. Reduces exactly to WRF when every user holds one
-    RU. epsilon = how many of the weakest users we attempt to lift this period."""
+    """Weakest-USER-first: WRF's EXACT pairwise machinery (identical candidate
+    generation, acceptance test, and normalised gain) — the ONLY difference is
+    which RUs are reconsidered and in what order. WRF reconsiders the epsilon
+    globally-worst RUs; WUF reconsiders every RU of the epsilon WEAKEST USERS
+    (lowest served sum), visited weakest-user-first and worst-RU-first within a
+    user. At rpu=1 each user owns one RU, so the weakest users ARE the worst RUs
+    and this reduces EXACTLY to WRF; the two diverge only at rpu>=2, where a
+    user's RUs differ from the globally-worst RUs. epsilon = number of weakest
+    users lifted this period."""
     U = len(user_rus)
     R = len(csi[0])
     ur = [list(x) for x in user_rus]
-    spares = [r for r in range(R) if all(r not in ur[u] for u in range(U))]
+    owner = [UNASSIGNED] * R
+    ru_perf = [0.0] * R
+    served = [0.0] * U
+    for u in range(U):
+        for r in ur[u]:
+            owner[r] = u
+            ru_perf[r] = csi[u][r]
+            served[u] += csi[u][r]
+    spares = [r for r in range(R) if owner[r] == UNASSIGNED]
 
-    served = _served(ur, csi)
-    weak_order = sorted(range(U), key=lambda u: served[u])[: max(1, epsilon)]
+    # worst set = the RUs of the epsilon weakest users (by served sum), ordered
+    # weakest-user-first, and worst-RU-first within each user.
+    weak_users = sorted(range(U), key=lambda u: served[u])[: max(1, min(epsilon, U))]
+    worst = []
+    for u in weak_users:
+        for r in sorted(ur[u], key=lambda r: csi[u][r]):
+            worst.append(r)
 
-    locked = [0] * R
-    stats = {"swaps": 0, "replaces": 0, "ran": True}
-
-    for A in weak_order:
-        if not ur[A]:
-            continue
-        served = _served(ur, csi)  # refresh after any prior apply this period
-        ops = []  # (type, ra, target_ru, d_swap, B)
-        for ra in ur[A]:
-            if locked[ra]:
+    # ---- candidate generation: identical to WRF ----
+    ops = []  # (type, worst_ru, target_ru, gain, target_user)
+    for wr in worst:
+        A = owner[wr]
+        c_A_worst = csi[A][wr]
+        for B in range(U):  # Type 1: swap with user B's RU
+            if B == A or not ur[B]:
                 continue
-            # Type 1: swap A's ra with some B's rb, improving min(served_A,served_B)
-            for B in range(U):
-                if B == A or not ur[B]:
-                    continue
-                for rb in ur[B]:
-                    if locked[rb]:
-                        continue
-                    sA2 = served[A] - csi[A][ra] + csi[A][rb]
-                    sB2 = served[B] - csi[B][rb] + csi[B][ra]
-                    d_swap = min(sA2, sB2)
-                    d_cur = min(served[A], served[B])
-                    if d_swap > d_cur:
-                        ops.append((1, ra, rb, d_swap, B))
-            # Type 2: move A off ra onto a better spare (raises served[A])
-            for sr in spares:
-                if locked[sr]:
-                    continue
-                if csi[A][sr] > csi[A][ra]:
-                    sA2 = served[A] - csi[A][ra] + csi[A][sr]
-                    ops.append((2, ra, sr, sA2, UNASSIGNED))
-        if not ops:
+            for tr in ur[B]:
+                c_A_target = csi[A][tr]
+                c_B_worst = csi[B][wr]
+                c_B_target = csi[B][tr]
+                d_swap = min(c_A_target, c_B_worst)
+                d_current = min(c_A_worst, c_B_target)
+                if d_swap > d_current and c_A_worst < c_A_target:
+                    ops.append((1, wr, tr, (d_swap - d_current) / c_B_worst, B))
+        for sr in spares:  # Type 2: take a better spare
+            c_A_spare = csi[A][sr]
+            if c_A_spare > c_A_worst:
+                ops.append((2, wr, sr, (c_A_spare - c_A_worst) / c_A_worst, UNASSIGNED))
+
+    stats = {"swaps": 0, "replaces": 0, "ran": True}
+    if not ops:
+        return ur, stats
+
+    # ---- execution: identical to WRF (one best swap per worst RU, by gain),
+    #      visited in the weakest-user-first order built above (NOT re-sorted
+    #      by RU power, which is the only thing that would turn this back into
+    #      WRF at rpu>=2). ----
+    locked = [0] * R
+    for wr in worst:
+        if locked[wr]:
             continue
-        # pick the op that lifts the weakest user's floor the most
-        ops.sort(key=lambda o: -o[3])
-        typ, ra, tr, _d, B = ops[0]
-        if typ == 1:
-            _replace(ur[A], ra, tr)
-            _replace(ur[B], tr, ra)
-            locked[ra] = locked[tr] = 1
-            stats["swaps"] += 1
-        else:
-            _replace(ur[A], ra, tr)
-            spares.remove(tr)
-            spares.append(ra)
-            locked[ra] = locked[tr] = 1
-            stats["replaces"] += 1
+        ru_ops = sorted([o for o in ops if o[1] == wr], key=lambda o: -o[3])
+        for typ, _wr, tr, gain, B in ru_ops:
+            if locked[wr] or locked[tr] or gain <= 0.0:
+                continue
+            A = owner[wr]
+            if typ == 1:
+                _replace(ur[A], wr, tr)
+                _replace(ur[B], tr, wr)
+                owner[wr] = B
+                owner[tr] = A
+                stats["swaps"] += 1
+            else:
+                _replace(ur[A], wr, tr)
+                owner[wr] = UNASSIGNED
+                owner[tr] = A
+                stats["replaces"] += 1
+            locked[wr] = 1
+            locked[tr] = 1
+            break
     return ur, stats
 
 
@@ -201,7 +226,7 @@ def _assignments(U, R, rpu):
     """All ways to give each of U users a distinct set of rpu RUs out of R."""
     rus = range(R)
     for combo in itertools.permutations(rus, U * rpu):
-        grp = [tuple(sorted(combo[i * rpu:(i + 1) * rpu])) for i in range(U)]
+        grp = [tuple(sorted(combo[i * rpu : (i + 1) * rpu])) for i in range(U)]
         # dedupe within-group order by only yielding sorted groups once
         if all(grp[i] == tuple(sorted(grp[i])) for i in range(U)):
             yield [list(g) for g in grp]
@@ -237,8 +262,11 @@ def build_grids_swaplog(path, min_users):
             d = json.loads(ln)
         except json.JSONDecodeError:
             continue
-        real = [u for u in d.get("users", [])
-                if u.get("rnti", 0) != 0 and max(u.get("csi", [0])) > 1e-7]
+        real = [
+            u
+            for u in d.get("users", [])
+            if u.get("rnti", 0) != 0 and max(u.get("csi", [0])) > 1e-7
+        ]
         if len(real) >= min_users:
             grids.append([list(map(float, u["csi"])) for u in real])
     # square up to a common (U,R)
@@ -263,16 +291,20 @@ def build_grids_rb(path, min_users, rbs_per_ru):
             d = json.loads(ln)
         except json.JSONDecodeError:
             continue
-        us = [u for u in d.get("users", [])
-              if u.get("rnti", 0) != 0 and sum(u.get("rb_csi", [0])) > 1e-9]
+        us = [
+            u
+            for u in d.get("users", [])
+            if u.get("rnti", 0) != 0 and sum(u.get("rb_csi", [0])) > 1e-9
+        ]
         if len(us) < min_users:
             continue
         grid = []
         for u in us:
             rb = list(map(float, u["rb_csi"]))
             nru = len(rb) // rbs_per_ru
-            grid.append([sum(rb[k * rbs_per_ru:(k + 1) * rbs_per_ru])
-                         for k in range(nru)])
+            grid.append(
+                [sum(rb[k * rbs_per_ru : (k + 1) * rbs_per_ru]) for k in range(nru)]
+            )
         grids.append(grid)
     if not grids:
         return []
@@ -318,10 +350,16 @@ def run(grids, rpu, epsilon, do_optimal):
     out["BEST_FIXED"] = fix_floor
     if opt_floor is not None:
         out["OPTIMAL"] = opt_floor
-    meta = {"U": U, "R": R, "rpu": rpu, "slots": len(grids),
-            "best_fixed": best_fixed, "nops": nops,
-            "alloc_us_mean": {k: tus[k] / len(grids) for k in pol},
-            "n_assignments": len(asgs)}
+    meta = {
+        "U": U,
+        "R": R,
+        "rpu": rpu,
+        "slots": len(grids),
+        "best_fixed": best_fixed,
+        "nops": nops,
+        "alloc_us_mean": {k: tus[k] / len(grids) for k in pol},
+        "n_assignments": len(asgs),
+    }
     return out, meta
 
 
@@ -331,8 +369,10 @@ def db(x):
 
 def summarize(out, meta):
     lines = []
-    lines.append(f"slots={meta['slots']} U={meta['U']} R={meta['R']} "
-                 f"rus_per_user={meta['rpu']} assignments={meta['n_assignments']}")
+    lines.append(
+        f"slots={meta['slots']} U={meta['U']} R={meta['R']} "
+        f"rus_per_user={meta['rpu']} assignments={meta['n_assignments']}"
+    )
     lines.append(f"best-fixed user->RUs: {meta['best_fixed']}")
     lines.append("")
     ref = "BEST_FIXED"
@@ -352,9 +392,11 @@ def summarize(out, meta):
         same = np.allclose(out["WRF"], out["WUF"])
         diff = db(out["WUF"]).mean() - db(out["WRF"]).mean()
         lines.append(f"WUF vs WRF: identical={same}  mean-floor diff={diff:+.3f} dB")
-        lines.append(f"alloc_us/decision (python, NOT the gNB CPU): "
-                     f"WRF={meta['alloc_us_mean']['WRF']:.2f}  "
-                     f"WUF={meta['alloc_us_mean']['WUF']:.2f}")
+        lines.append(
+            f"alloc_us/decision (python, NOT the gNB CPU): "
+            f"WRF={meta['alloc_us_mean']['WRF']:.2f}  "
+            f"WUF={meta['alloc_us_mean']['WUF']:.2f}"
+        )
     return "\n".join(lines)
 
 
@@ -364,11 +406,18 @@ def main():
     ap.add_argument("--rb", help="per-RB log instead (regroup with --rbs-per-ru)")
     ap.add_argument("--rbs-per-ru", type=int, default=8)
     ap.add_argument("--rus-per-user", type=int, default=1)
-    ap.add_argument("--epsilon", type=int, default=1,
-                    help="how many worst RUs (WRF) / weakest users (WUF) per period")
+    ap.add_argument(
+        "--epsilon",
+        type=int,
+        default=1,
+        help="how many worst RUs (WRF) / weakest users (WUF) per period",
+    )
     ap.add_argument("--min-users", type=int, default=3)
-    ap.add_argument("--no-optimal", action="store_true",
-                    help="skip per-slot optimum (brute force) for speed")
+    ap.add_argument(
+        "--no-optimal",
+        action="store_true",
+        help="skip per-slot optimum (brute force) for speed",
+    )
     ap.add_argument("-o", "--out", default="policy_cmp")
     a = ap.parse_args()
 

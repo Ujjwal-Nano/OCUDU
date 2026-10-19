@@ -1,0 +1,10 @@
+weakest-user outage — 20261019_1549_E2_4U_1RBG_per_UE
+slots=43063 users=4 RUs=4 rus_per_user=1 (from cli)   policy=wrf
+best  fixed assignment (brute-forced): user->RUs [[1], [0], [3], [2]]
+worst fixed assignment (brute-forced): user->RUs [[3], [2], [0], [1]]
+
+outage threshold Gamma_th (dB) at each outage probability:
+  Pout=   1%:  worst-fixed= -47.22   random= -46.91   best-fixed= -46.62   swap= -45.52   optimal= -45.33   gain(swap vs best-fixed)=+1.10 dB   (swap->opt gap=0.19 dB)
+  Pout=   5%:  worst-fixed= -46.51   random= -46.15   best-fixed= -45.76   swap= -44.78   optimal= -44.64   gain(swap vs best-fixed)=+0.98 dB   (swap->opt gap=0.14 dB)
+  Pout=  10%:  worst-fixed= -46.12   random= -45.69   best-fixed= -45.20   swap= -44.03   optimal= -43.90   gain(swap vs best-fixed)=+1.16 dB   (swap->opt gap=0.14 dB)
+  mean floor:  worst-fixed=-43.68   random=-42.67   best-fixed=-41.78   swap=-40.84   optimal=-40.75   gain(swap vs best-fixed)=+0.94 dB   (swap->opt gap=0.08 dB)

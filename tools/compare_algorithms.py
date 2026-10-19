@@ -1,54 +1,45 @@
 #!/usr/bin/env python3
-"""compare_algorithms.py — reproduce the Zhang paper's algorithm comparison on a
-testbed capture.
+"""compare_algorithms.py — swap-policy comparison on ONE testbed capture.
 
-Runs, on the SAME logged CSI grid, the paper's baselines and the swapping
-strategies, and reports each one's achieved weakest-user floor (the system
-metric Gamma_min, eq 3) and its decision time on the same CPU:
+Replays, on the same logged CSI grid, the three pairwise-swap strategies and
+the per-slot max-min optimum, and draws ONE plot: weakest-user power threshold
+Gamma_th (dB) vs outage probability P_out,sys (paper Fig. 3 layout, higher is
+better; Gamma_th at P is the P-quantile of the per-slot weakest-user power):
 
-  BASELINES (recomputed from scratch every slot, as in the paper)
-    Max-Min      : Trassl et al. — maximise the minimum PER-RESOURCE quality
-                   s.t. each user gets exactly rpu distinct resources. Implemented
-                   as a bottleneck assignment (threshold + bipartite matching),
-                   which gives the same optimum as Trassl's sort + Dulmage-
-                   Mendelsohn search. O(R^3 U^5) in the paper.
-    Preference   : Schwarzenberg et al., gradient variant — each round the user
-                   with the LOWEST aggregate quality takes its most-preferred free
-                   resource. O(R^2 U^3).
-    Bulk         : Walstab et al. — same, but the lowest user claims all rpu of
-                   its top free resources at once (U rounds instead of RU).
-                   O(R U^3).
-    Exhaustive   : brute-force per-slot user-aggregate max-min oracle (the ceiling).
+    WRF  (worst RU first)             swept over epsilon   (default 1,2,4)
+    GGM  (greedy gain maximisation)   swept over epsilon   (default 1,4)
+    WUF  (weakest user first)         one curve, labelled without epsilon
+    optimal (per-slot max-min oracle) drawn once, epsilon-independent
+    [best fixed assignment]           optional reference   (--fixed)
 
-  SWAPPING (warm-started — the whole point: only adjust, don't recompute)
-    GGM / WRF / WUF : the three pairwise-swap priority strategies. WRF/WUF are
-                   imported from swap_policies.py (the validated C++ port); GGM is
-                   the same machinery ordered by highest normalised gain first.
+epsilon = number of worst RUs (WRF/GGM) / weakest users (WUF) reconsidered for
+a swap each period. It is NOT a dB threshold. Every curve is a warm-started
+replay: each (policy, epsilon) evolves its own assignment slot by slot.
 
-Offline by necessity: only one assignment can go on the air per period, so the
-baselines cannot run live beside the swap. Replaying every algorithm on the
-captured CSI is the only apples-to-apples comparison, and the only way to time
-them all on one CPU.
+All curves are scored on the same yardstick, the weakest-user aggregate power
+    Gamma_min = min_u  sum_{r in A(u)} gamma_{u,r}          (10*log10, dB)
 
-ALL algorithms are SCORED on the same yardstick — the weakest-user AGGREGATE
-floor  Gamma_min = min_u sum_{r in A(u)} gamma_{u,r}  (eq 3) — even though Max-Min
-internally optimises the minimum per-RESOURCE quality. That mismatch is exactly
-why Max-Min trails the oracle at R>1 (paper Fig 3), and this script will show it.
+WRF/WUF come from swap_policies.py (the validated port); GGM is defined below
+(same candidate machinery as WRF, executed highest normalised gain first).
 
 Usage:
-  python3 compare_algorithms.py swap.jsonl --rus-per-user 2 -o out/cmp
-  python3 compare_algorithms.py swap.jsonl -o out/cmp          # rpu from log
+  python3 compare_algorithms.py swap.jsonl -o out/cmp
+  python3 compare_algorithms.py swap.jsonl --rus-per-user 2 --wrf-eps 1,2,4 -o out/cmp
+  python3 compare_algorithms.py swap.jsonl --ggm-eps 1,4 --wuf-eps 4 --fixed -o out/cmp
+  python3 compare_algorithms.py --rb rb.jsonl --rbs-per-ru 8 -o out/cmp
 """
 
-import argparse, json, sys, copy
+import argparse
+import copy
+import json
+import sys
 from time import perf_counter
+
 import numpy as np
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import maximum_bipartite_matching
 
 try:
     from swap_policies import (
@@ -64,16 +55,19 @@ except ImportError:
     sys.exit("keep compare_algorithms.py in the same folder as swap_policies.py")
 
 UNASSIGNED = -1
-EPS = 1e-12
+EPS = 1e-12  # numerical floor for log10 (NOT the swap epsilon)
 
 
 # ---------------------------------------------------------------------------
-# swap strategy: GGM (same candidate machinery as WRF, ordered by gain)
+# GGM: same Type-1/Type-2 candidates as WRF, executed highest-gain first
 # ---------------------------------------------------------------------------
 def policy_ggm(user_rus, csi, epsilon=1, num_redun=0):
-    """Greedy Gain Maximisation: generate the same Type-1/Type-2 candidates as
-    WRF over the epsilon worst RUs, then execute them highest-normalised-gain
-    first, conflict-free. (paper eq 9)."""
+    """Greedy Gain Maximisation (paper eq 9).
+
+    Builds the same candidates as WRF over the `epsilon` worst allocated RUs
+    (Type 1: pairwise swap with another user, Type 2: replace by a spare RU),
+    then executes them in descending normalised gain, conflict-free.
+    """
     U = len(user_rus)
     R = len(csi[0])
     ur = [list(x) for x in user_rus]
@@ -83,8 +77,10 @@ def policy_ggm(user_rus, csi, epsilon=1, num_redun=0):
         for r in ur[u]:
             owner[r] = u
             ru_perf[r] = csi[u][r]
-    allocated = [r for r in range(R) if owner[r] != UNASSIGNED]
-    allocated.sort(key=lambda r: ru_perf[r])
+
+    allocated = sorted(
+        (r for r in range(R) if owner[r] != UNASSIGNED), key=lambda r: ru_perf[r]
+    )
     worst = allocated[: min(epsilon, len(allocated))]
     spares = [r for r in range(R) if owner[r] == UNASSIGNED]
 
@@ -96,206 +92,250 @@ def policy_ggm(user_rus, csi, epsilon=1, num_redun=0):
             if B == A or not ur[B]:
                 continue
             for tr in ur[B]:
-                c_A_target = csi[A][tr]
-                c_B_worst = csi[B][wr]
-                c_B_target = csi[B][tr]
-                d_swap = min(c_A_target, c_B_worst)
-                d_current = min(c_A_worst, c_B_target)
-                if d_swap > d_current and c_A_worst < c_A_target:
-                    ops.append((1, wr, tr, (d_swap - d_current) / c_B_worst, B))
+                d_swap = min(csi[A][tr], csi[B][wr])
+                d_current = min(c_A_worst, csi[B][tr])
+                if d_swap > d_current and c_A_worst < csi[A][tr]:
+                    ops.append((1, wr, tr, (d_swap - d_current) / csi[B][wr], B))
         for sr in spares:
-            c_A_spare = csi[A][sr]
-            if c_A_spare > c_A_worst:
-                ops.append((2, wr, sr, (c_A_spare - c_A_worst) / c_A_worst, UNASSIGNED))
+            if csi[A][sr] > c_A_worst:
+                ops.append(
+                    (2, wr, sr, (csi[A][sr] - c_A_worst) / c_A_worst, UNASSIGNED)
+                )
 
     stats = {"swaps": 0, "replaces": 0, "ran": True}
     if not ops:
         return ur, stats
-    locked = [0] * R
-    for (typ, wr, tr, gain, B) in sorted(ops, key=lambda o: -o[3]):  # GGM: global gain order
+
+    locked = [False] * R
+    for typ, wr, tr, gain, B in sorted(ops, key=lambda o: -o[3]):
         if locked[wr] or locked[tr] or gain <= 0.0:
             continue
         A = owner[wr]
         if typ == 1:
             _replace(ur[A], wr, tr)
             _replace(ur[B], tr, wr)
-            owner[wr] = B
-            owner[tr] = A
+            owner[wr], owner[tr] = B, A
             stats["swaps"] += 1
         else:
             _replace(ur[A], wr, tr)
-            owner[wr] = UNASSIGNED
-            owner[tr] = A
+            owner[wr], owner[tr] = UNASSIGNED, A
             stats["replaces"] += 1
-        locked[wr] = 1
-        locked[tr] = 1
+        locked[wr] = locked[tr] = True
     return ur, stats
 
 
-# ---------------------------------------------------------------------------
-# baseline: Max-Min (Trassl) — bottleneck assignment via threshold + matching
-# ---------------------------------------------------------------------------
-def maxmin_trassl(csi, U, R, rpu):
-    """Maximise the minimum assigned PER-RESOURCE gain, each user getting exactly
-    rpu distinct resources. Same optimum as Trassl's sort + Dulmage-Mendelsohn,
-    found here by binary-searching a gain threshold and testing feasibility with
-    a bipartite matching (user split into rpu slots)."""
-    nrows = U * rpu
-    gains = sorted({csi[u][r] for u in range(U) for r in range(R)}, reverse=True)
-
-    def feasible(theta):
-        rows, cols = [], []
-        for u in range(U):
-            base = u * rpu
-            for r in range(R):
-                if csi[u][r] >= theta:
-                    for s in range(rpu):
-                        rows.append(base + s)
-                        cols.append(r)
-        if not rows:
-            return None
-        g = csr_matrix(
-            (np.ones(len(rows), dtype=np.int8), (rows, cols)), shape=(nrows, R)
-        )
-        # perm_type="column": array of length nrows, perm[row] = matched col (or -1)
-        m = maximum_bipartite_matching(g, perm_type="column")
-        return None if np.any(m == -1) else m
-
-    # smallest index in the descending gain list (= largest theta) that is feasible
-    lo, hi, best = 0, len(gains) - 1, None
-    while lo <= hi:
-        mid = (lo + hi) // 2
-        m = feasible(gains[mid])
-        if m is not None:
-            best = m
-            hi = mid - 1
-        else:
-            lo = mid + 1
-    if best is None:  # degenerate; fall back to greedy best-per-user
-        best = feasible(gains[-1])
-    assign = [[] for _ in range(U)]
-    for u in range(U):
-        for s in range(rpu):
-            assign[u].append(int(best[u * rpu + s]))
-    return assign
+POLICIES = {"GGM": policy_ggm, "WRF": policy_wrf, "WUF": policy_wuf}
 
 
 # ---------------------------------------------------------------------------
-# baseline: Preference-Based (Schwarzenberg, gradient variant)
-# ---------------------------------------------------------------------------
-def preference_gradient(csi, U, R, rpu):
-    """Gradient variant: each round, serve the under-allocated user that is most
-    constrained — lowest POTENTIAL aggregate (current served + the best gain it
-    could still grab). That protects the weakest link (the max-min gradient),
-    and discriminates even at the start when everyone is at zero. The chosen user
-    takes its most-preferred free resource."""
-    assigned = [[] for _ in range(U)]
-    served = [0.0] * U
-    free = [True] * R
-    need = [rpu] * U
-    for _ in range(U * rpu):
-        cand = [u for u in range(U) if need[u] > 0]
-        if not cand:
-            break
-
-        def best_avail(u):
-            b = -1.0
-            for r in range(R):
-                if free[r] and csi[u][r] > b:
-                    b = csi[u][r]
-            return b
-
-        u = min(cand, key=lambda u: served[u] + best_avail(u))
-        r = max((r for r in range(R) if free[r]), key=lambda r: csi[u][r])
-        assigned[u].append(r)
-        served[u] += csi[u][r]
-        free[r] = False
-        need[u] -= 1
-    return assigned
-
-
-# ---------------------------------------------------------------------------
-# baseline: Bulk (Walstab) — lowest user claims all rpu top free resources
-# ---------------------------------------------------------------------------
-def bulk_walstab(csi, U, R, rpu):
-    """Bulk variant: the most-constrained remaining user (lowest potential
-    aggregate over its top rpu free resources) claims all rpu of them at once."""
-    assigned = [[] for _ in range(U)]
-    served = [0.0] * U
-    free = [True] * R
-    done = [False] * U
-    for _ in range(U):
-        cand = [u for u in range(U) if not done[u]]
-        if not cand:
-            break
-
-        def topsum(u):
-            vals = sorted((csi[u][r] for r in range(R) if free[r]), reverse=True)[:rpu]
-            return sum(vals)
-
-        u = min(cand, key=lambda u: served[u] + topsum(u))
-        order = sorted((r for r in range(R) if free[r]), key=lambda r: -csi[u][r])
-        for r in order[:rpu]:
-            assigned[u].append(r)
-            served[u] += csi[u][r]
-            free[r] = False
-        done[u] = True
-    return assigned
-
-
+# helpers
 # ---------------------------------------------------------------------------
 def db(x):
     return 10 * np.log10(np.maximum(np.asarray(x, float), EPS))
 
 
-def _perslot_optimum(grids, asgs, U):
-    """Per-slot max-min oracle floor, vectorised over slots.
-
-    The old inline `max(floor_of(asg, g) for asg in asgs)` per slot is a pure
-    python loop over all 2520 assignments at U=4/R=8 -> ~137M floor_of calls ->
-    ~6 min. This streams over assignments with numpy (per-slot running max), so
-    it is ~1000x faster and never builds the full (n_asg x n_slots) matrix.
-    """
-    C = np.asarray(grids, float)  # (n_slots, U, R)
-    best = np.full(C.shape[0], -np.inf)
-    for asg in asgs:
-        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
-        np.maximum(best, served.min(axis=1), out=best)
-    return best
+def outage(x):
+    """Empirical CDF -> (sorted values, P(X <= value))."""
+    xs = np.sort(x)
+    return xs, np.arange(1, len(xs) + 1) / len(xs)
 
 
 def read_meta(path):
+    """Scrape policy / rus_per_user / epsilon from the gNB-written log fields."""
     meta = {"policy": None, "rus_per_user": None, "epsilon": None}
-    for ln in open(path):
-        ln = ln.strip()
-        if not ln:
-            continue
-        try:
-            d = json.loads(ln)
-        except json.JSONDecodeError:
-            continue
-        for k in ("policy", "rus_per_user", "epsilon"):
-            if meta[k] is None and d.get(k) is not None:
-                meta[k] = d[k]
-        if all(v is not None for v in meta.values()):
-            break
+    with open(path) as fh:
+        for ln in fh:
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                d = json.loads(ln)
+            except json.JSONDecodeError:
+                continue
+            for k in meta:
+                if meta[k] is None:
+                    v = d.get(k, d.get("eps") if k == "epsilon" else None)
+                    if v is not None:
+                        meta[k] = v
+            if all(v is not None for v in meta.values()):
+                break
     return meta
 
 
+def floor_series(C, asg, U):
+    """Weakest-user aggregate power per slot for ONE fixed assignment."""
+    served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+    return served.min(axis=1)
+
+
+def stream_best_opt(C, asgs, U):
+    """Memory-safe single pass over all assignments.
+
+    Returns (per-assignment mean floor, per-slot optimum). Peak memory is
+    O(n_slots) instead of O(n_assignments * n_slots).
+    """
+    opt = np.full(C.shape[0], -np.inf)
+    means = np.empty(len(asgs))
+    for i, asg in enumerate(asgs):
+        fl = floor_series(C, asg, U)
+        means[i] = fl.mean()
+        np.maximum(opt, fl, out=opt)
+    return means, opt
+
+
+def replay(grids, rpu, epsilon, policy_fn):
+    """Warm-started trajectory of one policy at one epsilon.
+
+    Returns (per-slot floor, total decision time in microseconds).
+    """
+    U = len(grids[0])
+    state = [list(range(u * rpu, u * rpu + rpu)) for u in range(U)]
+    floors = np.empty(len(grids))
+    t_us = 0.0
+    for i, g in enumerate(grids):
+        t0 = perf_counter()
+        state, _ = policy_fn(state, g, epsilon=epsilon)
+        t_us += (perf_counter() - t0) * 1e6
+        floors[i] = floor_of(state, g)
+    return floors, t_us
+
+
+def parse_eps(s):
+    return [int(x) for x in s.split(",") if x.strip()]
+
+
+# ---------------------------------------------------------------------------
+# plotting
+# ---------------------------------------------------------------------------
+def curve_label(pol, e):
+    """WUF is drawn as ONE curve and shown without an epsilon in the legend."""
+    return "WUF" if pol == "WUF" else f"{pol}  $\\epsilon$={e}"
+
+
+def make_plot(curves, opt_db, fixed_db, n_slots, n_users, rpu, out_png, pmax=0.1):
+    """Single plot: Gamma_th (dB) vs outage probability, one legend entry per curve.
+
+    Each policy has its own colour + line style; the epsilons of one policy
+    share that colour and differ by marker (WRF: circle / square / triangle,
+    GGM: diamond / down-triangle / pentagon). WUF is one curve with no epsilon
+    in its label.
+    """
+    color = {"WRF": "tab:blue", "GGM": "tab:green", "WUF": "tab:orange"}
+    ls = {"WRF": "-", "GGM": "--", "WUF": "-."}
+    markers = {"WRF": ["o", "s", "^"], "GGM": ["D", "v", "p"], "WUF": ["X"]}
+
+    pmin = max(1.0 / n_slots, 5e-4)
+    pg = np.logspace(np.log10(pmin), np.log10(pmax), 60)
+    thr = lambda series: np.quantile(series, pg)
+
+    fig, ax = plt.subplots(figsize=(9.5, 6))
+
+    if fixed_db is not None:
+        ax.semilogx(
+            pg, thr(fixed_db), color="tab:red", lw=2.2, label="no swap  (best fixed)"
+        )
+
+    seen = {"WRF": 0, "GGM": 0, "WUF": 0}
+    for j, (pol, e, series) in enumerate(curves):
+        mk = markers[pol][seen[pol] % len(markers[pol])]
+        seen[pol] += 1
+        ax.semilogx(
+            pg,
+            thr(series),
+            color=color[pol],
+            ls=ls[pol],
+            lw=2.0,
+            marker=mk,
+            ms=8,
+            mfc="white" if pol != "WUF" else color[pol],
+            mew=1.7,
+            markevery=((j * 3) % 8, 8),  # staggered markers
+            label=curve_label(pol, e),
+            zorder=3 + j,
+        )
+
+    ax.semilogx(
+        pg,
+        thr(opt_db),
+        color="black",
+        lw=2.6,
+        ls=(0, (6, 2)),
+        label="optimal  (per-slot max-min)",
+        zorder=2,
+    )
+
+    # same label / title wording as the original comparison plot
+
+    ax.set_xlabel("outage probability  $P(\\Gamma_{min} < \\Gamma_{th})$", fontsize=14)
+    ax.set_ylabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
+    ax.set_title(
+        f"Algorithm comparison: {n_users} Users, {rpu} RBG/user", fontsize=12.5
+    )
+    ax.grid(alpha=0.3, which="both")
+    ax.set_xlim(pmin, pmax)
+    # legend below the axes so it never covers the (closely spaced) curves
+    ax.legend(
+        fontsize=11,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15),
+        ncol=3,
+        framealpha=0.95,
+    )
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("swaplog", nargs="?")
-    ap.add_argument("--rb", help="per-RB log instead (regroup with --rbs-per-ru)")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument("swaplog", nargs="?", help="swap.jsonl from the gNB")
+    ap.add_argument("--rb", help="per-RB log instead (regrouped with --rbs-per-ru)")
     ap.add_argument("--rbs-per-ru", type=int, default=8)
-    ap.add_argument("--rus-per-user", type=int, default=None, help="default: from log, else 1")
-    ap.add_argument("--epsilon", type=int, default=None, help="swap depth; default: from log, else 1")
+    ap.add_argument(
+        "--rus-per-user", type=int, default=None, help="default: from log, else 1"
+    )
+    ap.add_argument(
+        "--wrf-eps",
+        default="1,2,4",
+        help="epsilons for WRF, comma list (default 1,2,4)",
+    )
+    ap.add_argument(
+        "--ggm-eps", default="1,4", help="epsilons for GGM, comma list (default 1,4)"
+    )
+    ap.add_argument(
+        "--wuf-eps",
+        type=int,
+        default=4,
+        help="depth handed to the WUF policy (default 4, as in the "
+        "paper's Fig. 3); WUF is drawn as ONE curve, no epsilon shown",
+    )
     ap.add_argument("--min-users", type=int, default=3)
-    ap.add_argument("--no-exhaustive", action="store_true", help="skip the oracle (speed)")
-    ap.add_argument("-o", "--out", default="algo_cmp")
+    ap.add_argument(
+        "--pmax",
+        type=float,
+        default=0.1,
+        help="largest outage probability on the x-axis (default 0.1)",
+    )
+    ap.add_argument(
+        "--fixed",
+        action="store_true",
+        help="also draw the best-fixed (no-swap) reference curve",
+    )
+    ap.add_argument(
+        "-o", "--out", default="algo_cmp", help="output prefix -> .png / .txt / .jsonl"
+    )
     ap.add_argument("--label", default=None)
     a = ap.parse_args()
 
-    meta = read_meta(a.swaplog) if a.swaplog else {"policy": None, "rus_per_user": None, "epsilon": None}
+    # ---- load ----
+    meta = (
+        read_meta(a.swaplog)
+        if a.swaplog
+        else {"policy": None, "rus_per_user": None, "epsilon": None}
+    )
     if a.rb:
         grids = build_grids_rb(a.rb, a.min_users, a.rbs_per_ru)
     elif a.swaplog:
@@ -304,227 +344,94 @@ def main():
         ap.error("give a swap.jsonl or --rb <per-RB log>")
     if not grids:
         sys.exit("no usable slots")
-    U = len(grids[0])
-    R = len(grids[0][0])
-    rpu = a.rus_per_user or (int(meta["rus_per_user"]) if meta["rus_per_user"] else 1)
-    eps = a.epsilon if a.epsilon is not None else (int(meta["epsilon"]) if meta["epsilon"] else 1)
-    if U * rpu > R:
-        sys.exit("need U*rus_per_user=%d <= R=%d" % (U * rpu, R))
-
-    swap_fn = {"GGM": policy_ggm, "WRF": policy_wrf, "WUF": policy_wuf}
-    base_fn = {"Max-Min": maxmin_trassl, "Preference": preference_gradient, "Bulk": bulk_walstab}
-    init = [list(range(u * rpu, u * rpu + rpu)) for u in range(U)]
-    state = {k: copy.deepcopy(init) for k in swap_fn}
-
-    names = list(swap_fn) + list(base_fn) + (["Exhaustive"] if not a.no_exhaustive else [])
-    floors = {k: np.empty(len(grids)) for k in names}
-    times = {k: 0.0 for k in names}
-    asgs = _uniq_assignments(U, R, rpu) if not a.no_exhaustive else None
-    # exhaustive oracle floors precomputed in one vectorised pass (fast);
-    # its offline time is left n/a since the per-slot python loop it replaces
-    # was only ever a "py-ref" number, not a hardware result (opt_alloc_us is).
-    exh = _perslot_optimum(grids, asgs, U) if asgs is not None else None
-
-    for i, g in enumerate(grids):
-        for k, fn in swap_fn.items():
-            t0 = perf_counter()
-            state[k], _ = fn(state[k], g, epsilon=eps)
-            times[k] += (perf_counter() - t0) * 1e6
-            floors[k][i] = floor_of(state[k], g)
-        for k, fn in base_fn.items():
-            t0 = perf_counter()
-            asg = fn(g, U, R, rpu)
-            times[k] += (perf_counter() - t0) * 1e6
-            floors[k][i] = floor_of(asg, g)
-        if asgs is not None:
-            floors["Exhaustive"][i] = exh[i]
 
     n = len(grids)
-    if asgs is not None:
-        times["Exhaustive"] = float("nan")  # vectorised; no per-call py-ref time
-    # ---- hardware decision times from the gNB log (the real, same-CPU numbers) ----
-    # alloc_us = applied swap (WRF/WUF), and by shared machinery also GGM.
-    # opt_alloc_us = Exhaustive. maxmin_us / pref_us / bulk_us = the baselines.
-    hw_raw = {k: [] for k in (
-        "alloc_us", "opt_alloc_us", "maxmin_us", "pref_us", "bulk_us",
-        "wrf_us_e1", "wrf_us_e2", "wrf_us_e4",
-        "ggm_us_e1", "ggm_us_e2", "ggm_us_e4",
-    )}
-    if a.swaplog:
-        for ln in open(a.swaplog):
-            ln = ln.strip()
-            if not ln:
-                continue
-            try:
-                d = json.loads(ln)
-            except json.JSONDecodeError:
-                continue
-            for k in hw_raw:
-                v = d.get(k)
-                if v is not None and float(v) >= 0:
-                    hw_raw[k].append(float(v))
-    hwmean = {k: (sum(v) / len(v) if v else None) for k, v in hw_raw.items()}
-    # DECISION-ONLY hardware cost for every algorithm, so the comparison is
-    # apples-to-apples: all rows are "compute + form an allocation, discard it".
-    #   Max-Min/Preference/Bulk -> their timing_* calls (decision-only)
-    #   WRF / GGM               -> wrf_us_e1 / ggm_us_e1 (decision-only). NOT
-    #       alloc_us, which also APPLIES the swap to the live allocator + does
-    #       bookkeeping — work the stateless baselines never do, so comparing
-    #       against it understates the swap (reads ~3x instead of the true ~10x).
-    #   WUF                     -> no standalone decision timer; WUF shares WRF's
-    #       pairwise machinery (differs only in priority order), so wrf_us_e1 is
-    #       used as its decision-cost proxy.
-    #   Exhaustive              -> opt_alloc_us (find + form the optimum).
-    # alloc_us (the real applied swap step) is still reported, but as its own
-    # "swap-applied" row in the decision-time sweep, not mixed into this column.
-    wrf_dec = hwmean.get("wrf_us_e1") or hwmean.get("alloc_us")
-    ggm_dec = hwmean.get("ggm_us_e1") or hwmean.get("alloc_us")
-    hw_us = {
-        "WRF": wrf_dec, "WUF": wrf_dec, "GGM": ggm_dec,
-        "Exhaustive": hwmean["opt_alloc_us"],
-        "Max-Min": hwmean["maxmin_us"], "Preference": hwmean["pref_us"], "Bulk": hwmean["bulk_us"],
-    }
+    U, R = len(grids[0]), len(grids[0][0])
+    rpu = a.rus_per_user or (int(meta["rus_per_user"]) if meta["rus_per_user"] else 1)
+    if U * rpu > R:
+        sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
 
-    def hwcol(k):
-        v = hw_us.get(k)
-        return f"{v:>13.3f}" if v is not None else f"{'n/a':>13}"
+    runs = (
+        [("WRF", e) for e in parse_eps(a.wrf_eps)]
+        + [("GGM", e) for e in parse_eps(a.ggm_eps)]
+        + [("WUF", a.wuf_eps)]
+    )
+
+    # ---- baselines: per-slot optimum (+ best fixed), one memory-safe pass ----
+    C = np.asarray(grids, float)  # (n_slots, U, R)
+    asgs = _uniq_assignments(U, R, rpu)
+    means, opt = stream_best_opt(C, asgs, U)
+    opt_db = db(opt)
+    fixed_db = db(floor_series(C, asgs[int(means.argmax())], U))
+
+    # ---- swap replays ----
+    curves, times = [], {}
+    for pol, e in runs:
+        fl, t_us = replay(grids, rpu, e, POLICIES[pol])
+        curves.append((pol, e, db(fl)))
+        times[(pol, e)] = t_us / n
+
+    # ---- plot ----
+    make_plot(
+        curves,
+        opt_db,
+        fixed_db if a.fixed else None,
+        n,
+        U,
+        rpu,
+        a.out + ".png",
+        pmax=a.pmax,
+    )
 
     # ---- report ----
-    order = ["Exhaustive", "Max-Min", "Preference", "Bulk", "GGM", "WRF", "WUF"]
-    order = [k for k in order if k in names]
-    lines = []
-    lines.append(f"algorithm comparison — {a.label or (a.swaplog or a.rb).split('/')[-1]}")
-    lines.append(f"slots={n} users={U} RUs={R} rus_per_user={rpu} epsilon={eps}  "
-                 f"(policy logged={meta['policy']})")
-    lines.append("")
-    lines.append("PERFORMANCE (floor, computed offline)  +  DECISION COST")
-    lines.append("  gNB us/slot = real C++ time on the base station CPU (apples-to-apples).")
-    lines.append("  py-ref us   = same-CPU python, RELATIVE reference only — not a hardware result.")
-    lines.append("")
-    hdr = (f"{'algorithm':<12}{'mean floor(dB)':>15}{'@1%(dB)':>10}"
-           f"{'gNB us/slot':>13}{'py-ref us':>11}")
-    lines.append(hdr)
-    lines.append("-" * len(hdr))
-    for k in order:
-        d = db(floors[k])
-        pyref = times[k] / n
-        pyref_s = f"{pyref:>11.3f}" if pyref == pyref else f"{'n/a':>11}"  # nan -> n/a
-        lines.append(
-            f"{k:<12}{d.mean():>15.2f}{np.percentile(d,1):>10.2f}"
-            f"{hwcol(k)}{pyref_s}"
+    lbl = a.label or (a.swaplog or a.rb).split("/")[-1]
+    hdr = (
+        f"{'curve':<14}{'mean(dB)':>10}{'@1%(dB)':>10}{'@5%(dB)':>10}"
+        f"{'gain/fixed':>12}{'opt gap':>9}{'py-ref us':>11}"
+    )
+    lines = [
+        f"swap-policy comparison — {lbl}",
+        f"slots={n} users={U} RUs={R} rus_per_user={rpu} "
+        f"(gNB logged policy={meta['policy']}, epsilon={meta['epsilon']})",
+        "",
+        hdr,
+        "-" * len(hdr),
+    ]
+
+    def row(name, d, t=None):
+        t_s = f"{t:>11.3f}" if t is not None else f"{'-':>11}"
+        return (
+            f"{name:<14}{d.mean():>10.2f}{np.percentile(d, 1):>10.2f}"
+            f"{np.percentile(d, 5):>10.2f}{d.mean() - fixed_db.mean():>+12.2f}"
+            f"{opt_db.mean() - d.mean():>9.2f}{t_s}"
         )
-    if hwmean["maxmin_us"] is None:
-        lines.append("")
-        lines.append("note: no baseline gNB timings in this capture (pre-dates the baseline-timing "
-                     "gNB build). Rebuild the gNB to populate maxmin_us/pref_us/bulk_us. Until then "
-                     "only alloc_us (swap) / opt_alloc_us (exhaustive) are real hardware times.")
 
-    # relative to Exhaustive (performance)
-    if "Exhaustive" in names:
-        ex = db(floors["Exhaustive"]).mean()
-        lines.append("")
-        lines.append("gap to Exhaustive (mean floor, dB) — lower is better:")
-        for k in order:
-            if k == "Exhaustive":
-                continue
-            lines.append(f"  {k:<12}{ex - db(floors[k]).mean():+.3f}")
-
-    # headline: swap matches Max-Min in PERFORMANCE at a fraction of the HARDWARE cost
-    if "Max-Min" in names:
-        lines.append("")
-        mm_hw = hw_us.get("Max-Min")
-        for sw in ("WRF", "WUF", "GGM"):
-            dgap = db(floors[sw]).mean() - db(floors["Max-Min"]).mean()
-            sw_hw = hw_us.get(sw)
-            if mm_hw and sw_hw:
-                lines.append(
-                    f"  {sw} vs Max-Min: floor {dgap:+.3f} dB, "
-                    f"{mm_hw / max(sw_hw, 1e-9):.0f}x faster on the gNB "
-                    f"({sw_hw:.3f} vs {mm_hw:.3f} us/decision)"
-                )
-            else:
-                lines.append(f"  {sw} vs Max-Min: floor {dgap:+.3f} dB  (gNB timing n/a — rebuild gNB)")
-
-    # ---- decision-time sweep on the gNB CPU (for offline timing-vs-epsilon plots) ----
-    def tstats(arr):
-        if not arr:
-            return None
-        v = np.asarray(arr, float)
-        return (v.mean(), np.percentile(v, 50), np.percentile(v, 99), v.max())
-
-    sweep = []  # (algorithm, epsilon, mean, p50, p99, max)
-    for e in (1, 2, 4):
-        for algo, key in (("WRF", f"wrf_us_e{e}"), ("GGM", f"ggm_us_e{e}")):
-            st = tstats(hw_raw.get(key, []))
-            if st:
-                sweep.append((algo, str(e), *st))
-    for algo, key in (("Max-Min", "maxmin_us"), ("Preference", "pref_us"),
-                      ("Bulk", "bulk_us"), ("Exhaustive", "opt_alloc_us"),
-                      ("swap-applied", "alloc_us")):
-        st = tstats(hw_raw.get(key, []))
-        if st:
-            sweep.append((algo, "-", *st))  # epsilon-independent
-
-    if sweep:
-        lines.append("")
-        lines.append("DECISION TIME on the gNB CPU (us) — epsilon-swept for WRF/GGM, "
-                     "single for the rest (eps='-'):")
-        lines.append(f"  {'algorithm':<13}{'eps':>4}{'mean':>10}{'p50':>10}{'p99':>10}{'max':>10}")
-        for (algo, e, m, p50, p99, mx) in sweep:
-            lines.append(f"  {algo:<13}{e:>4}{m:>10.3f}{p50:>10.3f}{p99:>10.3f}{mx:>10.3f}")
-        with open(a.out + "_timing.csv", "w") as f:
-            f.write("algorithm,epsilon,mean_us,p50_us,p99_us,max_us\n")
-            for (algo, e, m, p50, p99, mx) in sweep:
-                f.write(f"{algo},{e},{m:.4f},{p50:.4f},{p99:.4f},{mx:.4f}\n")
-    else:
-        lines.append("")
-        lines.append("note: no epsilon-swept gNB timings (wrf_us_e*/ggm_us_e*) in this capture — "
-                     "rebuild the gNB with the epsilon-swept timers to populate them.")
-
+    lines.append(row("best-fixed", fixed_db))
+    for pol, e, d in curves:
+        lines.append(
+            row("WUF" if pol == "WUF" else f"{pol} eps={e}", d, times[(pol, e)])
+        )
+    lines.append(row("optimal", opt_db))
+    lines += [
+        "",
+        "py-ref us = python decision time per slot on this CPU; a RELATIVE "
+        "reference only, not a gNB hardware result.",
+        "opt gap   = mean(optimal) - mean(curve) in dB; lower is better.",
+    ]
     report = "\n".join(lines)
     print(report)
     with open(a.out + ".txt", "w") as f:
         f.write(report + "\n")
 
-    # per-slot floors for re-plotting / audit
+    # per-slot floors (dB) for re-plotting / audit
     with open(a.out + ".jsonl", "w") as f:
         for i in range(n):
-            f.write(json.dumps({k: float(floors[k][i]) for k in names}) + "\n")
+            rec = {"optimal": float(opt_db[i]), "best_fixed": float(fixed_db[i])}
+            for pol, e, d in curves:
+                rec["WUF" if pol == "WUF" else f"{pol}_eps{e}"] = float(d[i])
+            f.write(json.dumps(rec) + "\n")
 
-    # ---- comparison outage plot (performance story) ----
-    def outage(x):
-        xs = np.sort(x)
-        return xs, np.arange(1, len(xs) + 1) / len(xs)
-
-    styles = {
-        "Exhaustive": ("black", "-", 2.4),
-        "Max-Min": ("tab:red", "-", 2.0),
-        "Preference": ("tab:orange", "-", 1.8),
-        "Bulk": ("tab:brown", ":", 1.8),
-        "GGM": ("tab:green", "--", 2.0),
-        "WRF": ("tab:blue", "--", 2.0),
-        "WUF": ("tab:purple", "-.", 2.0),
-    }
-    fig, ax = plt.subplots(figsize=(9.5, 6))
-    for k in order:
-        c, ls, lw = styles.get(k, ("gray", "-", 1.5))
-        xs, ps = outage(db(floors[k]))
-        ax.semilogy(xs, ps, color=c, ls=ls, lw=lw, label=k)
-    ax.set_xlabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
-    ax.set_ylabel("outage probability  $P(\\Gamma_{min} < \\Gamma_{th})$", fontsize=14)
-    ax.set_title(
-        f"Algorithm comparison — {rpu} RBG/user  (swap $\\epsilon$={eps})", fontsize=12.5
-    )
-    ax.grid(alpha=0.3, which="both")
-    ax.legend(fontsize=11, loc="lower right", ncol=2)
-    ax.set_ylim(max(1.0 / n, 5e-4), 1.0)
-    fig.tight_layout()
-    fig.savefig(a.out + ".png", dpi=140)
-    plt.close(fig)
-    outs = [a.out + ".txt", a.out + ".png", a.out + ".jsonl"]
-    if sweep:
-        outs.append(a.out + "_timing.csv")
-    print("wrote", ", ".join(outs))
+    print("wrote", ", ".join(a.out + s for s in (".png", ".txt", ".jsonl")))
 
 
 if __name__ == "__main__":

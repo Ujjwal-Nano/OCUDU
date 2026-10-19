@@ -1,191 +1,227 @@
 #!/usr/bin/env python3
-"""plot_timing.py — decision-cost bar chart from compare_algorithms' _timing.csv.
+"""plot_timing.py — decision-cost bar chart (timing counterpart to the fairness
+comparison). Reads the gNB's on-CPU decision timers from swap.jsonl.
 
-One bar per method = MEAN decision time on the gNB CPU (us), on a LOG y-axis so
-the ~1 us swap and the ~400 us exhaustive are both legible. A star (*) sits on
-top of each bar at that method's 99th-percentile time, with a thin stem from the
-mean up to it, so the bar shows the typical cost and the star shows the tail.
-
-Apples-to-apples note (matches compare_algorithms): every bar is DECISION-ONLY
-(compute + form an allocation), EXCEPT 'swap-applied' (alloc_us) which is the
-full applied swap step (decision + apply to the live allocator + bookkeeping).
-That bar is hatched to flag it as a different kind of measurement.
-
-Input CSV columns: algorithm,epsilon,mean_us,p50_us,p99_us,max_us
-(epsilon is '-' for the single-shot methods; '1'/'2'/'4' for the WRF/GGM sweep).
+Bars grouped by policy: WRF at every epsilon together, GGM at every epsilon
+together, then a Max-Min bar. Bar height = MEAN decision time; a star on top of
+each bar marks the 99th percentile, labelled with its value. Log y so the
+sub-microsecond swap bars and the larger baseline bar are both legible.
 
 Usage:
-  python3 plot_timing.py run_algocmp.txt_timing.csv -o timing.png
-  python3 plot_timing.py t.csv -o timing.png --order mean          # climb by mean
-  python3 plot_timing.py t.csv -o timing.png --order family        # group families
-  python3 plot_timing.py t.csv -o timing.png --linear              # linear y-axis
-  python3 plot_timing.py t.csv -o timing.png --title "U=4, 2 RBG/user"
+  python3 plot_timing.py swap.jsonl -o out/timing
+  python3 plot_timing.py swap.jsonl --wrf-eps 1,2,4 --ggm-eps 1,2,4 -o out/timing
+  python3 plot_timing.py swap.jsonl --linear --label E6_4U -o out/timing
 """
 
-import argparse, csv, sys
+import argparse
+import json
+import sys
+
 import numpy as np
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 
-# base colour per method family; WRF/GGM epsilon variants are shaded within it
-FAMILY = {
-    "WRF": "Blues",
-    "GGM": "Greens",
-    "WUF": "PuBu",
-    "Max-Min": "tab:orange",
-    "Preference": "tab:red",
-    "Bulk": "tab:brown",
-    "Exhaustive": "0.45",
-    "swap-applied": "tab:purple",
-}
-# a clean reading order when grouping by family (low -> high, swap stuff first)
-FAMILY_ORDER = ["WRF", "GGM", "WUF", "swap-applied",
-                "Preference", "Bulk", "Max-Min", "Exhaustive"]
+
+def parse_eps(s):
+    return [int(x) for x in s.split(",") if x.strip()]
 
 
 def load(path):
-    rows = []
-    with open(path) as f:
-        for r in csv.DictReader(f):
-            try:
-                rows.append({
-                    "algo": r["algorithm"],
-                    "eps": r.get("epsilon", "-"),
-                    "mean": float(r["mean_us"]),
-                    "p99": float(r["p99_us"]),
-                    "max": float(r["max_us"]),
-                })
-            except (KeyError, ValueError):
-                continue
-    return rows
-
-
-def colour_for(rows):
-    """Assign a colour per row; epsilon variants shade light->dark within family."""
-    # count epsilon variants per family to spread the colormap
-    fam_rows = {}
-    for i, r in enumerate(rows):
-        fam_rows.setdefault(r["algo"], []).append(i)
-    col = [None] * len(rows)
-    for algo, idxs in fam_rows.items():
-        spec = FAMILY.get(algo, "tab:gray")
-        if isinstance(spec, str) and spec in plt.colormaps():
-            cmap = plt.get_cmap(spec)
-            shades = np.linspace(0.55, 0.9, len(idxs))
-            for j, i in enumerate(idxs):
-                col[i] = cmap(shades[j])
-        else:
-            for i in idxs:
-                col[i] = spec
-    return col
-
-
-def label_for(r):
-    return f"{r['algo']}\n$\\epsilon$={r['eps']}" if r["eps"] not in ("-", "", None) else r["algo"]
+    """Collect every logged value of each decision timer, plus (users, rpu)."""
+    acc = {}
+    meta = {"users": None, "rus_per_user": None}
+    for ln in open(path):
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            d = json.loads(ln)
+        except json.JSONDecodeError:
+            continue
+        if meta["users"] is None and isinstance(d.get("users"), list):
+            meta["users"] = len(d["users"])
+        if meta["rus_per_user"] is None and d.get("rus_per_user") is not None:
+            meta["rus_per_user"] = int(d["rus_per_user"])
+        for k in (
+            "maxmin_us",
+            "opt_alloc_us",
+            "wrf_us_e1",
+            "wrf_us_e2",
+            "wrf_us_e4",
+            "ggm_us_e1",
+            "ggm_us_e2",
+            "ggm_us_e4",
+        ):
+            v = d.get(k)
+            if v is not None and float(v) >= 0:
+                acc.setdefault(k, []).append(float(v))
+    return {k: np.asarray(v) for k, v in acc.items() if v}, meta
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("csv", help="the _timing.csv written by compare_algorithms.py")
-    ap.add_argument("-o", "--out", default="timing.png")
-    ap.add_argument("--order", choices=["mean", "family", "file"], default="mean",
-                    help="mean: climb by mean time (default); family: group methods; "
-                         "file: keep CSV order")
-    ap.add_argument("--linear", action="store_true", help="linear y-axis (default: log)")
-    ap.add_argument("--title", default=None, help="extra context for the title")
+    ap.add_argument("swaplog")
+    ap.add_argument("--wrf-eps", default="1,2,4")
+    ap.add_argument("--ggm-eps", default="1,2,4")
+    ap.add_argument(
+        "--maxmin",
+        action="store_true",
+        default=True,
+        help="include the Max-Min bar (default on)",
+    )
+    ap.add_argument("--no-maxmin", dest="maxmin", action="store_false")
+    ap.add_argument("--linear", action="store_true", help="linear y (default: log)")
+    ap.add_argument("-o", "--out", default="timing")
     ap.add_argument("--label", default=None)
+    ap.add_argument("--title", default=None)
     a = ap.parse_args()
 
-    rows = load(a.csv)
-    if not rows:
-        sys.exit("no usable rows in %s" % a.csv)
+    data, meta = load(a.swaplog)
+    if not any(k.startswith("wrf_us_e") for k in data):
+        sys.exit(
+            "no wrf_us_e* timers in %s — rebuild/recapture the gNB with the "
+            "epsilon-swept decision timers." % a.swaplog
+        )
 
-    if a.order == "mean":
-        rows.sort(key=lambda r: r["mean"])
-    elif a.order == "family":
-        rank = {f: i for i, f in enumerate(FAMILY_ORDER)}
-        rows.sort(key=lambda r: (rank.get(r["algo"], 99),
-                                 float(r["eps"]) if r["eps"] not in ("-", "", None) else 0.0))
-    # 'file' keeps load order
+    # build the bar list: (label, color, mean, p99)
+    BLUE, GREEN, RED = "tab:blue", "tab:green", "tab:red"
+    bars = []  # (label, color, mean, p99)
+    for e in parse_eps(a.wrf_eps):
+        v = data.get(f"wrf_us_e{e}")
+        if v is not None:
+            bars.append((f"WRF\n$\\epsilon$={e}", BLUE, v.mean(), np.percentile(v, 99)))
+    for e in parse_eps(a.ggm_eps):
+        v = data.get(f"ggm_us_e{e}")
+        if v is not None:
+            bars.append(
+                (f"GGM\n$\\epsilon$={e}", GREEN, v.mean(), np.percentile(v, 99))
+            )
+    if a.maxmin and data.get("maxmin_us") is not None:
+        v = data["maxmin_us"]
+        bars.append(("Max-Min", RED, v.mean(), np.percentile(v, 99)))
 
-    x = np.arange(len(rows))
-    mean = np.array([r["mean"] for r in rows])
-    p99 = np.array([r["p99"] for r in rows])
-    cols = colour_for(rows)
-    labels = [label_for(r) for r in rows]
+    labels = [b[0] for b in bars]
+    cols = [b[1] for b in bars]
+    means = np.array([b[2] for b in bars])
+    p99 = np.array([b[3] for b in bars])
+    x = np.arange(len(bars))
 
-    # log axis needs a positive floor for the bar bottoms
-    floor = max(mean.min() / 3.0, 1e-3)
+    log = not a.linear
+    floor = max(means.min() / 3.0, 1e-3) if log else 0.0
 
-    fig, ax = plt.subplots(figsize=(max(8.0, 1.05 * len(rows)), 6.0))
-    bars = ax.bar(x, mean, width=0.68, color=cols, edgecolor="black",
-                  linewidth=0.7, bottom=(floor if not a.linear else 0.0), zorder=3)
-    # hatch the applied-swap bar: it is the full applied step, not decision-only
-    for r, b in zip(rows, bars):
-        if r["algo"] == "swap-applied":
-            b.set_hatch("///")
+    fig, ax = plt.subplots(figsize=(max(7.5, 1.0 * len(bars) + 2), 5.6))
+    ax.bar(
+        x,
+        means,
+        width=0.66,
+        color=cols,
+        edgecolor="black",
+        linewidth=0.7,
+        bottom=(floor if log else 0.0),
+        zorder=3,
+    )
+    # stem from mean up to p99, then the star at p99
+    ax.vlines(x, means, np.maximum(p99, means), color="0.35", lw=1.1, zorder=4)
+    ax.scatter(
+        x,
+        p99,
+        marker="*",
+        s=240,
+        color="gold",
+        edgecolor="black",
+        linewidth=0.7,
+        zorder=5,
+    )
 
-    # stem from bar top (mean) up to p99, then the star at p99
-    ax.vlines(x, mean, np.maximum(p99, mean), color="0.35", lw=1.2, zorder=4)
-    ax.scatter(x, p99, marker="*", s=240, color="gold", edgecolor="black",
-               linewidth=0.7, zorder=5)
+    # labels: mean inside/under bar top, p99 value above the star
+    for xi, mn, p in zip(x, means, p99):
+        ax.annotate(
+            f"{mn:.2f}",
+            (xi, mn),
+            ha="center",
+            va="top",
+            xytext=(0, -3),
+            textcoords="offset points",
+            fontsize=9,
+            color="white",
+            fontweight="bold",
+            zorder=6,
+        )
+        ax.annotate(
+            f"{p:.2f}",
+            (xi, p),
+            ha="center",
+            va="bottom",
+            xytext=(0, 7),
+            textcoords="offset points",
+            fontsize=8.5,
+            color="0.2",
+            zorder=6,
+        )
 
-    # annotate mean (on the bar) and p99 (above the star)
-    for xi, m, p in zip(x, mean, p99):
-        ax.annotate(f"{m:.2f}", (xi, m), ha="center", va="top",
-                    xytext=(0, -3), textcoords="offset points",
-                    fontsize=8.5, color="white", fontweight="bold", zorder=6)
-        ax.annotate(f"{p:.2f}", (xi, p), ha="center", va="bottom",
-                    xytext=(0, 7), textcoords="offset points",
-                    fontsize=8, color="0.2", zorder=6)
-
-    if not a.linear:
+    if log:
         ax.set_yscale("log")
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9.5)
-    ax.set_ylabel("decision time on the gNB CPU  (µs)"
-                  + ("  — log scale" if not a.linear else ""), fontsize=12.5)
-    ttl = "Per-method decision cost  (bar = mean,  ★ = p99)"
-    if a.title:
-        ttl += f"\n{a.title}"
-    elif a.label:
-        ttl += f"\n{a.label}"
-    ax.set_title(ttl, fontsize=12.5)
-    ax.grid(axis="y", alpha=0.3, which="both", zorder=0)
-    # headroom above the tallest star
-    top = p99.max()
-    if not a.linear:
-        ax.set_ylim(floor, top * 2.2)
+        ax.set_ylim(floor, p99.max() * 2.0)
     else:
-        ax.set_ylim(0, top * 1.18)
+        ax.set_ylim(0, p99.max() * 1.18)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=10)
+    ax.set_ylabel("decision time in gNB (µs)", fontsize=13)
+    # subtitle: explicit --label, else "<users> users, <rpu> RBG/user" from the log
+    if a.label:
+        sub = a.label
+    elif meta["users"] and meta["rus_per_user"]:
+        sub = f"{meta['users']} users, {meta['rus_per_user']} RBG/user"
+    else:
+        sub = None
+    ttl = (
+        (a.title + (f"\n{sub}" if sub is not None else ""))
+        if a.title is not None
+        else "Per algorithm decision cost" + (f"\n{sub}" if sub is not None else "")
+    )
+    ax.set_title(ttl, fontsize=13)
+    # small key for what the bar and star mean
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
 
-    legend = [
-        Line2D([0], [0], marker="*", color="none", markerfacecolor="gold",
-               markeredgecolor="black", markersize=14, label="99th percentile"),
-        Patch(facecolor="0.7", edgecolor="black", label="mean (bar height)"),
-        Patch(facecolor="tab:purple", edgecolor="black", hatch="///",
-              label="swap-applied = full applied step (not decision-only)"),
-    ]
-    ax.legend(handles=legend, fontsize=9.5, loc="upper left", framealpha=0.95)
-
+    ax.legend(
+        handles=[
+            Patch(facecolor="0.7", edgecolor="black", label="mean"),
+            Line2D(
+                [0],
+                [0],
+                marker="*",
+                color="none",
+                markerfacecolor="gold",
+                markeredgecolor="black",
+                markersize=13,
+                label="99th pct",
+            ),
+        ],
+        fontsize=10,
+        loc="upper left",
+        framealpha=0.95,
+    )
+    ax.grid(axis="y", alpha=0.3, which="both", zorder=0)
     fig.tight_layout()
-    fig.savefig(a.out, dpi=150)
+    fig.savefig(a.out + ".png", dpi=150)
     plt.close(fig)
 
-    # text summary alongside
-    txt = a.out.rsplit(".", 1)[0] + ".txt"
-    with open(txt, "w") as f:
-        f.write(f"decision-cost bars — {a.label or a.csv.split('/')[-1]}\n")
-        f.write(f"{'method':<16}{'mean_us':>10}{'p99_us':>10}{'max_us':>10}\n")
-        f.write("-" * 46 + "\n")
-        for r in rows:
-            lab = f"{r['algo']}" + (f" e{r['eps']}" if r["eps"] not in ("-", "", None) else "")
-            f.write(f"{lab:<16}{r['mean']:>10.3f}{r['p99']:>10.3f}{r['max']:>10.3f}\n")
-    print("wrote", a.out, "and", txt)
+    # text sidecar
+    lines = [
+        f"decision cost — {a.label or a.swaplog.split('/')[-1]}",
+        f"{'method':<16}{'mean_us':>10}{'p99_us':>10}",
+        "-" * 36,
+    ]
+    for lab, _c, mn, p in bars:
+        lines.append(f"{lab.replace(chr(10), ' '):<16}{mn:>10.3f}{p:>10.3f}")
+    report = "\n".join(lines)
+    print(report)
+    with open(a.out + ".txt", "w") as f:
+        f.write(report + "\n")
+    print("wrote", a.out + ".png,", a.out + ".txt")
 
 
 if __name__ == "__main__":
