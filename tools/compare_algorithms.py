@@ -248,6 +248,22 @@ def db(x):
     return 10 * np.log10(np.maximum(np.asarray(x, float), EPS))
 
 
+def _perslot_optimum(grids, asgs, U):
+    """Per-slot max-min oracle floor, vectorised over slots.
+
+    The old inline `max(floor_of(asg, g) for asg in asgs)` per slot is a pure
+    python loop over all 2520 assignments at U=4/R=8 -> ~137M floor_of calls ->
+    ~6 min. This streams over assignments with numpy (per-slot running max), so
+    it is ~1000x faster and never builds the full (n_asg x n_slots) matrix.
+    """
+    C = np.asarray(grids, float)  # (n_slots, U, R)
+    best = np.full(C.shape[0], -np.inf)
+    for asg in asgs:
+        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+        np.maximum(best, served.min(axis=1), out=best)
+    return best
+
+
 def read_meta(path):
     meta = {"policy": None, "rus_per_user": None, "epsilon": None}
     for ln in open(path):
@@ -304,6 +320,10 @@ def main():
     floors = {k: np.empty(len(grids)) for k in names}
     times = {k: 0.0 for k in names}
     asgs = _uniq_assignments(U, R, rpu) if not a.no_exhaustive else None
+    # exhaustive oracle floors precomputed in one vectorised pass (fast);
+    # its offline time is left n/a since the per-slot python loop it replaces
+    # was only ever a "py-ref" number, not a hardware result (opt_alloc_us is).
+    exh = _perslot_optimum(grids, asgs, U) if asgs is not None else None
 
     for i, g in enumerate(grids):
         for k, fn in swap_fn.items():
@@ -317,12 +337,11 @@ def main():
             times[k] += (perf_counter() - t0) * 1e6
             floors[k][i] = floor_of(asg, g)
         if asgs is not None:
-            t0 = perf_counter()
-            best = max(floor_of(asg, g) for asg in asgs)
-            times["Exhaustive"] += (perf_counter() - t0) * 1e6
-            floors["Exhaustive"][i] = best
+            floors["Exhaustive"][i] = exh[i]
 
     n = len(grids)
+    if asgs is not None:
+        times["Exhaustive"] = float("nan")  # vectorised; no per-call py-ref time
     # ---- hardware decision times from the gNB log (the real, same-CPU numbers) ----
     # alloc_us = applied swap (WRF/WUF), and by shared machinery also GGM.
     # opt_alloc_us = Exhaustive. maxmin_us / pref_us / bulk_us = the baselines.
@@ -345,8 +364,23 @@ def main():
                 if v is not None and float(v) >= 0:
                     hw_raw[k].append(float(v))
     hwmean = {k: (sum(v) / len(v) if v else None) for k, v in hw_raw.items()}
+    # DECISION-ONLY hardware cost for every algorithm, so the comparison is
+    # apples-to-apples: all rows are "compute + form an allocation, discard it".
+    #   Max-Min/Preference/Bulk -> their timing_* calls (decision-only)
+    #   WRF / GGM               -> wrf_us_e1 / ggm_us_e1 (decision-only). NOT
+    #       alloc_us, which also APPLIES the swap to the live allocator + does
+    #       bookkeeping — work the stateless baselines never do, so comparing
+    #       against it understates the swap (reads ~3x instead of the true ~10x).
+    #   WUF                     -> no standalone decision timer; WUF shares WRF's
+    #       pairwise machinery (differs only in priority order), so wrf_us_e1 is
+    #       used as its decision-cost proxy.
+    #   Exhaustive              -> opt_alloc_us (find + form the optimum).
+    # alloc_us (the real applied swap step) is still reported, but as its own
+    # "swap-applied" row in the decision-time sweep, not mixed into this column.
+    wrf_dec = hwmean.get("wrf_us_e1") or hwmean.get("alloc_us")
+    ggm_dec = hwmean.get("ggm_us_e1") or hwmean.get("alloc_us")
     hw_us = {
-        "WRF": hwmean["alloc_us"], "WUF": hwmean["alloc_us"], "GGM": hwmean["alloc_us"],
+        "WRF": wrf_dec, "WUF": wrf_dec, "GGM": ggm_dec,
         "Exhaustive": hwmean["opt_alloc_us"],
         "Max-Min": hwmean["maxmin_us"], "Preference": hwmean["pref_us"], "Bulk": hwmean["bulk_us"],
     }
@@ -373,9 +407,11 @@ def main():
     lines.append("-" * len(hdr))
     for k in order:
         d = db(floors[k])
+        pyref = times[k] / n
+        pyref_s = f"{pyref:>11.3f}" if pyref == pyref else f"{'n/a':>11}"  # nan -> n/a
         lines.append(
             f"{k:<12}{d.mean():>15.2f}{np.percentile(d,1):>10.2f}"
-            f"{hwcol(k)}{times[k] / n:>11.3f}"
+            f"{hwcol(k)}{pyref_s}"
         )
     if hwmean["maxmin_us"] is None:
         lines.append("")

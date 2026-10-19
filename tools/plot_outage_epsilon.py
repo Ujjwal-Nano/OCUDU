@@ -102,13 +102,29 @@ def replay(grids, rpu, epsilon, policy_fn):
     return floors
 
 
-def all_floors(C, asgs, U):
-    """Weakest-user floor for EVERY assignment, vectorised over all slots."""
-    out = np.empty((len(asgs), C.shape[0]))
+def floor_series_C(C, asg, U):
+    """Weakest-user floor over all slots for ONE assignment -> (n_slots,)."""
+    served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+    return served.min(axis=1)
+
+
+def stream_best_opt(C, asgs, U):
+    """Memory-safe pass: per-assignment mean floor + per-slot optimum.
+
+    Replaces the full (n_assignments x n_slots) float64 matrix, which is
+    ~1.1 GB at U=4 / R=8 and OOM-killed the process ('Killed'). Keeps only the
+    running per-slot optimum and the per-assignment means, so peak memory is
+    O(n_slots). The best-fixed series is recomputed afterwards for the single
+    winning assignment.
+    """
+    n_slots = C.shape[0]
+    opt = np.full(n_slots, -np.inf)
+    means = np.empty(len(asgs))
     for i, asg in enumerate(asgs):
-        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
-        out[i] = served.min(axis=1)
-    return out
+        fl = floor_series_C(C, asg, U)
+        means[i] = fl.mean()
+        np.maximum(opt, fl, out=opt)
+    return means, opt
 
 
 def outage(x):
@@ -148,9 +164,8 @@ def main():
     # baselines (identical across epsilon)
     C = np.asarray(grids, float)  # (n_slots, U, R)
     asgs = _uniq_assignments(U, R, rpu)
-    af = all_floors(C, asgs, U)
-    fix = af[int(af.mean(axis=1).argmax())]
-    opt = af.max(axis=0)
+    means, opt = stream_best_opt(C, asgs, U)  # memory-safe (see stream_best_opt)
+    fix = floor_series_C(C, asgs[int(means.argmax())], U)
     fx_db = 10 * np.log10(np.maximum(fix, EPS))
     op_db = 10 * np.log10(np.maximum(opt, EPS))
 

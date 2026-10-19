@@ -1,0 +1,41 @@
+dataset: /home/tud/OCUDU/datasets/Swap_test/E5_4U_2RBG_per_UE/20261019_1036_E5_4U_2RBG_per_UE.jsonl
+
+user 40c000003e: 36676 samples, 5 segment(s)
+  best-RBG fraction: RBG0=8.2%, RBG1=7.2%, RBG2=8.8%, RBG3=18.2%, RBG4=26.3%, RBG5=24.9%, RBG6=5.9%, RBG7=0.4%
+  total switches: 24840   zoom: 3.36-3.69 min
+
+user 40c000017e: 156 samples, 1 segment(s)
+  best-RBG fraction: RBG0=0.6%, RBG1=0.0%, RBG2=0.0%, RBG3=0.6%, RBG4=34.6%, RBG5=34.0%, RBG6=27.6%, RBG7=2.6%
+  total switches: 98   zoom: 0.00-0.33 min
+
+user 40c0000297: 21887 samples, 34 segment(s)
+  best-RBG fraction: RBG0=7.4%, RBG1=10.0%, RBG2=9.3%, RBG3=10.2%, RBG4=21.7%, RBG5=9.4%, RBG6=14.6%, RBG7=17.3%
+  total switches: 16151   zoom: 4.55-4.88 min
+
+user 40c000034d: 55366 samples, 1 segment(s)
+  best-RBG fraction: RBG0=14.7%, RBG1=14.8%, RBG2=12.0%, RBG3=10.6%, RBG4=13.8%, RBG5=10.3%, RBG6=12.3%, RBG7=11.5%
+  total switches: 39146   zoom: 10.03-10.37 min
+
+user 40c0000475: 62016 samples, 66 segment(s)
+  best-RBG fraction: RBG0=4.1%, RBG1=2.1%, RBG2=3.5%, RBG3=7.8%, RBG4=23.1%, RBG5=29.5%, RBG6=21.8%, RBG7=8.2%
+  total switches: 39927   zoom: 18.36-18.69 min
+
+user 40c0000547: 4037 samples, 7 segment(s)
+  best-RBG fraction: RBG0=7.4%, RBG1=7.8%, RBG2=10.9%, RBG3=17.7%, RBG4=27.4%, RBG5=13.5%, RBG6=8.8%, RBG7=6.6%
+  total switches: 2870   zoom: 0.03-0.36 min
+
+user 40c0000549: 8446 samples, 2 segment(s)
+  best-RBG fraction: RBG0=14.0%, RBG1=14.0%, RBG2=11.7%, RBG3=10.6%, RBG4=14.1%, RBG5=10.8%, RBG6=13.2%, RBG7=11.5%
+  total switches: 6248   zoom: 1.65-1.98 min
+
+user 40c0000608: 11666 samples, 3 segment(s)
+  best-RBG fraction: RBG0=20.3%, RBG1=9.2%, RBG2=11.5%, RBG3=11.0%, RBG4=20.5%, RBG5=13.3%, RBG6=5.9%, RBG7=8.3%
+  total switches: 5494   zoom: 0.96-1.29 min
+
+user 40c0000611: 52083 samples, 1 segment(s)
+  best-RBG fraction: RBG0=12.7%, RBG1=10.7%, RBG2=12.3%, RBG3=16.2%, RBG4=23.2%, RBG5=11.4%, RBG6=5.5%, RBG7=8.1%
+  total switches: 27155   zoom: 6.16-6.49 min
+
+user 40c0000739: 546 samples, 1 segment(s)
+  best-RBG fraction: RBG0=4.6%, RBG1=6.8%, RBG2=11.7%, RBG3=10.4%, RBG4=26.6%, RBG5=26.7%, RBG6=12.1%, RBG7=1.1%
+  total switches: 385   zoom: 0.00-0.33 min

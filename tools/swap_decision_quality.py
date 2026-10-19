@@ -46,15 +46,29 @@ def floor_of(asg, c, U):
     return min(sum(c[u][r] for r in asg[u]) for u in range(U))
 
 
-def all_floors(C, asgs, U):
-    """Weakest-user floor for EVERY assignment, vectorised over all slots.
-    C is (n_slots, U, R); returns (n_assignments, n_slots). Same result as
-    [[floor_of(asg, c, U) for c in csis] for asg in asgs] but ~100x faster."""
-    out = np.empty((len(asgs), C.shape[0]))
+def floor_series_C(C, asg, U):
+    """Weakest-user floor over all slots for ONE assignment -> (n_slots,)."""
+    served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+    return served.min(axis=1)
+
+
+def stream_best_opt(C, asgs, U):
+    """Memory-safe pass: per-assignment mean floor + per-slot optimum.
+
+    Replaces the full (n_assignments x n_slots) float64 matrix, which is
+    ~1.1 GB at U=4 / R=8 and OOM-killed the process. Keeps only the running
+    per-slot optimum and the per-assignment means (peak memory O(n_slots)); the
+    best-fixed series is recomputed afterwards for the single winning
+    assignment.
+    """
+    n_slots = C.shape[0]
+    opt = np.full(n_slots, -np.inf)
+    means = np.empty(len(asgs))
     for i, asg in enumerate(asgs):
-        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
-        out[i] = served.min(axis=1)
-    return out
+        fl = floor_series_C(C, asg, U)
+        means[i] = fl.mean()
+        np.maximum(opt, fl, out=opt)
+    return means, opt
 
 
 def main():
@@ -144,8 +158,7 @@ def main():
         sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
     asgs = assignments(U, R, rpu)
     C = np.asarray(csis, float)  # (n_slots, U, R)
-    af = all_floors(C, asgs, U)  # (n_assignments, n_slots)
-    ceil = af.max(axis=0)  # per-slot max-min optimum
+    means, ceil = stream_best_opt(C, asgs, U)  # memory-safe; ceil=per-slot optimum
     gap_db = 10 * np.log10(np.maximum(ceil, EPS) / np.maximum(ach, EPS))
     gap_db = np.maximum(gap_db, 0.0)
     opt_pct = 100.0 * np.mean(gap_db < 1e-3)
@@ -161,7 +174,7 @@ def main():
     onbest_pct = 100.0 * onbest / len(slots)
 
     # captured-gain ratio vs best fixed
-    fix = af[af.mean(axis=1).argmax()]
+    fix = floor_series_C(C, asgs[int(means.argmax())], U)
     fm, am, cm = (10 * np.log10(np.maximum(x, EPS)).mean() for x in (fix, ach, ceil))
     captured = (am - fm) / max(cm - fm, 1e-9) * 100.0
 

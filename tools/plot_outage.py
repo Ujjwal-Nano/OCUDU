@@ -60,15 +60,43 @@ def floor_series(asg, csis, U):
     return np.array([min(sum(c[u][r] for r in asg[u]) for u in range(U)) for c in csis])
 
 
-def all_floors(C, asgs, U):
-    """Weakest-user floor for EVERY assignment, vectorised over all slots.
-    C is (n_slots, U, R); returns (n_assignments, n_slots). ~100x faster than
-    looping floor_series per assignment."""
-    out = np.empty((len(asgs), C.shape[0]))
+def floor_series_C(C, asg, U):
+    """Weakest-user floor over all slots for ONE assignment -> (n_slots,)."""
+    served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
+    return served.min(axis=1)
+
+
+def stream_baselines(C, asgs, U, rnd_cap=2_000_000):
+    """Memory-safe single pass over every fixed assignment.
+
+    The old all_floors() built the full (n_assignments, n_slots) float64 matrix
+    (2520 x 54485 ~ 1.1 GB at U=4 / R=8, then .ravel() copied it again for the
+    random pool -> ~3 GB peak -> the kernel OOM-killed it: 'Killed'). This keeps
+    only the per-slot running optimum, the per-assignment mean floor, and a
+    bounded sub-sample for the channel-blind 'random' curve, so peak memory is
+    O(n_slots) instead of O(n_assignments x n_slots).
+
+    Returns (means, opt, rnd):
+      means (n_assignments,) mean weakest-user floor of each fixed assignment
+      opt   (n_slots,)       per-slot max over assignments (max-min oracle)
+      rnd   (<=rnd_cap,)     pooled floors, systematically sub-sampled, for the
+                             random-per-slot CDF (statistically identical pool)
+    """
+    n_slots = C.shape[0]
+    opt = np.full(n_slots, -np.inf)
+    means = np.empty(len(asgs))
+    stride = max(1, (len(asgs) * n_slots) // max(1, rnd_cap))
+    rnd_parts = []
     for i, asg in enumerate(asgs):
-        served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
-        out[i] = served.min(axis=1)
-    return out
+        fl = floor_series_C(C, asg, U)
+        means[i] = fl.mean()
+        np.maximum(opt, fl, out=opt)
+        # .copy() is essential: a strided slice is a VIEW that pins the whole
+        # fl array alive, so without it all 2520 fl's stay in memory (~1.1 GB,
+        # re-creating the very OOM this rewrite removes).
+        rnd_parts.append(fl[::stride].copy())
+    rnd = np.concatenate(rnd_parts) if rnd_parts else np.empty(0)
+    return means, opt, rnd
 
 
 def load(path, min_users):
@@ -121,8 +149,8 @@ def main():
         "--epsilon",
         type=float,
         default=None,
-        help="swap acceptance threshold ε shown in the swap legend; "
-        "default: read from log if present, else omitted",
+        help="swap ε (number of worst RUs reconsidered each period) shown in "
+        "the swap legend; default: read from log if present, else omitted",
     )
     ap.add_argument("--label", default=None)
     a = ap.parse_args()
@@ -153,24 +181,24 @@ def main():
         rpu, rpu_src = 1, "default"
     if U * rpu > R:
         sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
-    # swap acceptance threshold ε for the legend: CLI wins, else log, else none
+    # swap ε (worst RUs reconsidered per period) for the legend:
+    # CLI wins, else log, else none
     eps = a.epsilon if a.epsilon is not None else meta["epsilon"]
     asgs = assignments(U, R, rpu)
     C = np.asarray(csis, float)  # (n_slots, U, R)
-    af = all_floors(C, asgs, U)  # (n_assignments, n_slots)
-
-    mean_floor = af.mean(axis=1)
-    best_i = int(mean_floor.argmax())
-    worst_i = int(mean_floor.argmin())
+    # memory-safe streaming pass (see stream_baselines): no full
+    # (n_assignments x n_slots) matrix, so U=4/R=8 no longer OOMs.
+    means, opt, rnd = stream_baselines(C, asgs, U)
+    best_i = int(means.argmax())
+    worst_i = int(means.argmin())
     best_asg = asgs[best_i]
     worst_asg = asgs[worst_i]
-    fix = af[best_i]  # no swap, best fixed
-    wfix = af[worst_i]  # no swap, worst fixed
-    opt = af.max(axis=0)  # per-slot max-min optimum (oracle)
-    # no swap, random allocation per slot: picking a uniform-random assignment
-    # each slot gives a floor whose distribution is exactly the pool of every
-    # assignment over every slot (ensemble average, no Monte-Carlo noise).
-    rnd = af.ravel()
+    fix = floor_series_C(C, best_asg, U)    # no swap, best fixed
+    wfix = floor_series_C(C, worst_asg, U)  # no swap, worst fixed
+    # opt: per-slot max-min optimum (oracle), from the streaming pass.
+    # rnd: no swap, random allocation per slot -> pool of every assignment over
+    # every slot, systematically sub-sampled so the CDF is unchanged but the
+    # 2520x54485 ravel (~1.1 GB) that caused the OOM is gone.
 
     sw_db = 10 * np.log10(np.maximum(ach, EPS))
     fx_db = 10 * np.log10(np.maximum(fix, EPS))
@@ -191,13 +219,11 @@ def main():
     xo, po = outage(op_db)
 
     fig, ax = plt.subplots(figsize=(9.5, 6))
-    ax.semilogy(xf, pf, color="tab:red", lw=2.4, label="no swap  (best fixed)")
     ax.semilogy(
-        xr,
-        pr,
-        color="tab:purple",
-        lw=2.0,
-        ls="-.",
+        xf, pf, color="tab:red", lw=2.4, label="no swap  (best fixed)"
+    )
+    ax.semilogy(
+        xr, pr, color="tab:purple", lw=2.0, ls="-.",
         label="no swap  (randomly allocated per slot)",
     )
     ax.semilogy(
@@ -208,7 +234,8 @@ def main():
     pol = meta["policy"]
     base = pol.upper() if pol else "max-min"
     swap_label = (
-        f"swap  ({base}, $\\epsilon$={eps:g})" if eps is not None else f"swap  ({base})"
+        f"swap  ({base}, $\\epsilon$={eps:g})" if eps is not None
+        else f"swap  ({base})"
     )
     ax.semilogy(xs, ps, color="tab:blue", lw=2.4, label=swap_label)
     ax.semilogy(
@@ -218,7 +245,9 @@ def main():
     ax.set_ylabel(
         "outage probability  $P(\\,\\Gamma_{min} < \\Gamma_{th}\\,)$", fontsize=14
     )
-    ax.set_title(f"Weakest-user outage  —  {rpu} RBG/user", fontsize=12.5)
+    ax.set_title(
+        f"Weakest-user outage  —  {rpu} RBG/user", fontsize=12.5
+    )
     ax.grid(alpha=0.3, which="both")
     ax.legend(fontsize=11, loc="lower right")
     ax.set_ylim(max(1.0 / len(sw_db), 5e-4), 1.0)
