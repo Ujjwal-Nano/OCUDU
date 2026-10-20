@@ -1,0 +1,14 @@
+decision-cost bars — 20261019_1148_E5_4U_2RBG_per_UE_algocmp_timing.csv
+method             mean_us    p99_us    max_us
+----------------------------------------------
+Preference           0.396     0.428     0.741
+GGM e1               0.503     0.605     0.696
+GGM e2               0.557     0.724     0.802
+WRF e1               0.564     0.729     0.948
+WRF e2               0.649     0.952     1.213
+GGM e4               0.679     0.903     1.071
+WRF e4               0.836     1.188     1.498
+Bulk                 2.057     2.191     3.104
+Max-Min              3.563     4.393     5.436
+swap-applied         4.098    14.228   173.900
+Exhaustive         442.339   507.330   843.991

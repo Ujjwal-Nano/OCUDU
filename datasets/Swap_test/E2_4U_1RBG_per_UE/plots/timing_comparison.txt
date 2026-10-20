@@ -1,0 +1,10 @@
+decision cost — 20261019_1549_E2_4U_1RBG_per_UE.swap.jsonl
+method             mean_us    p99_us
+------------------------------------
+WRF $\epsilon$=1     0.585     0.756
+WRF $\epsilon$=2     0.650     0.826
+WRF $\epsilon$=4     0.736     0.948
+GGM $\epsilon$=1     0.571     0.674
+GGM $\epsilon$=2     0.617     0.741
+GGM $\epsilon$=4     0.689     0.830
+Optimal              7.629    17.590

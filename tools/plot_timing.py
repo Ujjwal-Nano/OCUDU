@@ -98,9 +98,10 @@ def main():
             bars.append(
                 (f"GGM\n$\\epsilon$={e}", GREEN, v.mean(), np.percentile(v, 99))
             )
-    if a.maxmin and data.get("maxmin_us") is not None:
-        v = data["maxmin_us"]
-        bars.append(("Max-Min", RED, v.mean(), np.percentile(v, 99)))
+    # include opt_alloc_us bar instead of the previous Max-Min baseline
+    if a.maxmin and data.get("opt_alloc_us") is not None:
+        v = data["opt_alloc_us"]
+        bars.append(("Optimal", RED, v.mean(), np.percentile(v, 99)))
 
     labels = [b[0] for b in bars]
     cols = [b[1] for b in bars]

@@ -1,0 +1,24 @@
+algorithm comparison — 20261014_1447_E1_3U_1RBG_per_U_test
+slots=45813 users=3 RUs=3 rus_per_user=1 epsilon=1  (policy logged=wrf)
+
+algorithm    mean floor(dB)  @1% out(dB)  @0.1%(dB)  alloc(us/slot)
+-------------------------------------------------------------------
+Exhaustive           -38.10       -43.60     -44.38          13.797
+Max-Min              -38.10       -43.60     -44.38         799.108
+Preference           -38.13       -43.60     -44.39          19.903
+Bulk                 -38.13       -43.60     -44.39          24.205
+GGM                  -38.16       -43.67     -44.48          12.516
+WRF                  -38.16       -43.67     -44.48          10.432
+WUF                  -38.12       -43.61     -44.39          16.266
+
+gap to Exhaustive (mean floor, dB) — lower is better:
+  Max-Min     +0.000
+  Preference  +0.039
+  Bulk        +0.039
+  GGM         +0.065
+  WRF         +0.065
+  WUF         +0.029
+
+  GGM vs Max-Min: floor -0.065 dB, 64x faster (12.516 vs 799.108 us/slot)
+  WRF vs Max-Min: floor -0.065 dB, 77x faster (10.432 vs 799.108 us/slot)
+  WUF vs Max-Min: floor -0.029 dB, 49x faster (16.266 vs 799.108 us/slot)
