@@ -1,0 +1,13 @@
+dataset: /home/tud/OCUDU/datasets/Static/E1_3U_1RBG_per_UE/20261016_1331_E1_3U_1RBG_per_UE.jsonl
+
+user 999420000020049: 63795 samples, 3 segment(s)
+  best-RBG fraction: RBG0=33.7%, RBG1=29.1%, RBG2=37.2%
+  total switches: 23135   zoom: 9.65-9.98 min
+
+user 999420000020051: 63814 samples, 2 segment(s)
+  best-RBG fraction: RBG0=79.8%, RBG1=12.0%, RBG2=8.3%
+  total switches: 11937   zoom: 15.86-16.19 min
+
+user 999420000020052: 63855 samples, 1 segment(s)
+  best-RBG fraction: RBG0=43.7%, RBG1=43.3%, RBG2=13.0%
+  total switches: 10995   zoom: 2.87-3.20 min

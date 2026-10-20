@@ -1,0 +1,14 @@
+weakest-user outage — epsilon sweep — 20261016_1331_E1_3U_1RBG_per_UE
+slots=49767 users=3 RUs=3 rus_per_user=1 policy=wrf (from log)
+
+curve           mean(dB)   @1%(dB)   @5%(dB)  gain/fixed  opt gap
+-----------------------------------------------------------------
+best-fixed        -38.25    -44.26    -43.34       +0.00     0.86
+wrf eps=1         -37.44    -43.49    -42.51       +0.81     0.05
+wrf eps=2         -37.44    -43.48    -42.51       +0.82     0.05
+wrf eps=3         -37.44    -43.48    -42.51       +0.82     0.05
+wrf eps=4         -37.44    -43.48    -42.51       +0.82     0.05
+optimal           -37.39    -43.41    -42.44       +0.86     0.00
+
+TRUST CHECK: gNB logged floor (its own epsilon: eps=1): mean=-37.44 dB, @1%=-43.49 dB
+  -> compare to the offline eps=1 row above; they should match within a few hundredths dB (warm-start washes out over the run).
