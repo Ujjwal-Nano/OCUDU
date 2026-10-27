@@ -127,15 +127,16 @@ def policy_wrf(user_rus, csi, epsilon=1, num_redun=0):
 
 
 def policy_wuf(user_rus, csi, epsilon=1, num_redun=0):
-    """Weakest-USER-first: WRF's EXACT pairwise machinery (identical candidate
-    generation, acceptance test, and normalised gain) — the ONLY difference is
-    which RUs are reconsidered and in what order. WRF reconsiders the epsilon
-    globally-worst RUs; WUF reconsiders every RU of the epsilon WEAKEST USERS
-    (lowest served sum), visited weakest-user-first and worst-RU-first within a
-    user. At rpu=1 each user owns one RU, so the weakest users ARE the worst RUs
-    and this reduces EXACTLY to WRF; the two diverge only at rpu>=2, where a
-    user's RUs differ from the globally-worst RUs. epsilon = number of weakest
-    users lifted this period."""
+    """Weakest-USER-first, FAITHFUL to Zhang et al. (eq 4, 11, 12).
+
+    Uses the SAME candidate set as WRF/GGM: R_worst = the `epsilon` globally
+    worst-performing RUs (lowest owner-CSI). The ONLY thing that differs from
+    WRF is the order in which those worst RUs are processed: a two-level
+    lexicographic priority — primary pi^(1) = -Gamma_owner (eq 11: the worst
+    RU whose OWNER has the lowest aggregate quality goes first), secondary
+    pi^(2) = -gamma_ru (eq 12: within the same owner, the worst RU first). So
+    epsilon counts WORST RESOURCES (not users), exactly as in the paper; at
+    rpu=1 this is identical to WRF."""
     U = len(user_rus)
     R = len(csi[0])
     ur = [list(x) for x in user_rus]
@@ -149,13 +150,10 @@ def policy_wuf(user_rus, csi, epsilon=1, num_redun=0):
             served[u] += csi[u][r]
     spares = [r for r in range(R) if owner[r] == UNASSIGNED]
 
-    # worst set = the RUs of the epsilon weakest users (by served sum), ordered
-    # weakest-user-first, and worst-RU-first within each user.
-    weak_users = sorted(range(U), key=lambda u: served[u])[: max(1, min(epsilon, U))]
-    worst = []
-    for u in weak_users:
-        for r in sorted(ur[u], key=lambda r: csi[u][r]):
-            worst.append(r)
+    # R_worst = the epsilon globally-worst allocated RUs (SAME set as WRF).
+    allocated = [r for r in range(R) if owner[r] != UNASSIGNED]
+    allocated.sort(key=lambda r: ru_perf[r])
+    worst = allocated[: min(epsilon, len(allocated))]
 
     # ---- candidate generation: identical to WRF ----
     ops = []  # (type, worst_ru, target_ru, gain, target_user)
@@ -182,12 +180,13 @@ def policy_wuf(user_rus, csi, epsilon=1, num_redun=0):
     if not ops:
         return ur, stats
 
-    # ---- execution: identical to WRF (one best swap per worst RU, by gain),
-    #      visited in the weakest-user-first order built above (NOT re-sorted
-    #      by RU power, which is the only thing that would turn this back into
-    #      WRF at rpu>=2). ----
+    # ---- execution: one best swap per worst RU (by gain), but visit the worst
+    #      RUs in WUF's two-level priority order (eq 11 then eq 12): weakest
+    #      OWNER first (served ascending), then worst RU within owner (ru_perf
+    #      ascending). This is the ONLY difference from WRF. ----
     locked = [0] * R
-    for wr in worst:
+    worst_order = sorted(worst, key=lambda r: (served[owner[r]], ru_perf[r]))
+    for wr in worst_order:
         if locked[wr]:
             continue
         ru_ops = sorted([o for o in ops if o[1] == wr], key=lambda o: -o[3])

@@ -2,10 +2,12 @@
 """plot_timing.py — decision-cost bar chart (timing counterpart to the fairness
 comparison). Reads the gNB's on-CPU decision timers from swap.jsonl.
 
-Bars grouped by policy: WRF at every epsilon together, GGM at every epsilon
-together, then a Max-Min bar. Bar height = MEAN decision time; a star on top of
-each bar marks the 99th percentile, labelled with its value. Log y so the
-sub-microsecond swap bars and the larger baseline bar are both legible.
+Bars grouped by policy: WRF at every epsilon, GGM at every epsilon, WUF at
+every epsilon, then the Optimal (exhaustive) bar. Colours match the fairness
+comparison plot (WRF blue, GGM green, WUF orange, Optimal black). Bar height =
+MEAN decision time; a star on top of each bar marks the 99th percentile,
+labelled with its value. Log y so the sub-microsecond swap bars and the larger
+baseline bar are both legible.
 
 Usage:
   python3 plot_timing.py swap.jsonl -o out/timing
@@ -53,6 +55,9 @@ def load(path):
             "ggm_us_e1",
             "ggm_us_e2",
             "ggm_us_e4",
+            "wuf_us_e1",
+            "wuf_us_e2",
+            "wuf_us_e4",
         ):
             v = d.get(k)
             if v is not None and float(v) >= 0:
@@ -65,6 +70,12 @@ def main():
     ap.add_argument("swaplog")
     ap.add_argument("--wrf-eps", default="1,2,4")
     ap.add_argument("--ggm-eps", default="1,2,4")
+    ap.add_argument(
+        "--wuf-eps",
+        default="1,2,4",
+        help="epsilons for WUF (weakest USERS, not worst RUs); "
+        "use '4' for a single bar matching the fairness plot",
+    )
     ap.add_argument(
         "--maxmin",
         action="store_true",
@@ -86,7 +97,9 @@ def main():
         )
 
     # build the bar list: (label, color, mean, p99)
-    BLUE, GREEN, RED = "tab:blue", "tab:green", "tab:red"
+    # colours consistent with the fairness plot (point 2): WRF blue, GGM green,
+    # WUF orange, Optimal/exhaustive black.
+    BLUE, GREEN, ORANGE, BLACK = "tab:blue", "tab:green", "tab:orange", "black"
     bars = []  # (label, color, mean, p99)
     for e in parse_eps(a.wrf_eps):
         v = data.get(f"wrf_us_e{e}")
@@ -98,10 +111,19 @@ def main():
             bars.append(
                 (f"GGM\n$\\epsilon$={e}", GREEN, v.mean(), np.percentile(v, 99))
             )
-    # include opt_alloc_us bar instead of the previous Max-Min baseline
+    # WUF (point 3): decision timers logged by the gNB on the same CSI/CPU.
+    # NB epsilon here = number of WEAKEST USERS reconsidered (not worst RUs as
+    # for WRF/GGM); compare WUF across epsilon, not 1:1 against WRF/GGM bars.
+    for e in parse_eps(a.wuf_eps):
+        v = data.get(f"wuf_us_e{e}")
+        if v is not None:
+            bars.append(
+                (f"WUF\n$\\epsilon$={e}", ORANGE, v.mean(), np.percentile(v, 99))
+            )
+    # Optimal (exhaustive per-slot max-min oracle) bar, in black
     if a.maxmin and data.get("opt_alloc_us") is not None:
         v = data["opt_alloc_us"]
-        bars.append(("Optimal", RED, v.mean(), np.percentile(v, 99)))
+        bars.append(("Optimal", BLACK, v.mean(), np.percentile(v, 99)))
 
     labels = [b[0] for b in bars]
     cols = [b[1] for b in bars]

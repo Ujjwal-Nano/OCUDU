@@ -1,0 +1,1 @@
+4 UE, 1rbg per user, 40mhz bw with 25 rb per rbg
