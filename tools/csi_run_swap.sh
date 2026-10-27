@@ -167,10 +167,9 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
       python3 "$REPO/tools/plot_outage_epsilon.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_outage_epssweep.png" --min-users "${NUM_USERS:-3}" \
               --rus-per-user "$RUS_PER_USER" --eps-list 1,2,3,4 --label "$BASE" || true
-      # (4) decision quality: optimality (vs per-slot max-min) + alloc-time cost
-      python3 "$REPO/tools/swap_decision_quality.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_quality.png" --min-users "${NUM_USERS:-3}" \
-              --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
+      # (4) timing for different Algorithm for different epsilon
+      python3 "$REPO/tools/plot_timing.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}timing_quality"|| true
       # (5) paper baselines vs swap: floors (offline) + decision cost (gNB C++ time)
       python3 "$REPO/tools/compare_algorithms.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_algocmp" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
