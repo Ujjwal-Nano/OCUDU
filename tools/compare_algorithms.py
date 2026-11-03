@@ -1,39 +1,48 @@
 #!/usr/bin/env python3
 """compare_algorithms.py — swap-policy comparison on ONE testbed capture.
 
-Replays, on the same logged CSI grid, the three pairwise-swap strategies and
-the per-slot max-min optimum, and draws ONE plot: weakest-user power threshold
-Gamma_th (dB) vs outage probability P_out,sys (paper Fig. 3 layout, higher is
-better; Gamma_th at P is the P-quantile of the per-slot weakest-user power):
+Replays every algorithm on the same logged CSI grid and draws TWO outage plots
+(weakest-user power threshold Gamma_th (dB) vs outage probability P_out,sys;
+paper Fig. 3 layout, higher is better; Gamma_th at P is the P-quantile of the
+per-slot weakest-user power):
 
-    WRF  (worst RU first)             swept over epsilon   (default 1,2,4)
-    GGM  (greedy gain maximisation)   swept over epsilon   (default 1,4)
-    WUF  (weakest user first)         one curve, labelled without epsilon
-    optimal (per-slot max-min oracle) drawn once, epsilon-independent
-    [best fixed assignment]           optional reference   (--fixed)
+  PLOT 1  <out>.png           (unchanged look: same colours / markers / labels)
+      WRF  (worst RU first)             swept over epsilon   (default 1,2,4)
+      GGM  (greedy gain maximisation)   swept over epsilon   (default 1,2,4)
+      WUF  (weakest user first)         (default epsilon 4)
+      optimal (per-slot max-min oracle) drawn once
+      no swap (best fixed)              red, solid  (worst case)
 
-epsilon = number of worst RUs (WRF/GGM) / weakest users (WUF) reconsidered for
-a swap each period. It is NOT a dB threshold. Every curve is a warm-started
-replay: each (policy, epsilon) evolves its own assignment slot by slot.
+  PLOT 2  <out>.all_algos.png
+      WRF eps=4, WUF eps=4, GGM eps=4  (same colour/marker as plot 1)
+      optimal, Max-min (Trassl), PrefGradient, Bulk   (new colours / markers)
+      no swap (best fixed)              red, solid  (worst case)
 
-All curves are scored on the same yardstick, the weakest-user aggregate power
+epsilon = number of worst RUs reconsidered for a swap each period (NOT a dB
+threshold). WRF/WUF/GGM are warm-started replays: each (policy, epsilon) evolves
+its own assignment slot by slot. Max-min / Pref / Bulk are stateless: rebuilt
+from the CSI every slot. All curves are scored on the same yardstick, the
+weakest-user aggregate power
     Gamma_min = min_u  sum_{r in A(u)} gamma_{u,r}          (10*log10, dB)
 
-WRF/WUF come from swap_policies.py (the validated port); GGM is defined below
-(same candidate machinery as WRF, executed highest normalised gain first).
+OPTIMAL is ONE algorithm: exhaustive_maxmin (exact branch-and-bound, warm-seeded
+from the previous slot). NO SWAP is the best STATIC assignment (maximises the mean
+weakest-user floor over the run): exact brute force when the search space is
+small, otherwise a local search (marked with * in the report).
 
-Usage:
-  python3 compare_algorithms.py swap.jsonl -o out/cmp
-  python3 compare_algorithms.py swap.jsonl --rus-per-user 2 --wrf-eps 1,2,4 -o out/cmp
-  python3 compare_algorithms.py swap.jsonl --ggm-eps 1,4 --wuf-eps 4 --fixed -o out/cmp
-  python3 compare_algorithms.py --rb rb.jsonl --rbs-per-ru 8 -o out/cmp
+All algorithms live in swap_policies.py; this file only replays and plots.
+
+Usage (4 users; only rus-per-user is needed):
+  python3 compare_algorithms.py swap.jsonl --rus-per-user 2 -o out/cmp
+  python3 compare_algorithms.py --rb rb.jsonl --rbs-per-ru 8 --rus-per-user 2 -o out/cmp
 """
 
 import argparse
-import copy
+import itertools
 import json
 import os
 import sys
+from math import comb
 from time import perf_counter
 
 import numpy as np
@@ -44,186 +53,63 @@ import matplotlib.pyplot as plt
 
 try:
     from swap_policies import (
-        policy_wrf,
-        policy_wuf,
+        POLICIES,
+        max_min_leximin,
+        pref_gradient,
+        bulk_gradient,
+        exhaustive_maxmin,
         build_grids_swaplog,
         build_grids_rb,
-        _uniq_assignments,
         floor_of,
-        _replace,
     )
 except ImportError:
-    sys.exit("keep compare_algorithms.py in the same folder as swap_policies.py")
+    sys.exit(
+        "keep compare_algorithms.py in the same folder as the UPDATED "
+        "swap_policies.py (needs policy_ggm, max_min_leximin, pref_gradient, "
+        "bulk_gradient, exhaustive_maxmin)"
+    )
 
-UNASSIGNED = -1
 EPS = 1e-12  # numerical floor for log10 (NOT the swap epsilon)
-
-# Exact per-slot optimum (max-min of SUMS) via MILP, for rpu where brute-force
-# enumeration of assignments is intractable (e.g. U4/R12/rpu3 -> 369,600;
-# the old permutations() path tries 12! = 4.8e8 and hangs). MILP returns the
-# PROVEN optimum without enumerating. Needs scipy>=1.9 (ships HiGHS).
-try:
-    from scipy.optimize import milp, LinearConstraint, Bounds
-
-    _HAVE_MILP = True
-except ImportError:
-    _HAVE_MILP = False
-
-BRUTE_MAX = 100000  # <= this many assignments: enumerate; above: use MILP
-
-
-def _assignment_count(U, R, rpu):
-    """Number of distinct disjoint assignments = prod_u C(R-u*rpu, rpu)."""
-    from math import comb
-
-    c = 1
-    for u in range(U):
-        avail = R - u * rpu
-        if avail < rpu:
-            return 0
-        c *= comb(avail, rpu)
-    return c
-
-
-def optimal_maxmin_milp(csi, U, R, rpu):
-    """Exact max-min of SUMS: maximize t s.t. each user's RU-sum >= t, each user
-    gets exactly rpu distinct RUs, each RU to <=1 user. Returns the optimal
-    weakest-user aggregate power (linear units)."""
-    import io, contextlib
-
-    # Scale CSI so coefficients are O(1e4). With raw ~1e-4 magnitudes, HiGHS's
-    # default MIP gap/tolerances can return a slightly SUB-optimal t (it may even
-    # fall below the heuristic on deep-fade slots, which is impossible for a true
-    # optimum). Scaling + mip_rel_gap=0 forces the exact integer optimum; t is
-    # linear in the CSI, so we divide the scale back out of the result.
-    mx = max((csi[u][r] for u in range(U) for r in range(R)), default=1.0)
-    s = (1e4 / mx) if mx > 0 else 1.0
-    n = U * R + 1  # x[u,r] flattened (U*R) + t (last)
-    c = np.zeros(n)
-    c[-1] = -1.0  # maximize t
-    integ = np.ones(n)
-    integ[-1] = 0  # x integer, t continuous
-    lb = np.zeros(n)
-    ub = np.ones(n)
-    ub[-1] = np.inf
-    A1 = np.zeros((U, n))  # sum_r csi[u,r] x[u,r] - t >= 0
-    for u in range(U):
-        for r in range(R):
-            A1[u, u * R + r] = csi[u][r] * s
-        A1[u, -1] = -1.0
-    A2 = np.zeros((U, n))  # sum_r x[u,r] = rpu
-    for u in range(U):
-        for r in range(R):
-            A2[u, u * R + r] = 1.0
-    A3 = np.zeros((R, n))  # sum_u x[u,r] <= 1
-    for r in range(R):
-        for u in range(U):
-            A3[r, u * R + r] = 1.0
-    cons = [
-        LinearConstraint(A1, 0, np.inf),
-        LinearConstraint(A2, rpu, rpu),
-        LinearConstraint(A3, 0, 1),
-    ]
-    with contextlib.redirect_stderr(io.StringIO()):  # silence HiGHS chatter
-        res = milp(
-            c=c,
-            constraints=cons,
-            integrality=integ,
-            bounds=Bounds(lb, ub),
-            options={"mip_rel_gap": 0.0},
-        )  # force exact optimum
-    return float(-res.fun) / s
-
-
-def _opt_worker(args):
-    """Picklable wrapper so the per-slot MILP can run in a process pool."""
-    grid, U, R, rpu = args
-    return optimal_maxmin_milp(grid, U, R, rpu)
-
-
-def optimal_series(grids, idx, U, R, rpu, jobs):
-    """Exact per-slot optimum over the given slot indices, parallelised over
-    `jobs` processes (each MILP is single-threaded, so this scales ~linearly)."""
-    tasks = [(grids[i], U, R, rpu) for i in idx]
-    if jobs and jobs > 1 and len(tasks) > 50:
-        import multiprocessing as mp
-
-        with mp.Pool(jobs) as pool:
-            vals = pool.map(
-                _opt_worker, tasks, chunksize=max(1, len(tasks) // (jobs * 8))
-            )
-    else:
-        vals = [optimal_maxmin_milp(g, U, R, rpu) for (g, U, R, rpu) in tasks]
-    return np.array(vals)
-
+PLOT2_EPS = 4  # epsilon used for WRF / WUF / GGM in plot 2
+FIXED_EXACT_MAX = 3e8  # n_assignments * n_slots below this -> exact best-fixed
 
 # ---------------------------------------------------------------------------
-# GGM: same Type-1/Type-2 candidates as WRF, executed highest-gain first
+# plot style. Plot-1 styling is UNCHANGED. Colour = policy, marker = epsilon.
 # ---------------------------------------------------------------------------
-def policy_ggm(user_rus, csi, epsilon=1, num_redun=0):
-    """Greedy Gain Maximisation (paper eq 9).
+POL_COLOR = {"WRF": "tab:blue", "GGM": "tab:green", "WUF": "tab:orange"}
+POL_LS = {"WRF": "-", "GGM": "--", "WUF": "-."}
+EPS_MARKER = {1: "o", 2: "X", 3: "^", 4: "s"}
+DEFAULT_MARKER = "P"
+# new algorithms (plot 2): colours/markers not used by anything above
+NEW_STYLE = {
+    "Max-min": dict(label="Max-min  (Trassl)", color="tab:purple", ls=":", marker="D"),
+    "Pref": dict(
+        label="PrefGradient", color="tab:brown", ls=(0, (3, 1, 1, 1, 1, 1)), marker="v"
+    ),
+    "Bulk": dict(label="Bulk", color="tab:cyan", ls=(0, (5, 1)), marker="p"),
+}
+FIXED_COLOR = "red"  # no swap (best fixed): solid red
 
-    Builds the same candidates as WRF over the `epsilon` worst allocated RUs
-    (Type 1: pairwise swap with another user, Type 2: replace by a spare RU),
-    then executes them in descending normalised gain, conflict-free.
-    """
-    U = len(user_rus)
-    R = len(csi[0])
-    ur = [list(x) for x in user_rus]
-    owner = [UNASSIGNED] * R
-    ru_perf = [0.0] * R
-    for u in range(U):
-        for r in ur[u]:
-            owner[r] = u
-            ru_perf[r] = csi[u][r]
-
-    allocated = sorted(
-        (r for r in range(R) if owner[r] != UNASSIGNED), key=lambda r: ru_perf[r]
-    )
-    worst = allocated[: min(epsilon, len(allocated))]
-    spares = [r for r in range(R) if owner[r] == UNASSIGNED]
-
-    ops = []  # (type, worst_ru, target_ru, gain, target_user)
-    for wr in worst:
-        A = owner[wr]
-        c_A_worst = csi[A][wr]
-        for B in range(U):
-            if B == A or not ur[B]:
-                continue
-            for tr in ur[B]:
-                d_swap = min(csi[A][tr], csi[B][wr])
-                d_current = min(c_A_worst, csi[B][tr])
-                if d_swap > d_current and c_A_worst < csi[A][tr]:
-                    ops.append((1, wr, tr, (d_swap - d_current) / csi[B][wr], B))
-        for sr in spares:
-            if csi[A][sr] > c_A_worst:
-                ops.append(
-                    (2, wr, sr, (csi[A][sr] - c_A_worst) / c_A_worst, UNASSIGNED)
-                )
-
-    stats = {"swaps": 0, "replaces": 0, "ran": True}
-    if not ops:
-        return ur, stats
-
-    locked = [False] * R
-    for typ, wr, tr, gain, B in sorted(ops, key=lambda o: -o[3]):
-        if locked[wr] or locked[tr] or gain <= 0.0:
-            continue
-        A = owner[wr]
-        if typ == 1:
-            _replace(ur[A], wr, tr)
-            _replace(ur[B], tr, wr)
-            owner[wr], owner[tr] = B, A
-            stats["swaps"] += 1
-        else:
-            _replace(ur[A], wr, tr)
-            owner[wr], owner[tr] = UNASSIGNED, A
-            stats["replaces"] += 1
-        locked[wr] = locked[tr] = True
-    return ur, stats
-
-
-POLICIES = {"GGM": policy_ggm, "WRF": policy_wrf, "WUF": policy_wuf}
+# ONE line width / marker size / marker edge for EVERY curve in EVERY plot
+LW = 2.2  # line width (all curves, incl. optimal and no-swap)
+MS = 7.5  # marker size
+MEW = 1.5  # marker edge width
+MARKEVERY = 8  # a marker every N points (staggered per curve)
+RC = {  # publication look
+    "font.family": "STIXGeneral",
+    "mathtext.fontset": "stix",
+    "axes.linewidth": 1.0,
+    "xtick.direction": "in",
+    "ytick.direction": "in",
+    "xtick.top": True,
+    "ytick.right": True,
+    "xtick.major.size": 5,
+    "ytick.major.size": 5,
+    "xtick.minor.size": 3,
+    "ytick.minor.size": 3,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -231,12 +117,6 @@ POLICIES = {"GGM": policy_ggm, "WRF": policy_wrf, "WUF": policy_wuf}
 # ---------------------------------------------------------------------------
 def db(x):
     return 10 * np.log10(np.maximum(np.asarray(x, float), EPS))
-
-
-def outage(x):
-    """Empirical CDF -> (sorted values, P(X <= value))."""
-    xs = np.sort(x)
-    return xs, np.arange(1, len(xs) + 1) / len(xs)
 
 
 def read_meta(path):
@@ -261,32 +141,19 @@ def read_meta(path):
     return meta
 
 
+def parse_eps(s):
+    return [int(x) for x in s.split(",") if x.strip()]
+
+
 def floor_series(C, asg, U):
     """Weakest-user aggregate power per slot for ONE fixed assignment."""
     served = np.stack([C[:, u, asg[u]].sum(axis=1) for u in range(U)], axis=1)
     return served.min(axis=1)
 
 
-def stream_best_opt(C, asgs, U):
-    """Memory-safe single pass over all assignments.
-
-    Returns (per-assignment mean floor, per-slot optimum). Peak memory is
-    O(n_slots) instead of O(n_assignments * n_slots).
-    """
-    opt = np.full(C.shape[0], -np.inf)
-    means = np.empty(len(asgs))
-    for i, asg in enumerate(asgs):
-        fl = floor_series(C, asg, U)
-        means[i] = fl.mean()
-        np.maximum(opt, fl, out=opt)
-    return means, opt
-
-
 def replay(grids, rpu, epsilon, policy_fn):
-    """Warm-started trajectory of one policy at one epsilon.
-
-    Returns (per-slot floor, total decision time in microseconds).
-    """
+    """Warm-started trajectory of one swap policy at one epsilon.
+    Returns (per-slot floor, total decision time in microseconds)."""
     U = len(grids[0])
     state = [list(range(u * rpu, u * rpu + rpu)) for u in range(U)]
     floors = np.empty(len(grids))
@@ -299,8 +166,108 @@ def replay(grids, rpu, epsilon, policy_fn):
     return floors, t_us
 
 
-def parse_eps(s):
-    return [int(x) for x in s.split(",") if x.strip()]
+def replay_stateless(fn, C, rpu, **kw):
+    """Stateless allocator (Max-min / Pref / Bulk): rebuilt from CSI every slot."""
+    floors = np.empty(len(C))
+    t_us = 0.0
+    for i in range(len(C)):
+        t0 = perf_counter()
+        asg = fn(C[i], rpu, **kw)
+        t_us += (perf_counter() - t0) * 1e6
+        floors[i] = floor_of(asg, C[i])
+    return floors, t_us
+
+
+def optimal_series(C, rpu):
+    """OPTIMAL = exhaustive_maxmin on every slot (exact), warm-seeded by the
+    previous slot's optimum. Returns per-slot optimal weakest-user power."""
+    U = C.shape[1]
+    seed = [list(range(u * rpu, u * rpu + rpu)) for u in range(U)]
+    out = np.empty(len(C))
+    for i in range(len(C)):
+        seed = exhaustive_maxmin(C[i], rpu, seed)
+        out[i] = floor_of(seed, C[i])
+    return out
+
+
+# ---------------------------------------------------------------------------
+# NO SWAP = best fixed assignment
+# ---------------------------------------------------------------------------
+def _assignment_count(U, R, rpu):
+    """Number of distinct disjoint assignments = prod_u C(R-u*rpu, rpu)."""
+    c = 1
+    for u in range(U):
+        avail = R - u * rpu
+        if avail < rpu:
+            return 0
+        c *= comb(avail, rpu)
+    return c
+
+
+def _iter_assignments(U, R, rpu, avail=None, u=0):
+    """Every way to give U users disjoint sets of rpu RUs (no duplicates)."""
+    if avail is None:
+        avail = tuple(range(R))
+    if u == U:
+        yield []
+        return
+    for c in itertools.combinations(avail, rpu):
+        rest = tuple(r for r in avail if r not in c)
+        for tail in _iter_assignments(U, R, rpu, rest, u + 1):
+            yield [list(c)] + tail
+
+
+def _local_search_fixed(C, U, R, rpu, starts):
+    """Steepest-ascent over pairwise RU swaps / spare replacements, maximising the
+    MEAN weakest-user floor of one static assignment. Best of several starts."""
+
+    def mean_floor(asg):
+        return floor_series(C, asg, U).mean()
+
+    best_asg, best_v = None, -np.inf
+    for st in starts:
+        asg = [list(x) for x in st]
+        v = mean_floor(asg)
+        for _ in range(500):
+            used = {r for a in asg for r in a}
+            spares = [r for r in range(R) if r not in used]
+            cand, cv = None, v
+            for u in range(U):
+                for i in range(rpu):
+                    for w in range(u + 1, U):  # swap with another user's RU
+                        for j in range(rpu):
+                            a2 = [list(x) for x in asg]
+                            a2[u][i], a2[w][j] = a2[w][j], a2[u][i]
+                            val = mean_floor(a2)
+                            if val > cv + 1e-15:
+                                cand, cv = a2, val
+                    for sp in spares:  # replace by a spare RU
+                        a2 = [list(x) for x in asg]
+                        a2[u][i] = sp
+                        val = mean_floor(a2)
+                        if val > cv + 1e-15:
+                            cand, cv = a2, val
+            if cand is None:
+                break
+            asg, v = cand, cv
+        if v > best_v:
+            best_asg, best_v = asg, v
+    return best_asg
+
+
+def best_fixed_assignment(C, U, R, rpu):
+    """Best static assignment (max mean weakest-user floor). Returns (asg, exact)."""
+    n_assign = _assignment_count(U, R, rpu)
+    if n_assign * len(C) <= FIXED_EXACT_MAX:
+        best, bv = None, -np.inf
+        for asg in _iter_assignments(U, R, rpu):
+            v = floor_series(C, asg, U).mean()
+            if v > bv:
+                best, bv = asg, v
+        return best, True
+    init = [list(range(u * rpu, u * rpu + rpu)) for u in range(U)]
+    mean_seed = exhaustive_maxmin(C.mean(axis=0), rpu, init)  # max-min of avg CSI
+    return _local_search_fixed(C, U, R, rpu, [init, mean_seed]), False
 
 
 # ---------------------------------------------------------------------------
@@ -312,81 +279,91 @@ def curve_label(pol, e):
     return f"{pol}  $\\epsilon$={e}"
 
 
-def make_plot(curves, opt_db, fixed_db, n_slots, n_users, rpu, out_png, pmax=0.1):
-    """Single plot: Gamma_th (dB) vs outage probability, one legend entry per curve.
+def swap_style(pol, e):
+    return dict(
+        label=curve_label(pol, e),
+        color=POL_COLOR[pol],
+        ls=POL_LS[pol],
+        marker=EPS_MARKER.get(e, DEFAULT_MARKER),
+    )
 
-    Colour encodes the POLICY (WRF blue / GGM green / WUF orange / optimal
-    black), identical in every plot. Marker encodes the EPSILON VALUE and is
-    identical across policies, so a given epsilon looks the same everywhere
-    (point (1): "same marker for same epsilon"). By number of sides where one
-    exists: 3 -> triangle, 4 -> square; 1 -> circle; 2 has no 2-sided polygon
-    so it uses a cross (edit EPS_MARKER[2] to change). WUF markers are filled,
-    WRF/GGM open, so same-epsilon curves of different policies stay distinct.
-    """
-    color = {"WRF": "tab:blue", "GGM": "tab:green", "WUF": "tab:orange"}
-    ls = {"WRF": "-", "GGM": "--", "WUF": "-."}
-    # marker by epsilon value, shared across all policies (point (1))
-    EPS_MARKER = {1: "o", 2: "X", 3: "^", 4: "s"}
-    DEFAULT_MARKER = "P"
 
+def draw_outage(
+    curves, opt_db, fixed_db, n_slots, n_users, rpu, out_png, title, pmax=0.1
+):
+    """One outage plot. `curves` = list of (style_dict, series_dB).
+
+    Colour encodes the ALGORITHM, marker encodes the EPSILON VALUE for the swap
+    policies (same marker for same epsilon in every plot). Every curve uses the
+    same line width / marker size. No-swap (best fixed) is solid red; optimal is
+    black dashed. Each plot is also saved as a vector PDF."""
     pmin = max(1.0 / n_slots, 5e-4)
     pg = np.logspace(np.log10(pmin), np.log10(pmax), 60)
     thr = lambda series: np.quantile(series, pg)
 
-    fig, ax = plt.subplots(figsize=(9.5, 6))
+    with plt.rc_context(RC):
+        fig, ax = plt.subplots(figsize=(9.5, 6))
 
-    if fixed_db is not None:
-        ax.semilogx(
-            pg, thr(fixed_db), color="tab:red", lw=2.2, label="no swap  (best fixed)"
-        )
-
-    for j, (pol, e, series) in enumerate(curves):
-        mk = EPS_MARKER.get(e, DEFAULT_MARKER)  # marker = epsilon value (point 1)
         ax.semilogx(
             pg,
-            thr(series),
-            color=color[pol],
-            ls=ls[pol],
-            lw=2.0,
-            marker=mk,
-            ms=8,
-            mfc="white",
-            mew=1.7,
-            markevery=((j * 3) % 8, 8),  # staggered markers
-            label=curve_label(pol, e),
-            zorder=3 + j,
+            thr(fixed_db),
+            color=FIXED_COLOR,
+            ls="-",
+            lw=LW,
+            label="no swap  (best fixed)",
+            zorder=2.5,
         )
 
-    ax.semilogx(
-        pg,
-        thr(opt_db),
-        color="black",
-        lw=2.6,
-        ls=(0, (6, 2)),
-        label="optimal  (per-slot max-min)",
-        zorder=2,
-    )
+        for j, (st, series) in enumerate(curves):
+            ax.semilogx(
+                pg,
+                thr(series),
+                color=st["color"],
+                ls=st["ls"],
+                lw=LW,
+                marker=st["marker"],
+                ms=MS,
+                mfc="white",
+                mew=MEW,
+                markevery=((j * 3) % MARKEVERY, MARKEVERY),  # staggered markers
+                label=st["label"],
+                zorder=3 + j,
+            )
 
-    # same label / title wording as the original comparison plot
+        ax.semilogx(
+            pg,
+            thr(opt_db),
+            color="black",
+            lw=LW,
+            ls=(0, (6, 2)),
+            label="optimal  (per-slot max-min)",
+            zorder=2,
+        )
 
-    ax.set_xlabel("outage probability  $P(\\Gamma_{min} < \\Gamma_{th})$", fontsize=14)
-    ax.set_ylabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
-    ax.set_title(
-        f"Algorithm comparison: {n_users} Users, {rpu} RBG/user", fontsize=12.5
-    )
-    ax.grid(alpha=0.3, which="both")
-    ax.set_xlim(pmin, pmax)
-    # legend below the axes so it never covers the (closely spaced) curves
-    ax.legend(
-        fontsize=11,
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.15),
-        ncol=3,
-        framealpha=0.95,
-    )
-    fig.tight_layout()
-    fig.savefig(out_png, dpi=140, bbox_inches="tight")
-    plt.close(fig)
+        ax.set_xlabel(
+            "outage probability  $P(\\Gamma_{min} < \\Gamma_{th})$", fontsize=14
+        )
+        ax.set_ylabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
+        ax.set_title(title, fontsize=13)
+        ax.grid(which="major", alpha=0.35, lw=0.8)
+        ax.grid(which="minor", alpha=0.15, lw=0.5)
+        ax.set_xlim(pmin, pmax)
+        # legend below the axes so it never covers the (closely spaced) curves
+        ax.legend(
+            fontsize=11.5,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.15),
+            ncol=3,
+            framealpha=1.0,
+            edgecolor="0.3",
+            fancybox=False,
+            handlelength=3.0,
+            columnspacing=1.6,
+        )
+        fig.tight_layout()
+        fig.savefig(out_png, dpi=300, bbox_inches="tight")
+        fig.savefig(out_png.rsplit(".", 1)[0] + ".pdf", bbox_inches="tight")  # vector
+        plt.close(fig)
 
 
 # ---------------------------------------------------------------------------
@@ -400,60 +377,36 @@ def main():
     ap.add_argument(
         "--rus-per-user", type=int, default=None, help="default: from log, else 1"
     )
+    # plot-1 epsilons are fixed (WRF 1,2,4 / GGM 1,2,4 / WUF 4); the flags
+    # still work but are hidden, you normally never need them.
+    ap.add_argument("--wrf-eps", default="1,2,4", help=argparse.SUPPRESS)
+    ap.add_argument("--ggm-eps", default="1,2,4", help=argparse.SUPPRESS)
+    ap.add_argument("--wuf-eps", default="4", help=argparse.SUPPRESS)
     ap.add_argument(
-        "--wrf-eps",
-        default="1,2,4",
-        help="epsilons for WRF, comma list (default 1,2,4)",
+        "--l-pref",
+        type=float,
+        default=3.0,
+        help="Pref/Bulk lookahead (== PREF_LOOKAHEAD in scheduler_swap.cpp)",
     )
     ap.add_argument(
-        "--ggm-eps",
-        default="1,2,4",
-        help="epsilons for GGM, comma list (default 1,2,4)",
+        "--min-users", type=int, default=4, help="users needed per slot (default 4)"
     )
-    ap.add_argument(
-        "--wuf-eps",
-        default="4",
-        help="epsilons for WUF, comma list (default 4). can be set to 1,2,4",
-    )
-    ap.add_argument("--min-users", type=int, default=3)
     ap.add_argument(
         "--pmax",
         type=float,
         default=0.1,
         help="largest outage probability on the x-axis (default 0.1)",
     )
+    # kept so old command lines still run; behaviour is now fixed:
+    ap.add_argument("--fixed", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--opt-method", default=None, help=argparse.SUPPRESS)
+    ap.add_argument("--opt-subsample", type=int, default=0, help=argparse.SUPPRESS)
+    ap.add_argument("--opt-jobs", type=int, default=0, help=argparse.SUPPRESS)
     ap.add_argument(
-        "--fixed",
-        action="store_true",
-        help="also draw the best-fixed (no-swap) reference curve "
-        "(brute-force only; omitted automatically when the optimum uses MILP)",
-    )
-    ap.add_argument(
-        "--opt-method",
-        choices=["auto", "milp", "brute"],
-        default="auto",
-        help="optimal baseline: 'brute' enumerates all assignments (only for "
-        "small rpu), 'milp' uses the exact solver (any rpu), 'auto' picks milp "
-        "above %d assignments (default)" % BRUTE_MAX,
-    )
-    ap.add_argument(
-        "--opt-subsample",
-        type=int,
-        default=0,
-        help="slots used for the MILP optimum CCDF. 0 = ALL slots (default), for "
-        "a fair full-resolution comparison against the heuristics; a positive N "
-        "uses N evenly-spaced slots for a faster preview. With --opt-jobs, "
-        "all-slots stays practical.",
-    )
-    ap.add_argument(
-        "--opt-jobs",
-        type=int,
-        default=0,
-        help="parallel processes for the MILP optimum (0 = all CPU cores). "
-        "Each MILP is single-threaded, so this scales ~linearly.",
-    )
-    ap.add_argument(
-        "-o", "--out", default="algo_cmp", help="output prefix -> .png / .txt / .jsonl"
+        "-o",
+        "--out",
+        default="algo_cmp",
+        help="output prefix -> .png / .all_algos.png / .txt / .jsonl",
     )
     ap.add_argument("--label", default=None)
     a = ap.parse_args()
@@ -472,89 +425,98 @@ def main():
         ap.error("give a swap.jsonl or --rb <per-RB log>")
     if not grids:
         sys.exit("no usable slots")
+    if os.path.dirname(a.out):
+        os.makedirs(os.path.dirname(a.out), exist_ok=True)
 
     n = len(grids)
     U, R = len(grids[0]), len(grids[0][0])
     rpu = a.rus_per_user or (int(meta["rus_per_user"]) if meta["rus_per_user"] else 1)
     if U * rpu > R:
         sys.exit("need U*rus_per_user=%d <= R=%d RUs" % (U * rpu, R))
-
-    runs = (
-        [("WRF", e) for e in parse_eps(a.wrf_eps)]
-        + [("GGM", e) for e in parse_eps(a.ggm_eps)]
-        + [("WUF", e) for e in parse_eps(a.wuf_eps)]
-    )
-
-    # ---- baselines: per-slot optimum (MILP for large rpu, brute otherwise) ----
     C = np.asarray(grids, float)  # (n_slots, U, R)
-    n_assign = _assignment_count(U, R, rpu)
-    use_milp = (a.opt_method == "milp") or (
-        a.opt_method == "auto" and n_assign > BRUTE_MAX
-    )
-    opt_subsampled = False
-    if use_milp:
-        if not _HAVE_MILP:
-            sys.exit(
-                "optimal needs scipy>=1.9 for MILP at this rpu "
-                "(%d assignments). Install: pip install -U scipy" % n_assign
-            )
-        # per-slot optimum is independent across slots, so an evenly-spaced
-        # subsample gives an unbiased CCDF; brute force (n_assign) is intractable.
-        k = len(grids) if a.opt_subsample <= 0 else min(a.opt_subsample, len(grids))
-        idx = np.linspace(0, len(grids) - 1, k).astype(int)
-        jobs = a.opt_jobs if a.opt_jobs else (os.cpu_count() or 1)
-        print(
-            "optimal: MILP on %d of %d slots, %d parallel jobs "
-            "(brute force would need %d assignments)" % (k, len(grids), jobs, n_assign)
-        )
-        opt_db = db(optimal_series(grids, idx, U, R, rpu, jobs))
-        opt_subsampled = k != len(grids)
-        opt_idx = idx  # the slots the optimum was evaluated on
-        fixed_db = (
-            None  # best-fixed brute force intractable here; omitted (see --fixed)
-        )
-    else:
-        asgs = _uniq_assignments(U, R, rpu)
-        means, opt = stream_best_opt(C, asgs, U)
-        opt_db = db(opt)
-        opt_idx = None
-        fixed_db = db(floor_series(C, asgs[int(means.argmax())], U))
 
-    # ---- swap replays ----
-    curves, times = [], {}
+    # ---- which swap runs: plot-1 epsilons plus eps=4 for plot 2 ----
+    plot1_eps = {
+        "WRF": parse_eps(a.wrf_eps),
+        "GGM": parse_eps(a.ggm_eps),
+        "WUF": parse_eps(a.wuf_eps),
+    }
+    runs = []
+    for pol in ("WRF", "GGM", "WUF"):
+        for e in sorted(set(plot1_eps[pol]) | {PLOT2_EPS}):
+            runs.append((pol, e))
+
+    # ---- baselines: exact optimum + best fixed (no swap) ----
+    print("optimal: exhaustive_maxmin on %d slots ..." % n)
+    opt_db = db(optimal_series(C, rpu))
+    fixed_asg, fixed_exact = best_fixed_assignment(C, U, R, rpu)
+    fixed_db = db(floor_series(C, fixed_asg, U))
+    print(
+        "no swap (best fixed): %s  [%s]"
+        % (fixed_asg, "exact" if fixed_exact else "local search")
+    )
+
+    # ---- swap replays + stateless algorithms ----
+    res, times = {}, {}  # key -> dB series / us per slot
     for pol, e in runs:
         fl, t_us = replay(grids, rpu, e, POLICIES[pol])
-        curves.append((pol, e, db(fl)))
+        res[(pol, e)] = db(fl)
         times[(pol, e)] = t_us / n
+    for name, fn, kw in (
+        ("Max-min", max_min_leximin, {}),
+        ("Pref", pref_gradient, {"l_pref": a.l_pref}),
+        ("Bulk", bulk_gradient, {"l_pref": a.l_pref}),
+    ):
+        fl, t_us = replay_stateless(fn, C, rpu, **kw)
+        res[name] = db(fl)
+        times[name] = t_us / n
 
-    # ---- guard: optimum >= every heuristic on each evaluated slot ----
-    # The true per-slot optimum is always >= any heuristic's floor. On a handful
-    # of extreme deep-fade slots HiGHS can still return a hair below optimal even
-    # after scaling; the best heuristic floor is a valid lower bound on the true
-    # optimum, so clamping up to it repairs those without ever overshooting.
-    if opt_idx is not None and curves:
-        best_heur_db = np.max([d for (_, _, d) in curves], axis=0)[opt_idx]
-        opt_db = np.maximum(opt_db, best_heur_db)
+    # ---- sanity: the exact optimum can never be below any algorithm ----
+    worst_viol = max(float((d - opt_db).max()) for d in res.values())
+    if worst_viol > 1e-6:
+        print(
+            "WARNING: an algorithm exceeded 'optimal' by %.3g dB on some slot "
+            "- check exhaustive_maxmin / CSI units" % worst_viol
+        )
 
-    # ---- plot ----
-    # When the optimum is a subsample, draw EVERY curve on the SAME slots so the
-    # CCDFs are comparable and the optimum can't dip below a heuristic in the
-    # noisy deep tail (opt >= heuristic per slot => opt >= heuristic per quantile
-    # only when evaluated on identical slots).
-    if opt_subsampled:
-        plot_curves = [(pol, e, d[opt_idx]) for pol, e, d in curves]
-        n_grid = len(opt_idx)
-    else:
-        plot_curves = curves
-        n_grid = n
-    make_plot(
-        plot_curves,
+    title_tail = f"{U} Users, {rpu} RBG/user"
+
+    # ---- PLOT 1: unchanged look (epsilon sweeps + optimal) + best fixed ----
+    curves1 = []
+    for pol, eps_list in (
+        ("WRF", plot1_eps["WRF"]),
+        ("GGM", plot1_eps["GGM"]),
+        ("WUF", plot1_eps["WUF"]),
+    ):
+        for e in eps_list:
+            curves1.append((swap_style(pol, e), res[(pol, e)]))
+    draw_outage(
+        curves1,
         opt_db,
-        fixed_db if a.fixed else None,
-        n_grid,
+        fixed_db,
+        n,
         U,
         rpu,
         a.out + ".png",
+        f"Algorithm comparison: {title_tail}",
+        pmax=a.pmax,
+    )
+
+    # ---- PLOT 2: WRF/WUF/GGM at eps=4 + Max-min / Pref / Bulk + optimal ----
+    curves2 = [
+        (swap_style(p, PLOT2_EPS), res[(p, PLOT2_EPS)]) for p in ("WRF", "WUF", "GGM")
+    ]
+    for name in ("Max-min", "Pref", "Bulk"):
+        curves2.append((NEW_STYLE[name], res[name]))
+    draw_outage(
+        curves2,
+        opt_db,
+        fixed_db,
+        n,
+        U,
+        rpu,
+        a.out + ".all_algos.png",
+        f"Algorithm comparison ($\\epsilon$={PLOT2_EPS}): {title_tail}",
         pmax=a.pmax,
     )
 
@@ -572,61 +534,55 @@ def main():
         hdr,
         "-" * len(hdr),
     ]
-
-    fixed_mean = fixed_db.mean() if fixed_db is not None else None
+    fixed_mean = fixed_db.mean()
 
     def row(name, d, t=None):
         t_s = f"{t:>11.3f}" if t is not None else f"{'-':>11}"
-        gain = (
-            f"{d.mean() - fixed_mean:>+12.2f}"
-            if fixed_mean is not None
-            else f"{'-':>12}"
-        )
         return (
             f"{name:<14}{d.mean():>10.2f}{np.percentile(d, 1):>10.2f}"
-            f"{np.percentile(d, 5):>10.2f}{gain}"
+            f"{np.percentile(d, 5):>10.2f}{d.mean() - fixed_mean:>+12.2f}"
             f"{opt_db.mean() - d.mean():>9.2f}{t_s}"
         )
 
-    if fixed_db is not None:
-        lines.append(row("best-fixed", fixed_db))
-    for pol, e, d in curves:
-        lines.append(row(f"{pol} eps={e}", d, times[(pol, e)]))
-    lines.append(row("optimal" + ("*" if opt_subsampled else ""), opt_db))
+    lines.append(row("best-fixed" + ("" if fixed_exact else "*"), fixed_db))
+    for pol, e in runs:
+        lines.append(row(f"{pol} eps={e}", res[(pol, e)], times[(pol, e)]))
+    for name in ("Max-min", "Pref", "Bulk"):
+        lines.append(row(name, res[name], times[name]))
+    lines.append(row("optimal", opt_db))
     lines += [
         "",
         "py-ref us = python decision time per slot on this CPU; a RELATIVE "
         "reference only, not a gNB hardware result.",
         "opt gap   = mean(optimal) - mean(curve) in dB; lower is better.",
+        "optimal   = exhaustive_maxmin (exact, branch-and-bound) on every slot.",
     ]
-    if opt_subsampled:
+    if not fixed_exact:
         lines.append(
-            "optimal*  = exact MILP optimum on %d evenly-spaced slots "
-            "(per-slot independent -> unbiased CCDF)." % len(opt_db)
+            "best-fixed* = best static assignment found by local search "
+            "(exhaustive enumeration too large at this U/R/rpu)."
         )
     report = "\n".join(lines)
     print(report)
     with open(a.out + ".txt", "w") as f:
         f.write(report + "\n")
 
-    # per-slot floors (dB) for re-plotting / audit
+    # per-slot floors (dB) for re-plotting / audit — all aligned per slot
     with open(a.out + ".jsonl", "w") as f:
         for i in range(n):
-            rec = {}
-            if not opt_subsampled:  # aligned per-slot optimum (brute path)
-                rec["optimal"] = float(opt_db[i])
-            if fixed_db is not None:
-                rec["best_fixed"] = float(fixed_db[i])
-            for pol, e, d in curves:
-                rec[f"{pol}_eps{e}"] = float(d[i])
+            rec = {"optimal": float(opt_db[i]), "best_fixed": float(fixed_db[i])}
+            for pol, e in runs:
+                rec[f"{pol}_eps{e}"] = float(res[(pol, e)][i])
+            for name in ("Max-min", "Pref", "Bulk"):
+                rec[name.lower().replace("-", "")] = float(res[name][i])
             f.write(json.dumps(rec) + "\n")
-    # subsampled MILP optimum: write its own CCDF sample (not per-slot aligned)
-    if opt_subsampled:
-        with open(a.out + ".optimal.jsonl", "w") as f:
-            for v in opt_db:
-                f.write(json.dumps({"optimal_db": float(v)}) + "\n")
 
-    print("wrote", ", ".join(a.out + s for s in (".png", ".txt", ".jsonl")))
+    print(
+        "wrote",
+        ", ".join(
+            a.out + s for s in (".png/.pdf", ".all_algos.png/.pdf", ".txt", ".jsonl")
+        ),
+    )
 
 
 if __name__ == "__main__":

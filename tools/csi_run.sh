@@ -227,23 +227,23 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
     # --sessions. Each also writes a .txt sidecar with the numbers.
     if [ -s "$D/$BASE.swap.jsonl" ]; then
 
-      # weakest-user outage CDF (the paper's benefit metric, eq 13)
-      python3 "$REPO/tools/plot_outage.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_outage.png" --min-users "${NUM_USERS:-3}" \
+      # Algorithm comparison in ONE call (replaces plot_outage.py +
+      # plot_outage_epsilon.py + compare_algorithms.py). Writes FOUR PNGs with the
+      # ${BASE}_algocmp prefix:
+      #   .sweep_outage.png  outage vs P_out, WRF/GGM eps=1,2,4 + WUF eps=4 + Optimal + No-swap
+      #   .algo_outage.png   outage vs P_out, all algorithms at eps=4 (incl. Max-min/Pref/Bulk)
+      #   .sweep_timing.png  decision cost (bar+p99 star) across eps
+      #   .algo_timing.png   decision cost across all algorithms
+      # Outage = offline CSI replay; timing = the gNB *_us fields in the swap log.
+      # NB outage separates only at rus_per_user>=2; at R=1 the curves collapse.
+      python3 "$REPO/tools/swap_policies.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_algocmp" --min-users "${NUM_USERS:-3}" \
               --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
       # decision quality: optimality (vs per-slot max-min) + alloc-time cost
       python3 "$REPO/tools/swap_decision_quality.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_quality.png" --min-users "${NUM_USERS:-3}" \
               --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
-              
-      # weakest-user outage vs swap depth epsilon (offline replay, eps=1..4)
-      python3 "$REPO/tools/plot_outage_epsilon.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_outage_epssweep.png" --min-users "${NUM_USERS:-3}" \
-              --eps-list 1,2,3,4 --label "$BASE" || true
-              
-      python3 "$REPO/tools/compare_algorithms.py" "$D/$BASE.swap.jsonl" \
-        -o "$P/${BASE}_algocmp" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
-        
+
     fi
     python3 "$REPO/tools/plot_rbg_power.py" "$D/$BASE.rb.jsonl.gz" \
             -o "$P/${BASE}_rbgpower.png" --K "$RBS_PER_RU" \

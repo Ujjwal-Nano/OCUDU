@@ -2,10 +2,10 @@
 # csi_run_swap.sh — SWAP-TEST pipeline: capture -> correlate -> convert ->
 #                   per-user CSI + swapping analyses -> git.
 # Same format as csi_run.sh, trimmed to the swap study:
-#   KEEP : plot_csi (CSI power per user), plot_outage, plot_outage_epsilon,
-#          swap_decision_quality, compare_algorithms (paper baselines vs swap).
-#   DROP : metrics_suite, swap_analysis, plot_weakest, plot_rbg_power,
-#          and the swap.jsonl CSI plot.
+#   KEEP : plot_csi (CSI power per user), compare_algorithms (outage: 2 plots),
+#          plot_timing (decision cost: 2 plots).
+#   DROP : plot_outage, plot_outage_epsilon, swap_decision_quality, metrics_suite,
+#          swap_analysis, plot_weakest, plot_rbg_power, the swap.jsonl CSI plot.
 # Datasets land in datasets/Swap_test/<name> (not Static/Mobility).
 #   csi_run_swap.sh start                 # clear logs BEFORE launching the gNB
 #   csi_run_swap.sh mark                  # after gNB up + all phones attached: reset data logs
@@ -157,22 +157,21 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
       sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"
     fi
 
-    # ---- (2-5) swapping analyses (swap.jsonl only; auto-read policy/rus_per_user/epsilon) ----
+    # ---- (2-3) swapping analyses (swap.jsonl only; auto-read policy/rus_per_user/epsilon) ----
     if [ -s "$D/$BASE.swap.jsonl" ]; then
-      # (2) weakest-user outage CDF (best/worst fixed, random, swap, optimal)
-      python3 "$REPO/tools/plot_outage.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_outage.png" --min-users "${NUM_USERS:-3}" \
-              --rus-per-user "$RUS_PER_USER" --label "$BASE" || true
-      # (3) outage vs swap depth epsilon (offline replay eps=1..4; needs swap_policies.py)
-      python3 "$REPO/tools/plot_outage_epsilon.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}_outage_epssweep.png" --min-users "${NUM_USERS:-3}" \
-              --rus-per-user "$RUS_PER_USER" --eps-list 1,2,3,4 --label "$BASE" || true
-      # (4) timing for different Algorithm for different epsilon
-      python3 "$REPO/tools/plot_timing.py" "$D/$BASE.swap.jsonl" \
-              -o "$P/${BASE}timing_quality"|| true
-      # (5) paper baselines vs swap: floors (offline) + decision cost (gNB C++ time)
+      # (2) OUTAGE comparison — TWO plots (compare_algorithms.py auto-reads
+      #     rus_per_user/epsilon from the log):
+      #       ${BASE}_algocmp.png            eps sweep: WRF/GGM eps 1,2,4 + WUF eps4 + optimal + no-swap
+      #       ${BASE}_algocmp.all_algos.png  WRF/WUF/GGM eps4 + Max-min/Pref/Bulk + optimal + no-swap
+      #     (also writes .pdf, .txt, .jsonl)
       python3 "$REPO/tools/compare_algorithms.py" "$D/$BASE.swap.jsonl" \
               -o "$P/${BASE}_algocmp" --min-users "${NUM_USERS:-3}" --label "$BASE" || true
+      # (3) TIMING (decision cost, gNB *_us fields) — TWO plots, colours matched to (2):
+      #       ${BASE}_timing.png             eps sweep: WRF/GGM eps 1,2,4 + WUF eps4 + optimal
+      #       ${BASE}_timing.all_algos.png   WRF/WUF/GGM eps4 + Pref/Bulk/Max-min + optimal
+      #     (also writes .pdf, .txt; no no-swap bar — its time is not measured)
+      python3 "$REPO/tools/plot_timing.py" "$D/$BASE.swap.jsonl" \
+              -o "$P/${BASE}_timing" --label "$BASE" || true
     fi
 
     cd "$REPO"

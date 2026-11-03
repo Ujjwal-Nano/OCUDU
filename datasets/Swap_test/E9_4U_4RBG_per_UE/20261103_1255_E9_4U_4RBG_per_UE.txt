@@ -1,0 +1,1 @@
+4 UE, 4rbg per user, 40mhz bw with 6 rb per rbg, tx gain 70, rx gain 45

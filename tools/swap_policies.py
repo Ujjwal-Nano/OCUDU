@@ -3,6 +3,15 @@
 SAME capture, warm-started, for any rus_per_user. Offline, reproducible,
 apples-to-apples. This is the generalisable testbed comparator.
 
+ADDED (purely additive, existing code below is unchanged):
+    policy_ggm        Greedy Gain Maximisation (swap policy, same signature as WRF/WUF)
+    max_min_leximin   Trassl leximin max-min [6]            \
+    pref_gradient     PrefGradient, Schwarzenberg [7]        > stateless baselines,
+    bulk_gradient     Bulk, Walstab [8]                      > fn(G, rpu[, l_pref])
+    exhaustive_maxmin exact per-slot optimum (branch&bound)  /  G = numpy U x R
+    synth_grids       synthetic CSI loader
+    POLICIES / BASELINES registries for the compare/plot script to import.
+
 WHY OFFLINE INSTEAD OF TWO LIVE SCHEDULERS
 ------------------------------------------
 Only one assignment can be written to the air each period, so you cannot APPLY
@@ -219,6 +228,244 @@ def _replace(v, frm, to):
 
 
 # -----------------------------------------------------------------------------
+# ADDED: GGM swap policy (same signature / format as WRF and WUF above)
+# -----------------------------------------------------------------------------
+def policy_ggm(user_rus, csi, epsilon=1, num_redun=0):
+    """Greedy Gain Maximisation (paper eq 9).
+
+    Builds the same candidates as WRF over the `epsilon` worst allocated RUs
+    (Type 1: pairwise swap with another user, Type 2: replace by a spare RU),
+    then executes ALL of them pooled together in descending normalised gain,
+    conflict-free (an RU touched by an executed op is locked)."""
+    U = len(user_rus)
+    R = len(csi[0])
+    ur = [list(x) for x in user_rus]
+    owner = [UNASSIGNED] * R
+    ru_perf = [0.0] * R
+    for u in range(U):
+        for r in ur[u]:
+            owner[r] = u
+            ru_perf[r] = csi[u][r]
+
+    allocated = [r for r in range(R) if owner[r] != UNASSIGNED]
+    allocated.sort(key=lambda r: ru_perf[r])
+    worst = allocated[: min(epsilon, len(allocated))]
+    spares = [r for r in range(R) if owner[r] == UNASSIGNED]
+
+    # ---- candidate generation: identical to WRF ----
+    ops = []  # (type, worst_ru, target_ru, gain, target_user)
+    for wr in worst:
+        A = owner[wr]
+        c_A_worst = csi[A][wr]
+        for B in range(U):  # Type 1: swap with user B's RU
+            if B == A or not ur[B]:
+                continue
+            for tr in ur[B]:
+                c_A_target = csi[A][tr]
+                c_B_worst = csi[B][wr]
+                c_B_target = csi[B][tr]
+                d_swap = min(c_A_target, c_B_worst)
+                d_current = min(c_A_worst, c_B_target)
+                if d_swap > d_current and c_A_worst < c_A_target:
+                    ops.append((1, wr, tr, (d_swap - d_current) / c_B_worst, B))
+        for sr in spares:  # Type 2: take a better spare
+            c_A_spare = csi[A][sr]
+            if c_A_spare > c_A_worst:
+                ops.append((2, wr, sr, (c_A_spare - c_A_worst) / c_A_worst, UNASSIGNED))
+
+    stats = {"swaps": 0, "replaces": 0, "ran": True}
+    if not ops:
+        return ur, stats
+
+    # ---- execution: global highest-gain-first over the pooled candidates ----
+    locked = [0] * R
+    for typ, wr, tr, gain, B in sorted(ops, key=lambda o: -o[3]):
+        if locked[wr] or locked[tr] or gain <= 0.0:
+            continue
+        A = owner[wr]
+        if typ == 1:
+            _replace(ur[A], wr, tr)
+            _replace(ur[B], tr, wr)
+            owner[wr] = B
+            owner[tr] = A
+            stats["swaps"] += 1
+        else:
+            _replace(ur[A], wr, tr)
+            owner[wr] = UNASSIGNED
+            owner[tr] = A
+            stats["replaces"] += 1
+        locked[wr] = 1
+        locked[tr] = 1
+    return ur, stats
+
+
+# -----------------------------------------------------------------------------
+# ADDED: stateless baseline allocators — rebuilt from scratch each slot, no warm
+# start. G is a numpy U x R array; they return user_rus (list[list[int]]).
+# -----------------------------------------------------------------------------
+def pref_gradient(G, rpu, l_pref=3.0):
+    """PrefGradient (Schwarzenberg [7]). Repeatedly: score each unfinished user by
+    Q = best_gain * gain_at_lookahead_window, give the lowest-Q user its single
+    best free RU. l_pref must equal PREF_LOOKAHEAD in scheduler_swap.cpp."""
+    U, R = G.shape
+    main = [[] for _ in range(U)]
+    need = [rpu] * U
+    free = list(range(R))
+    while any(n > 0 for n in need) and free:
+        Q = np.full(U, np.inf)
+        best = [-1] * U
+        for u in range(U):
+            if need[u] <= 0:
+                continue
+            gf = G[u, free]
+            idx = np.argsort(-gf, kind="stable")
+            gs = gf[idx]
+            W = min(max(1, int(np.ceil(l_pref * need[u]))), len(gs))
+            Q[u] = gs[0] * gs[W - 1]
+            best[u] = free[idx[0]]
+        uw = int(np.argmin(Q))
+        main[uw].append(int(best[uw]))
+        need[uw] -= 1
+        free.remove(int(best[uw]))
+    return main
+
+
+def bulk_gradient(G, rpu, l_pref=3.0):
+    """Bulk (Walstab [8]). Same scoring as PrefGradient, but the lowest-Q user
+    takes ALL its remaining RUs (its top `need` free RUs) in one go."""
+    U, R = G.shape
+    main = [[] for _ in range(U)]
+    need = [rpu] * U
+    free = list(range(R))
+    while any(n > 0 for n in need) and free:
+        Q = np.full(U, np.inf)
+        order = [None] * U
+        for u in range(U):
+            if need[u] <= 0:
+                continue
+            gf = G[u, free]
+            idx = np.argsort(-gf, kind="stable")
+            gs = gf[idx]
+            W = min(max(1, int(np.ceil(l_pref * need[u]))), len(gs))
+            Q[u] = gs[0] * gs[W - 1]
+            order[u] = [free[i] for i in idx]
+        uw = int(np.argmin(Q))
+        take = order[uw][: need[uw]]
+        main[uw].extend(int(x) for x in take)
+        need[uw] = 0
+        for x in take:
+            free.remove(int(x))
+    return main
+
+
+def _kuhn(adj, nL, nR):
+    """Maximum bipartite matching size (Kuhn's augmenting paths)."""
+    matchR = [-1] * nR
+
+    def try_(v, seen):
+        for r in adj[v]:
+            if not seen[r]:
+                seen[r] = True
+                if matchR[r] == -1 or try_(matchR[r], seen):
+                    matchR[r] = v
+                    return True
+        return False
+
+    return sum(1 for v in range(nL) if try_(v, [False] * nR))
+
+
+def max_min_leximin(G, rpu):
+    """Leximin max-min (Trassl [6]). Treat each user as `rpu` virtual users; sweep
+    (gain, vuser, ru) pairs from best to worst, and fix the bottleneck pair each
+    time a perfect matching of the remaining virtual users first becomes possible."""
+    U, R = G.shape
+    V = U * rpu
+    pairs = sorted(
+        ((G[v // rpu, r], v, r) for v in range(V) for r in range(R)),
+        key=lambda p: -p[0],
+    )
+    vleft = list(range(V))
+    rleft = list(range(R))
+    alloc = [-1] * V
+    while vleft:
+        nL = len(vleft)
+        vidx = {v: i for i, v in enumerate(vleft)}
+        ridx = {r: i for i, r in enumerate(rleft)}
+        for omega in range(nL, len(pairs) + 1):
+            adj = [[] for _ in range(nL)]
+            for g, v, r in pairs[:omega]:
+                if v in vidx and r in ridx:
+                    adj[vidx[v]].append(ridx[r])
+            if _kuhn(adj, nL, len(rleft)) == nL:
+                g, v, r = pairs[omega - 1]
+                alloc[v] = r
+                vleft.remove(v)
+                rleft.remove(r)
+                pairs = [(gg, vv, rr) for (gg, vv, rr) in pairs if vv != v and rr != r]
+                break
+    main = [[] for _ in range(U)]
+    for v in range(V):
+        main[v // rpu].append(int(alloc[v]))
+    return main
+
+
+def exhaustive_maxmin(G, rpu, seed_alloc):
+    """Exact per-slot max-min of the weakest-USER sum, via DFS branch-and-bound
+    (same method as scheduler_swap.cpp::exhaustive_maxmin). Warm-seeded from
+    seed_alloc (the previous slot's optimum), so it prunes heavily when the channel
+    is coherent across slots - this is the cheap way to keep Optimal feasible at
+    rpu>=2 without enumerating all assignments. Returns the optimal assignment."""
+    U, K = G.shape
+    best = {
+        "val": min(sum(G[u, r] for r in seed_alloc[u]) for u in range(U)),
+        "alloc": [list(x) for x in seed_alloc],
+    }
+    order = list(
+        np.argsort(
+            [sum(sorted(G[u], reverse=True)[:rpu]) for u in range(U)], kind="stable"
+        )
+    )
+
+    def dfs(depth, used, cur_min, alloc):
+        if depth >= U:
+            if cur_min > best["val"]:
+                best["val"] = cur_min
+                best["alloc"] = [list(x) for x in alloc]
+            return
+        free = [r for r in range(K) if not used[r]]
+        bound = cur_min
+        for j in order[depth:]:
+            bound = min(bound, sum(sorted(G[j, free], reverse=True)[:rpu]))
+        if bound <= best["val"]:
+            return  # prune: can't beat incumbent
+        u = order[depth]
+        combos = (
+            [tuple(free)]
+            if len(free) == rpu
+            else list(itertools.combinations(free, rpu))
+        )
+        for val, c in sorted(
+            ((sum(G[u, list(cc)]), cc) for cc in combos), key=lambda x: -x[0]
+        ):
+            nm = min(cur_min, val)
+            if nm <= best["val"]:
+                break  # remaining combos are weaker
+            alloc[u] = list(c)
+            used2 = used.copy()
+            for r in c:
+                used2[r] = True
+            dfs(depth + 1, used2, nm, alloc)
+
+    dfs(0, [False] * K, float("inf"), [list(x) for x in best["alloc"]])
+    return best["alloc"]
+
+
+# ADDED: registries for the compare/plot script (run() below keeps its own dict)
+POLICIES = {"WRF": policy_wrf, "WUF": policy_wuf, "GGM": policy_ggm}
+BASELINES = {"MAXMIN": max_min_leximin, "PREF": pref_gradient, "BULK": bulk_gradient}
+
+
+# -----------------------------------------------------------------------------
 # baselines
 # -----------------------------------------------------------------------------
 def _assignments(U, R, rpu):
@@ -310,6 +557,22 @@ def build_grids_rb(path, min_users, rbs_per_ru):
     U = min(len(g) for g in grids)
     R = min(len(g[0]) for g in grids)
     return [[row[:R] for row in g[:U]] for g in grids]
+
+
+def synth_grids(U, rpu, slots, seed=42, alpha=0.95):
+    """ADDED: synthetic temporally-correlated fading CSI (AR(1) on |N(0,1)|)."""
+    rng = np.random.default_rng(seed)
+    R = U * rpu
+    grids = []
+    pl = 0.5 + 0.5 * rng.random(U)
+    H = np.array([pl[u] * np.abs(rng.standard_normal(R)) for u in range(U)])
+    for t in range(slots):
+        if t > 0:
+            H = alpha * H + (1 - alpha) * (
+                pl[:, None] * np.abs(rng.standard_normal((U, R)))
+            )
+        grids.append([list(H[u]) for u in range(U)])
+    return grids
 
 
 # -----------------------------------------------------------------------------
