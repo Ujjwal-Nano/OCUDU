@@ -82,11 +82,11 @@ EPS_MARKER = {1: "o", 2: "X", 3: "^", 4: "s"}
 DEFAULT_MARKER = "P"
 # new algorithms (plot 2): colours/markers not used by anything above
 NEW_STYLE = {
-    "Max-min": dict(label="Max-min  (Trassl)", color="tab:purple", ls=":", marker="D"),
+    "Max-min": dict(label="Max-min", color="tab:purple", ls=":"),
     "Pref": dict(
-        label="PrefGradient", color="tab:brown", ls=(0, (3, 1, 1, 1, 1, 1)), marker="v"
+        label="Preference based", color="tab:brown", ls=(0, (3, 1, 1, 1, 1, 1))
     ),
-    "Bulk": dict(label="Bulk", color="tab:cyan", ls=(0, (5, 1)), marker="p"),
+    "Bulk": dict(label="Bulk", color="tab:cyan", ls=(0, (5, 1))),
 }
 FIXED_COLOR = "red"  # no swap (best fixed): solid red
 
