@@ -50,6 +50,12 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import (
+    LogLocator,
+    LogFormatterSciNotation,
+    MaxNLocator,
+    NullFormatter,
+)
 
 try:
     from swap_policies import (
@@ -289,65 +295,120 @@ def swap_style(pol, e):
 
 
 def draw_outage(
-    curves, opt_db, fixed_db, n_slots, n_users, rpu, out_png, title, pmax=0.1
+    curves,
+    opt_db,
+    fixed_db,
+    n_slots,
+    n_users,
+    rpu,
+    out_png,
+    title,
+    pmax=0.1,
+    zoom=True,
+    zoom_frac=0.22,
 ):
     """One outage plot. `curves` = list of (style_dict, series_dB).
 
     Colour encodes the ALGORITHM, marker encodes the EPSILON VALUE for the swap
     policies (same marker for same epsilon in every plot). Every curve uses the
     same line width / marker size. No-swap (best fixed) is solid red; optimal is
-    black dashed. Each plot is also saved as a vector PDF."""
+    black dashed. Each plot is also saved as a vector PDF.
+
+    If `zoom`, a left-end inset re-frames the leftmost `zoom_frac` of the log-x
+    axis with its own magnified y-scale, so the closely-spaced curves separate
+    visibly at the low-outage end."""
     pmin = max(1.0 / n_slots, 5e-4)
     pg = np.logspace(np.log10(pmin), np.log10(pmax), 60)
     thr = lambda series: np.quantile(series, pg)
 
+    # one spec per line so the main axes and the inset draw identically
+    specs = [
+        (
+            thr(fixed_db),
+            dict(
+                color=FIXED_COLOR,
+                ls="-",
+                lw=LW,
+                label="no swap  (best fixed)",
+                zorder=2.5,
+            ),
+        )
+    ]
+    for j, (st, series) in enumerate(curves):
+        specs.append(
+            (
+                thr(series),
+                dict(
+                    color=st["color"],
+                    ls=st["ls"],
+                    lw=LW,
+                    marker=st.get("marker"),
+                    ms=MS,
+                    mfc="white",
+                    mew=MEW,
+                    markevery=((j * 3) % MARKEVERY, MARKEVERY),
+                    label=st["label"],
+                    zorder=3 + j,
+                ),
+            )
+        )
+    specs.append(
+        (
+            thr(opt_db),
+            dict(
+                color="black",
+                lw=LW,
+                ls=(0, (6, 2)),
+                label="optimal  (per-slot max-min)",
+                zorder=2,
+            ),
+        )
+    )
+
+    def _draw(target):
+        for y, kw in specs:
+            target.semilogx(pg, y, **kw)
+
     with plt.rc_context(RC):
         fig, ax = plt.subplots(figsize=(9.5, 6))
-
-        ax.semilogx(
-            pg,
-            thr(fixed_db),
-            color=FIXED_COLOR,
-            ls="-",
-            lw=LW,
-            label="no swap  (best fixed)",
-            zorder=2.5,
-        )
-
-        for j, (st, series) in enumerate(curves):
-            ax.semilogx(
-                pg,
-                thr(series),
-                color=st["color"],
-                ls=st["ls"],
-                lw=LW,
-                marker=st["marker"],
-                ms=MS,
-                mfc="white",
-                mew=MEW,
-                markevery=((j * 3) % MARKEVERY, MARKEVERY),  # staggered markers
-                label=st["label"],
-                zorder=3 + j,
-            )
-
-        ax.semilogx(
-            pg,
-            thr(opt_db),
-            color="black",
-            lw=LW,
-            ls=(0, (6, 2)),
-            label="optimal  (per-slot max-min)",
-            zorder=2,
-        )
+        _draw(ax)
 
         ax.set_xlabel(
             "outage probability  $P(\\Gamma_{min} < \\Gamma_{th})$", fontsize=14
         )
-        ax.set_ylabel("weakest-user power  $\\Gamma_{th}$  (dB)", fontsize=14)
+        ax.set_ylabel("weakest-user power threshold  $\\Gamma_{th}$  (dB)", fontsize=14)
         ax.set_title(title, fontsize=13)
         ax.grid(which="major", alpha=0.35, lw=0.8)
         ax.grid(which="minor", alpha=0.15, lw=0.5)
         ax.set_xlim(pmin, pmax)
+
+        # ---- left-end zoom inset: magnified y-axis over the leftmost slice ----
+        if zoom:
+            zhi = pmin * (pmax / pmin) ** zoom_frac
+            m = pg <= zhi
+            if m.sum() >= 2:
+                vals = np.concatenate([y[m] for y, _ in specs])
+                ylo, yhi = float(np.nanmin(vals)), float(np.nanmax(vals))
+                pad = 0.10 * (yhi - ylo) if yhi > ylo else max(0.05, abs(yhi) * 0.02)
+                axins = ax.inset_axes([0.075, 0.58, 0.32, 0.36])
+                axins.set_xscale("log")
+                _draw(axins)
+                axins.set_xlim(pmin, zhi)
+                axins.set_ylim(ylo - pad, yhi + pad)
+                axins.xaxis.set_major_locator(LogLocator(numticks=3))
+                axins.xaxis.set_minor_locator(
+                    LogLocator(subs=(0.2, 0.4, 0.6, 0.8), numticks=12)
+                )
+                axins.xaxis.set_minor_formatter(NullFormatter())
+                axins.xaxis.set_major_formatter(LogFormatterSciNotation())
+                axins.yaxis.set_major_locator(MaxNLocator(4))
+                axins.tick_params(labelsize=8, direction="in", top=True, right=True)
+                axins.grid(which="major", alpha=0.3, lw=0.6)
+                for sp in axins.spines.values():
+                    sp.set_edgecolor("0.4")
+                    sp.set_linewidth(0.9)
+                ax.indicate_inset_zoom(axins, edgecolor="0.45", alpha=0.7, lw=1.0)
+
         # legend below the axes so it never covers the (closely spaced) curves
         ax.legend(
             fontsize=11.5,
@@ -396,6 +457,15 @@ def main():
         type=float,
         default=0.1,
         help="largest outage probability on the x-axis (default 0.1)",
+    )
+    ap.add_argument(
+        "--no-zoom", action="store_true", help="disable the left-end zoom inset"
+    )
+    ap.add_argument(
+        "--zoom-frac",
+        type=float,
+        default=0.22,
+        help="leftmost fraction of the log x-axis magnified in the inset (default 0.22)",
     )
     # kept so old command lines still run; behaviour is now fixed:
     ap.add_argument("--fixed", action="store_true", help=argparse.SUPPRESS)
@@ -500,6 +570,8 @@ def main():
         a.out + ".png",
         f"Algorithm comparison: {title_tail}",
         pmax=a.pmax,
+        zoom=not a.no_zoom,
+        zoom_frac=a.zoom_frac,
     )
 
     # ---- PLOT 2: WRF/WUF/GGM at eps=4 + Max-min / Pref / Bulk + optimal ----
@@ -518,6 +590,8 @@ def main():
         a.out + ".all_algos.png",
         f"Algorithm comparison ($\\epsilon$={PLOT2_EPS}): {title_tail}",
         pmax=a.pmax,
+        zoom=not a.no_zoom,
+        zoom_frac=a.zoom_frac,
     )
 
     # ---- report ----
