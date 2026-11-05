@@ -50,12 +50,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.ticker import (
-    LogLocator,
-    LogFormatterSciNotation,
-    MaxNLocator,
-    NullFormatter,
-)
+from matplotlib.ticker import MaxNLocator
+from matplotlib.patches import Circle, Ellipse, ConnectionPatch
 
 try:
     from swap_policies import (
@@ -294,6 +290,122 @@ def swap_style(pol, e):
     )
 
 
+def _circular_lens(fig, ax, pg, specs, win, center=(0.34, 0.73), diam_in=2.5):
+    """Paper-style circular magnifier of the lowest-outage (left) end.
+
+    Draws `specs` (list of (y_series, plot_kwargs); the caller omits the no-swap
+    curve) with their own magnified y-scale inside a TRUE circle, and marks the
+    source region on the main plot with a ring + connector. Readable dB y-ticks
+    and horizontal gridlines inside the lens so the per-curve values can be read.
+    `win` = (x0, x1, y0, y1) source window in data coords."""
+    fig.canvas.draw()  # finalise ax position
+    bb = ax.get_position()
+    fw, fh = fig.get_size_inches()
+    wf = diam_in / (bb.width * fw)
+    hf = diam_in / (bb.height * fh)  # display-square
+    # keep the whole lens inside the axes border (never spill over an edge)
+    cx = min(max(center[0], wf / 2 + 0.012), 1 - wf / 2 - 0.012)
+    cy = min(max(center[1], hf / 2 + 0.012), 1 - hf / 2 - 0.012)
+    center = (cx, cy)
+    axi = ax.inset_axes([center[0] - wf / 2, center[1] - hf / 2, wf, hf])
+    axi.set_xscale("log")
+    for y, kw in specs:
+        kw2 = dict(kw)
+        kw2.pop("label", None)
+        if kw2.get("markevery"):  # sparser markers in the small lens
+            kw2["markevery"] = (kw2["markevery"][0] % 6, 6)
+        axi.semilogx(pg, y, **kw2)
+    axi.set_xlim(win[0], win[1])
+    axi.set_ylim(win[2], win[3])
+    axi.set_xticks([])
+    axi.tick_params(axis="x", which="both", labelbottom=False, labeltop=False, length=0)
+    axi.yaxis.set_major_locator(MaxNLocator(5))
+    yticks = [yt for yt in axi.get_yticks() if win[2] < yt < win[3]]
+    axi.tick_params(axis="y", labelleft=False, length=0)  # labels go INSIDE the circle
+    for sp in axi.spines.values():
+        sp.set_visible(False)
+    axi.add_patch(
+        Circle(
+            (0.5, 0.5),
+            0.5,
+            transform=axi.transAxes,
+            facecolor="white",
+            edgecolor="none",
+            zorder=-5,
+        )
+    )
+    ring = Circle(
+        (0.5, 0.5),
+        0.5,
+        transform=axi.transAxes,
+        fill=False,
+        edgecolor="0.2",
+        lw=1.6,
+        zorder=30,
+    )
+    axi.add_patch(ring)
+    for yt in yticks:  # dB gridlines + labels INSIDE the lens
+        (gl,) = axi.plot([win[0], win[1]], [yt, yt], color="0.78", lw=0.6, zorder=1)
+        gl.set_clip_path(ring)
+        yf = (yt - win[2]) / (win[3] - win[2])
+        xf = (
+            0.5 - np.sqrt(max(0.25 - (yf - 0.5) ** 2, 0.0)) + 0.04
+        )  # just inside the left arc
+        axi.text(
+            xf,
+            yf,
+            f"{yt:.2f}",
+            transform=axi.transAxes,
+            fontsize=7.5,
+            ha="left",
+            va="center",
+            color="0.25",
+            zorder=32,
+            bbox=dict(boxstyle="square,pad=0.1", fc="white", ec="none", alpha=0.65),
+        )
+    for ln in axi.lines:
+        ln.set_clip_path(ring)
+    # source ellipse drawn around the magnified cluster (axes-fraction coords, so
+    # it stays a clean ellipse on the log-x axis), + a connector up to the lens
+    tr = ax.transData + ax.transAxes.inverted()
+    fx0, fy0 = tr.transform((win[0], win[2]))
+    fx1, fy1 = tr.transform((win[1], win[3]))
+    ecx, ecy = (fx0 + fx1) / 2.0, (fy0 + fy1) / 2.0
+    ew = max(1.3 * abs(fx1 - fx0), 0.030)
+    eh = max(1.2 * abs(fy1 - fy0), 0.095)
+    m = 0.008  # keep the ellipse inside the axes border
+    ecx = min(max(ecx, ew / 2 + m), 1 - ew / 2 - m)
+    ecy = min(max(ecy, eh / 2 + m), 1 - eh / 2 - m)
+    ax.add_patch(
+        Ellipse(
+            (ecx, ecy),
+            ew,
+            eh,
+            transform=ax.transAxes,
+            fill=False,
+            edgecolor="0.4",
+            lw=1.2,
+            zorder=19,
+        )
+    )
+    # connector: from the lens circle's border to the ellipse's border only
+    # (stops at each edge, never crossing into either shape). All in axes fraction;
+    # the lens is a display-circle so its semi-axes there are (wf/2, hf/2).
+    lcx, lcy = center
+    vx, vy = ecx - lcx, ecy - lcy
+    tl = 1.0 / np.hypot(vx / (wf / 2.0), vy / (hf / 2.0))  # lens-border hit
+    te = 1.0 / np.hypot(vx / (ew / 2.0), vy / (eh / 2.0))  # ellipse-border hit
+    ax.plot(
+        [lcx + tl * vx, ecx - te * vx],
+        [lcy + tl * vy, ecy - te * vy],
+        transform=ax.transAxes,
+        color="0.45",
+        lw=1.0,
+        zorder=12,
+    )
+    return axi
+
+
 def draw_outage(
     curves,
     opt_db,
@@ -305,7 +417,7 @@ def draw_outage(
     title,
     pmax=0.1,
     zoom=True,
-    zoom_frac=0.22,
+    zoom_frac=0.10,
 ):
     """One outage plot. `curves` = list of (style_dict, series_dB).
 
@@ -382,32 +494,24 @@ def draw_outage(
         ax.grid(which="minor", alpha=0.15, lw=0.5)
         ax.set_xlim(pmin, pmax)
 
-        # ---- left-end zoom inset: magnified y-axis over the leftmost slice ----
+        # ---- lowest-outage circular magnifier lens (excludes the no-swap curve) ----
         if zoom:
             zhi = pmin * (pmax / pmin) ** zoom_frac
             m = pg <= zhi
             if m.sum() >= 2:
-                vals = np.concatenate([y[m] for y, _ in specs])
+                # window spans the swap/optimal cluster only (specs[0] = no-swap, skipped)
+                vals = np.concatenate([y[m] for y, _ in specs[1:]])
                 ylo, yhi = float(np.nanmin(vals)), float(np.nanmax(vals))
-                pad = 0.10 * (yhi - ylo) if yhi > ylo else max(0.05, abs(yhi) * 0.02)
-                axins = ax.inset_axes([0.075, 0.58, 0.32, 0.36])
-                axins.set_xscale("log")
-                _draw(axins)
-                axins.set_xlim(pmin, zhi)
-                axins.set_ylim(ylo - pad, yhi + pad)
-                axins.xaxis.set_major_locator(LogLocator(numticks=3))
-                axins.xaxis.set_minor_locator(
-                    LogLocator(subs=(0.2, 0.4, 0.6, 0.8), numticks=12)
+                pad = 0.06 * (yhi - ylo) if yhi > ylo else max(0.04, abs(yhi) * 0.02)
+                _circular_lens(
+                    fig,
+                    ax,
+                    pg,
+                    specs[1:],
+                    (pmin, zhi, ylo - pad, yhi + pad),
+                    center=(0.20, 0.78),
+                    diam_in=1.5,
                 )
-                axins.xaxis.set_minor_formatter(NullFormatter())
-                axins.xaxis.set_major_formatter(LogFormatterSciNotation())
-                axins.yaxis.set_major_locator(MaxNLocator(4))
-                axins.tick_params(labelsize=8, direction="in", top=True, right=True)
-                axins.grid(which="major", alpha=0.3, lw=0.6)
-                for sp in axins.spines.values():
-                    sp.set_edgecolor("0.4")
-                    sp.set_linewidth(0.9)
-                ax.indicate_inset_zoom(axins, edgecolor="0.45", alpha=0.7, lw=1.0)
 
         # legend below the axes so it never covers the (closely spaced) curves
         ax.legend(
@@ -464,8 +568,8 @@ def main():
     ap.add_argument(
         "--zoom-frac",
         type=float,
-        default=0.22,
-        help="leftmost fraction of the log x-axis magnified in the inset (default 0.22)",
+        default=0.10,
+        help="leftmost fraction of the log x-axis magnified in the lens (default 0.10)",
     )
     # kept so old command lines still run; behaviour is now fixed:
     ap.add_argument("--fixed", action="store_true", help=argparse.SUPPRESS)

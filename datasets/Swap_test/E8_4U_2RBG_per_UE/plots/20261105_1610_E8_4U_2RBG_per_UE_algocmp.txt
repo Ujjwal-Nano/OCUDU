@@ -1,0 +1,21 @@
+swap-policy comparison — 20261105_1610_E8_4U_2RBG_per_UE
+slots=25066 users=4 RUs=8 rus_per_user=2 (gNB logged policy=wrf, epsilon=1)
+
+curve           mean(dB)   @1%(dB)   @5%(dB)  gain/fixed  opt gap  py-ref us
+----------------------------------------------------------------------------
+best-fixed        -27.82    -32.63    -31.91       +0.00     1.69          -
+WRF eps=1         -26.43    -31.78    -31.01       +1.39     0.31     14.445
+WRF eps=2         -26.27    -31.58    -30.78       +1.55     0.14     17.904
+WRF eps=4         -26.25    -31.59    -30.79       +1.57     0.12     29.259
+GGM eps=1         -26.43    -31.78    -31.01       +1.39     0.31     11.160
+GGM eps=2         -26.28    -31.59    -30.80       +1.54     0.15     13.875
+GGM eps=4         -26.28    -31.66    -30.86       +1.54     0.15     21.811
+WUF eps=4         -26.25    -31.59    -30.79       +1.58     0.12     26.398
+Max-min           -26.14    -31.47    -30.67       +1.68     0.01   1202.796
+Pref              -26.15    -31.47    -30.67       +1.67     0.02    292.319
+Bulk              -26.17    -31.47    -30.67       +1.65     0.04    175.348
+optimal           -26.13    -31.47    -30.67       +1.69     0.00          -
+
+py-ref us = python decision time per slot on this CPU; a RELATIVE reference only, not a gNB hardware result.
+opt gap   = mean(optimal) - mean(curve) in dB; lower is better.
+optimal   = exhaustive_maxmin (exact, branch-and-bound) on every slot.

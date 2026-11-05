@@ -1,0 +1,8 @@
+user         : 999420000020051
+file         : /home/tud/OCUDU/datasets/Swap_test/E8_4U_2RBG_per_UE/20261105_1610_E8_4U_2RBG_per_UE.rb.jsonl.gz
+samples      : 68975   duration 23.0 min   rate 50.0/s
+avg window   : 1000 ms (50 samples)
+re-attach guard: 10s x2 around 0 event(s)
+RBs sounded  : 104   RBG size K=12 → 8 RBGs
+Tc(0.5)      : nan s
+Bc(0.5)      : 10.08 MHz   (RBG width K=12 = 4.32 MHz)

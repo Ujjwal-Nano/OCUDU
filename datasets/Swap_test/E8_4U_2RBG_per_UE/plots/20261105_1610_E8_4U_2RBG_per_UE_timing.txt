@@ -1,0 +1,20 @@
+decision cost — 20261105_1610_E8_4U_2RBG_per_UE
+method             mean_us    p99_us
+------------------------------------
+[sweep]
+WRF $\epsilon$=1     0.523     0.763
+WRF $\epsilon$=2     0.565     0.994
+WRF $\epsilon$=4     0.807     1.225
+GGM $\epsilon$=1     0.481     0.635
+GGM $\epsilon$=2     0.512     0.744
+GGM $\epsilon$=4     0.665     0.919
+WUF $\epsilon$=4     0.834     1.253
+Optimal            465.565   580.514
+[all algos]
+WRF $\epsilon$=4     0.807     1.225
+WUF $\epsilon$=4     0.834     1.253
+GGM $\epsilon$=4     0.665     0.919
+Pref                 1.286     1.460
+Bulk                 1.800     1.928
+Max-min             95.776   130.779
+Optimal            465.565   580.514
