@@ -1,0 +1,17 @@
+dataset: /home/tud/OCUDU/datasets/Swap_test/E9_4U_4RBG_per_UE/20261105_1453_E9_4U_4RBG_per_UE.jsonl
+
+user 999420000020049: 59196 samples, 46 segment(s)
+  best-RBG fraction: RBG0=13.2%, RBG1=6.1%, RBG2=4.3%, RBG3=4.0%, RBG4=3.9%, RBG5=3.9%, RBG6=3.6%, RBG7=3.6%, RBG8=10.3%, RBG9=4.0%, RBG10=3.9%, RBG11=4.6%, RBG12=5.7%, RBG13=7.8%, RBG14=5.9%, RBG15=6.2%, RBG16=9.1%
+  total switches: 47909   zoom: 8.18-8.51 min
+
+user 999420000020051: 65130 samples, 1 segment(s)
+  best-RBG fraction: RBG0=14.5%, RBG1=5.3%, RBG2=1.0%, RBG3=0.7%, RBG4=0.9%, RBG5=1.4%, RBG6=1.4%, RBG7=1.3%, RBG8=3.5%, RBG9=5.3%, RBG10=7.6%, RBG11=9.1%, RBG12=10.4%, RBG13=6.8%, RBG14=4.1%, RBG15=9.0%, RBG16=17.7%
+  total switches: 41966   zoom: 9.17-9.50 min
+
+user 999420000020052: 61735 samples, 2 segment(s)
+  best-RBG fraction: RBG0=7.4%, RBG1=10.6%, RBG2=7.9%, RBG3=5.1%, RBG4=2.7%, RBG5=3.0%, RBG6=3.2%, RBG7=3.8%, RBG8=5.4%, RBG9=6.3%, RBG10=7.4%, RBG11=10.0%, RBG12=8.4%, RBG13=3.7%, RBG14=3.9%, RBG15=2.8%, RBG16=8.3%
+  total switches: 38824   zoom: 15.82-16.16 min
+
+user 999420000020053: 65130 samples, 1 segment(s)
+  best-RBG fraction: RBG0=47.1%, RBG1=1.6%, RBG2=0.9%, RBG3=0.3%, RBG4=0.2%, RBG5=0.3%, RBG6=0.2%, RBG7=0.2%, RBG8=0.1%, RBG9=0.0%, RBG10=0.0%, RBG11=0.1%, RBG12=0.2%, RBG13=6.1%, RBG14=15.7%, RBG15=10.4%, RBG16=16.6%
+  total switches: 19947   zoom: 2.62-2.95 min

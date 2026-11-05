@@ -1,8 +1,0 @@
-user         : 999420000020052
-file         : /home/tud/OCUDU/datasets/Swap_test/E9_4U_4RBG_per_UE/20261105_1400_E9_4U_4RBG_per_UE.rb.jsonl.gz
-samples      : 32366   duration 18.5 min   rate 50.0/s
-avg window   : 1000 ms (50 samples)
-re-attach guard: 10s x2 around 42 event(s)
-RBs sounded  : 104   RBG size K=6 → 17 RBGs
-Tc(0.5)      : 1.354 s
-Bc(0.5)      : >37.1 MHz (flat in band)   (RBG width K=6 = 2.16 MHz)
