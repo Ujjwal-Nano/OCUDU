@@ -152,6 +152,17 @@ else: print('WARNING: no IMSI users after filter; keeping original sessions', fi
     # ---- (1) CSI power per user ----
     python3 "$REPO/tools/plot_csi.py" "$D/$BASE.jsonl" -o "$P/$BASE.png" --rbs-per-ru "$RBS_PER_RU"
 
+    # ---- (1b) coherence time + coherence bandwidth per user (from the per-RB capture) ----
+    #   per-user  ${BASE}_coh_<imsi>.png + .txt   (Tc panel + Bc panel)
+    #   combined  ${BASE}_coh_summary.txt         (Tc, Bc for ALL users)
+    #   + appends a row per user to ${BASE}.coherence.csv
+    #   K = rbs_per_ru (the RBG/RU width). Pass SPEED=<m/s> to also print the Tc theory line.
+    python3 "$REPO/tools/coherence_metrics.py" "$D/$BASE.rb.jsonl.gz" \
+            -o "$P/${BASE}_coh.png" --K "$RBS_PER_RU" --label "$BASE" \
+            --csv "$D/$BASE.coherence.csv" \
+            ${SPEED:+--speed "$SPEED"} \
+            ${SESSIONS:+--sessions "$SESSIONS"} || true
+
     # copy the swap log — input to every swapping analysis below
     if [ -s "$SW" ]; then
       sudo cp "$SW" "$D/$BASE.swap.jsonl"; sudo chown "$USER" "$D/$BASE.swap.jsonl"
